@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Themeable ink scale (RGB channels, space-separated) ---- */
+:root {
+  --ink-0: 255 255 255;   /* surface  */
+  --ink-50: 248 250 252;  /* page bg  */
+  --ink-100: 241 245 249;
+  --ink-200: 226 232 240; /* borders  */
+  --ink-300: 203 213 225;
+  --ink-400: 148 163 184; /* muted    */
+  --ink-500: 100 116 139;
+  --ink-600: 71 85 105;
+  --ink-700: 51 65 85;
+  --ink-800: 30 41 59;
+  --ink-900: 15 23 42;    /* heading  */
+}
+.dark {
+  --ink-0: 30 41 59;      /* card surface #1e293b */
+  --ink-50: 15 23 42;     /* page bg #0f172a      */
+  --ink-100: 36 49 71;    /* subtle surface       */
+  --ink-200: 51 65 85;    /* borders #334155      */
+  --ink-300: 71 85 105;
+  --ink-400: 148 163 184; /* muted text (stable)  */
+  --ink-500: 156 169 188;
+  --ink-600: 186 197 213;
+  --ink-700: 214 222 233;
+  --ink-800: 233 238 245;
+  --ink-900: 248 250 252; /* heading -> near white */
+}
+
+@layer base {
+  body {
+    @apply bg-ink-50 text-ink-800 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-ink-0 rounded-3xl shadow-card border border-ink-200/70;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm;
+  }
+  .btn-ghost {
+    @apply btn text-ink-600 hover:bg-ink-100;
+  }
+  .btn-danger {
+    @apply btn bg-rose-50 text-rose-600 hover:bg-rose-100;
+  }
+  .input {
+    @apply w-full px-3 py-2 rounded-xl border border-ink-200 bg-ink-50/60 text-ink-800 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 focus:bg-ink-0 transition;
+  }
+  .chip {
+    @apply inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-ink-200 bg-ink-0
+           text-sm font-medium text-ink-600 hover:bg-ink-50 transition;
+  }
+  .label {
+    @apply block text-xs font-semibold text-ink-500 mb-1 uppercase tracking-wide;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+}
+
+@keyframes slidein {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  @apply relative overflow-hidden bg-ink-200/60 rounded;
+}
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+/* thin scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { @apply bg-ink-300 rounded-full; }
+::-webkit-scrollbar-track { background: transparent; }

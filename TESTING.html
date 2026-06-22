@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DAGOS CRM — Testing Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --brand:#6366f1; --brand-d:#4f46e5; --ink9:#0f172a; --ink7:#334155;
+    --ink5:#64748b; --ink4:#94a3b8; --ink2:#e2e8f0; --ink1:#f1f5f9; --ink0:#f8fafc;
+    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --violet:#a855f7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,system-ui,sans-serif;background:var(--ink1);color:var(--ink7);line-height:1.6}
+  a{color:var(--brand-d)}
+
+  /* layout */
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+  header{background:var(--ink9);color:#fff;position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;top:-120px;right:-80px;width:380px;height:380px;border-radius:50%;background:rgba(99,102,241,.35);filter:blur(80px)}
+  .hd{position:relative;padding:48px 0 40px}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .hex{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#818cf8,#4f46e5);display:grid;place-items:center;font-weight:800;font-size:20px}
+  .logo b{font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .logo span{font-size:10px;letter-spacing:3px;color:var(--ink4);text-transform:uppercase;display:block;margin-top:-4px}
+  h1{font-size:34px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+  .sub{color:var(--ink4);max-width:620px}
+  .creds{display:flex;gap:14px;flex-wrap:wrap;margin-top:22px}
+  .cred{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 16px;font-size:14px}
+  .cred b{color:#fff}
+  .cred small{color:var(--ink4);display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+
+  /* service pills */
+  .services{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:-26px 0 30px;position:relative;z-index:2}
+  .svc{background:#fff;border:1px solid var(--ink2);border-radius:16px;padding:16px 18px;box-shadow:0 4px 24px rgba(15,23,42,.06)}
+  .svc .dot{width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block;margin-right:8px;box-shadow:0 0 0 4px rgba(34,197,94,.15)}
+  .svc h4{font-size:14px;color:var(--ink9);font-weight:700}
+  .svc a{font-size:13px;font-family:ui-monospace,monospace}
+
+  /* toc */
+  .toc{background:#fff;border:1px solid var(--ink2);border-radius:16px;padding:20px 24px;margin-bottom:28px}
+  .toc h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--ink5);margin-bottom:12px}
+  .toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+  .toc-grid a{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--ink7);font-size:14px;font-weight:500;transition:.15s}
+  .toc-grid a:hover{background:var(--ink1)}
+  .toc-grid .n{width:24px;height:24px;border-radius:7px;background:var(--ink1);color:var(--brand-d);font-size:12px;font-weight:700;display:grid;place-items:center}
+
+  /* sections */
+  section{background:#fff;border:1px solid var(--ink2);border-radius:18px;padding:26px 28px;margin-bottom:20px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+  .s-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .s-num{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#818cf8,#4f46e5);color:#fff;font-weight:800;display:grid;place-items:center;flex-shrink:0}
+  .s-head h2{font-size:20px;color:var(--ink9);font-weight:800}
+  .s-head p{font-size:13px;color:var(--ink4)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--ink4);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;border-bottom:2px solid var(--ink1)}
+  td{padding:11px 12px;border-bottom:1px solid var(--ink1);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--ink0)}
+  .step{font-weight:700;color:var(--brand-d);white-space:nowrap}
+  .expect{color:var(--ink5)}
+  code{background:var(--ink1);padding:2px 7px;border-radius:6px;font-family:ui-monospace,monospace;font-size:13px;color:var(--brand-d)}
+
+  .pass{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:capitalize}
+  .b-red{background:#fef2f2;color:#dc2626}.b-amber{background:#fffbeb;color:#d97706}
+  .b-blue{background:#eff6ff;color:#2563eb}.b-green{background:#ecfdf5;color:#059669}
+  .b-violet{background:#faf5ff;color:#9333ea}
+
+  .key{border-left:3px solid var(--brand);background:#eef2ff;padding:12px 16px;border-radius:0 10px 10px 0;margin-top:14px;font-size:13px}
+  .key b{color:var(--brand-d)}
+
+  pre{background:var(--ink9);color:#e2e8f0;padding:16px 18px;border-radius:12px;overflow-x:auto;font-size:13px;font-family:ui-monospace,monospace;margin-top:8px}
+  pre .c{color:#64748b}
+
+  /* smoke test */
+  .smoke{background:linear-gradient(135deg,#312e81,#4f46e5);color:#fff;border:none}
+  .smoke .s-head h2{color:#fff}
+  .smoke ol{list-style:none;counter-reset:s;margin-top:10px}
+  .smoke li{counter-increment:s;padding:10px 0 10px 44px;position:relative;border-bottom:1px solid rgba(255,255,255,.1);font-size:15px}
+  .smoke li:last-child{border-bottom:none}
+  .smoke li::before{content:counter(s);position:absolute;left:0;top:8px;width:28px;height:28px;border-radius:9px;background:rgba(255,255,255,.15);display:grid;place-items:center;font-weight:700;font-size:13px}
+  .smoke code{background:rgba(255,255,255,.15);color:#fff}
+
+  footer{text-align:center;color:var(--ink4);font-size:13px;padding:30px 0 50px}
+
+  /* print */
+  @media print{body{background:#fff}header::after{display:none}.svc,section{box-shadow:none}.toc{display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <div class="logo">
+      <div class="hex">⬡</div>
+      <div><b>DAGOS</b><span>CRM Suite</span></div>
+    </div>
+    <h1>Testing Guide — Step by Step</h1>
+    <p class="sub">Har module ko test karne ka complete flow: kya click karna hai, kya data daalna hai, aur kya result aana chahiye.</p>
+    <div class="creds">
+      <div class="cred"><small>Login Email</small><b>admin@dagos.com</b></div>
+      <div class="cred"><small>Password</small><b>admin123</b></div>
+      <div class="cred"><small>App URL</small><b>http://localhost:5173</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- services -->
+  <div class="services">
+    <div class="svc"><h4><span class="dot"></span>Frontend (React)</h4><a href="http://localhost:5173" target="_blank">localhost:5173</a></div>
+    <div class="svc"><h4><span class="dot"></span>Backend API (DRF)</h4><a href="http://localhost:8010/api/docs/" target="_blank">localhost:8010/api/docs</a></div>
+    <div class="svc"><h4><span class="dot"></span>AI Service (FastAPI)</h4><a href="http://localhost:8101/docs" target="_blank">localhost:8101/docs</a></div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Modules — Quick Jump</h3>
+    <div class="toc-grid">
+      <a href="#s1"><span class="n">1</span>Login / Auth</a>
+      <a href="#s2"><span class="n">2</span>Dashboard</a>
+      <a href="#s3"><span class="n">3</span>Leads</a>
+      <a href="#s4"><span class="n">4</span>Lead Activities</a>
+      <a href="#s5"><span class="n">5</span>Opportunities</a>
+      <a href="#s6"><span class="n">6</span>Customers</a>
+      <a href="#s7"><span class="n">7</span>Communications</a>
+      <a href="#s8"><span class="n">8</span>Targets & Revenue</a>
+      <a href="#s9"><span class="n">9</span>Setup</a>
+      <a href="#s10"><span class="n">10</span>Support Desk</a>
+      <a href="#s11"><span class="n">11</span>HR & People</a>
+      <a href="#s12"><span class="n">12</span>Finance</a>
+      <a href="#s13"><span class="n">13</span>Administration</a>
+      <a href="#s14"><span class="n">14</span>Reports</a>
+      <a href="#s15"><span class="n">15</span>AI Assistant</a>
+      <a href="#s16"><span class="n">16</span>Responsive UI</a>
+      <a href="#smoke"><span class="n">★</span>Smoke Test</a>
+    </div>
+  </div>
+
+  <!-- 0 precheck -->
+  <section id="s0">
+    <div class="s-head"><div class="s-num">0</div><div><h2>Pre-check — Services chalu hain?</h2><p>App use karne se pehle 3 services chalni chahiye</p></div></div>
+    <p style="margin-bottom:12px">Upar wale 3 links pe click karke check karo — sab khulne chahiye. Agar koi band hai to neeche commands se chalu karo (3 alag terminal):</p>
+    <pre><span class="c"># Terminal 1 — Backend</span>
+cd "e:/crm doc/backend" && ./.venv/Scripts/python.exe manage.py runserver 8010
+
+<span class="c"># Terminal 2 — AI Service</span>
+cd "e:/crm doc/ai-service" && ./.venv/Scripts/python.exe -m uvicorn app.main:app --port 8101
+
+<span class="c"># Terminal 3 — Frontend</span>
+cd "e:/crm doc/frontend" && npm run dev</pre>
+  </section>
+
+  <!-- 1 -->
+  <section id="s1">
+    <div class="s-head"><div class="s-num">1</div><div><h2>Login / Authentication</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">1.1</td><td>Browser me <code>http://localhost:5173</code> kholo</td><td class="expect">Login page — left dark branding, right form</td></tr>
+      <tr><td class="step">1.2</td><td>Email/password pehle se bhare hain → <b>Sign in</b></td><td class="expect">Dashboard khul jaye</td></tr>
+      <tr><td class="step">1.3</td><td>Top-right logout icon dabao</td><td class="expect">Wapas login page</td></tr>
+      <tr><td class="step">1.4</td><td>Galat password (<code>wrong123</code>) → Sign in</td><td class="expect">Red error: "Invalid email or password"</td></tr>
+      <tr><td class="step">1.5</td><td>Sahi credentials se dobara login</td><td class="expect">Dashboard</td></tr>
+    </tbody></table>
+    <div class="pass">✓ Pass: Login/logout aur galat password handling theek</div>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2">
+    <div class="s-head"><div class="s-num">2</div><div><h2>Dashboard</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">2.1</td><td>Login ke baad Dashboard pe ho</td><td class="expect">8 KPI cards: Total Leads, Open Pipeline, Net Revenue, Open Tickets, Customers, Converted, Gross Revenue, Open Opps</td></tr>
+      <tr><td class="step">2.2</td><td>Numbers dekho</td><td class="expect">Total Leads = <b>120</b>, Customers = <b>29</b></td></tr>
+      <tr><td class="step">2.3</td><td>"Net Revenue Trend" chart</td><td class="expect">Area chart with months</td></tr>
+      <tr><td class="step">2.4</td><td>"Leads by Source" pie</td><td class="expect">Colors + legend</td></tr>
+      <tr><td class="step">2.5</td><td>"Opportunities by Stage" bar</td><td class="expect">proposal, negotiation, won, lost, active</td></tr>
+      <tr><td class="step">2.6</td><td>Right side <b>AI Insights</b></td><td class="expect">2-4 insight cards</td></tr>
+    </tbody></table>
+    <div class="pass">✓ Pass: Saare charts + AI insights load</div>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3">
+    <div class="s-head"><div class="s-num">3</div><div><h2>Leads <span class="badge b-violet">most important</span></h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">3.1</td><td>Sidebar → Sales &amp; CRM → <b>Leads</b></td><td class="expect">~100 leads table</td></tr>
+      <tr><td class="step">3.2</td><td>Score column dekho</td><td class="expect">Colored progress bar + number</td></tr>
+      <tr><td class="step">3.3</td><td>Search box me <code>LD0001</code></td><td class="expect">List filter ho</td></tr>
+      <tr><td class="step">3.4</td><td><b>+ New</b> dabao</td><td class="expect">Modal form khule</td></tr>
+      <tr><td class="step">3.5</td><td>Bharo: code <code>LD9999</code>, Name <code>Test Lead</code>, Source, Owner, Status = new</td><td class="expect">—</td></tr>
+      <tr><td class="step">3.6</td><td><b>Save</b></td><td class="expect">Naya lead top pe</td></tr>
+      <tr><td class="step">3.7</td><td>Row pe pencil (edit)</td><td class="expect">Form pre-filled</td></tr>
+      <tr><td class="step">3.8</td><td>Status new → <code>qualified</code> → Save</td><td class="expect">Badge update</td></tr>
+      <tr><td class="step">3.9</td><td>Trash icon → Confirm</td><td class="expect">Row gayab</td></tr>
+    </tbody></table>
+    <div class="pass">✓ Pass: Create, Read, Search, Update, Delete sab chalein</div>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4">
+    <div class="s-head"><div class="s-num">4</div><div><h2>Lead Activities</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">4.1</td><td>Sidebar → <b>Lead Activities</b></td><td class="expect">Lead#, Type, Remarks, Follow-up, By</td></tr>
+      <tr><td class="step">4.2</td><td>+ New → Lead, Type = <code>call</code>, Remarks, Follow-up date → Save</td><td class="expect">Naya activity</td></tr>
+      <tr><td class="step">4.3</td><td>Type badge dekho</td><td class="expect"><span class="badge b-blue">call</span> color badge</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 5 -->
+  <section id="s5">
+    <div class="s-head"><div class="s-num">5</div><div><h2>Opportunities</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">5.1</td><td>Sidebar → <b>Opportunities</b></td><td class="expect">Lead, Product, Owner, Stage, Expected, Status</td></tr>
+      <tr><td class="step">5.2</td><td>+ New → Stage = <code>negotiation</code>, Expected = <code>25000</code> → Save</td><td class="expect">Expected = $25,000</td></tr>
+      <tr><td class="step">5.3</td><td>Edit → Stage = <code>won</code></td><td class="expect"><span class="badge b-green">won</span> green badge</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 6 -->
+  <section id="s6">
+    <div class="s-head"><div class="s-num">6</div><div><h2>Customers</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">6.1</td><td>Sidebar → <b>Customers</b></td><td class="expect">~29 customers</td></tr>
+      <tr><td class="step">6.2</td><td>Search me naam</td><td class="expect">Filter ho</td></tr>
+      <tr><td class="step">6.3</td><td>+ New → Name, Email, Phone, Country → Save</td><td class="expect">Naya customer</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 7 -->
+  <section id="s7">
+    <div class="s-head"><div class="s-num">7</div><div><h2>Communications</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">7.1</td><td>Sidebar → <b>Communications</b></td><td class="expect">Channel, Direction, Message, When</td></tr>
+      <tr><td class="step">7.2</td><td>+ New → Channel = <code>whatsapp</code>, Direction = outbound, Customer, Message → Save</td><td class="expect">Naya record</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 8 -->
+  <section id="s8">
+    <div class="s-head"><div class="s-num">8</div><div><h2>Targets &amp; Revenue</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">8.1</td><td><b>Targets</b> → table</td><td class="expect">Har business ka Q-Target</td></tr>
+      <tr><td class="step">8.2</td><td><b>Revenue</b> → Gross, Commission, Net columns</td><td class="expect">Net = Gross − Commission</td></tr>
+      <tr><td class="step">8.3</td><td>Revenue + New → Gross = <code>10000</code>, Commission = <code>1500</code> → Save</td><td class="expect">Net = <b>$8,500</b> (auto)</td></tr>
+    </tbody></table>
+    <div class="key"><b>Key test:</b> Net revenue backend me khud calculate hota hai (save override).</div>
+  </section>
+
+  <!-- 9 -->
+  <section id="s9">
+    <div class="s-head"><div class="s-num">9</div><div><h2>Setup — Business / Products / Sources</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">9.1</td><td><b>Businesses</b></td><td class="expect">6 businesses (FX Artha, DAGChain…) + product count</td></tr>
+      <tr><td class="step">9.2</td><td><b>Products</b></td><td class="expect">Business ke saath products</td></tr>
+      <tr><td class="step">9.3</td><td>+ New Product → Name, Business, Status → Save</td><td class="expect">Naya product</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 10 -->
+  <section id="s10">
+    <div class="s-head"><div class="s-num">10</div><div><h2>Support Desk</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">10.1</td><td>Sidebar → Support → <b>Support Desk</b></td><td class="expect">~40 tickets</td></tr>
+      <tr><td class="step">10.2</td><td>Priority badges</td><td class="expect"><span class="badge b-red">urgent</span> <span class="badge b-amber">high</span> <span class="badge b-blue">medium</span></td></tr>
+      <tr><td class="step">10.3</td><td>+ New → Ticket no <code>TK9999</code>, Priority = high → Save</td><td class="expect">Naya ticket</td></tr>
+      <tr><td class="step">10.4</td><td>Edit → Status open → <code>resolved</code></td><td class="expect"><span class="badge b-green">resolved</span></td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 11 -->
+  <section id="s11">
+    <div class="s-head"><div class="s-num">11</div><div><h2>HR &amp; People</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">11.1</td><td><b>Employees</b></td><td class="expect">15 employees + Salary</td></tr>
+      <tr><td class="step">11.2</td><td><b>Departments</b></td><td class="expect">Sales, Support, HR, Finance, Tech</td></tr>
+      <tr><td class="step">11.3</td><td><b>Attendance</b></td><td class="expect">Date-wise, Hours, Status</td></tr>
+      <tr><td class="step">11.4</td><td><b>Activity Tracking</b></td><td class="expect">Active min, Calls, Tickets</td></tr>
+      <tr><td class="step">11.5</td><td><b>Leaves</b></td><td class="expect">From/To, Reason, Status</td></tr>
+      <tr><td class="step">11.7</td><td>Payroll + New → Basic <code>50000</code>, Incentive <code>5000</code>, Bonus <code>2000</code>, Deduction <code>1000</code>, Month 6, Year 2026 → Save</td><td class="expect"><b>Net Pay = $56,000</b> (50000+5000+2000−1000)</td></tr>
+      <tr><td class="step">11.8</td><td><b>Incentives / Incentive Rules</b></td><td class="expect">Tables load</td></tr>
+    </tbody></table>
+    <div class="key"><b>Key test:</b> Payroll final salary formula khud chale.</div>
+  </section>
+
+  <!-- 12 -->
+  <section id="s12">
+    <div class="s-head"><div class="s-num">12</div><div><h2>Finance</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">12.1</td><td><b>Expenses</b></td><td class="expect">Type, Department, Amount, Date</td></tr>
+      <tr><td class="step">12.2</td><td><b>Commissions</b></td><td class="expect">Partner, Business, Amount</td></tr>
+      <tr><td class="step">12.3</td><td>Dono me + New se record add</td><td class="expect">Save ho jaye</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 13 -->
+  <section id="s13">
+    <div class="s-head"><div class="s-num">13</div><div><h2>Administration</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">13.1</td><td><b>Users</b></td><td class="expect">15 users, Role, Status</td></tr>
+      <tr><td class="step">13.2</td><td>+ New User → Name, Email, Role, Password → Save</td><td class="expect">Naya user (login bhi kar sakta hai)</td></tr>
+      <tr><td class="step">13.3</td><td><b>Roles</b></td><td class="expect">8 roles</td></tr>
+      <tr><td class="step">13.4</td><td><b>Teams</b></td><td class="expect">Team A/B/C with leaders</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 14 -->
+  <section id="s14">
+    <div class="s-head"><div class="s-num">14</div><div><h2>Reports</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">14.1</td><td>Sidebar → <b>Reports</b></td><td class="expect">Leads by Status (bar) + Revenue by Business (horizontal bar)</td></tr>
+      <tr><td class="step">14.2</td><td>Neeche Revenue table</td><td class="expect">Business-wise Gross/Net</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- 15 -->
+  <section id="s15">
+    <div class="s-head"><div class="s-num">15</div><div><h2>AI Assistant <span class="badge b-violet">interesting</span></h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">15.1</td><td>Sidebar → Overview → <b>AI Assistant</b></td><td class="expect">Left: chat, Right: Lead Scorer</td></tr>
+      <tr><td class="step">15.2</td><td>Chat: <code>how many leads do I have?</code> → Send</td><td class="expect">AI reply with lead count</td></tr>
+      <tr><td class="step">15.3</td><td>Chat: <code>what is my revenue?</code></td><td class="expect">AI reply with net revenue</td></tr>
+      <tr><td class="step">15.4</td><td>Lead Scorer: Source = <code>Referral</code>, Status = <code>qualified</code>, Activity = <code>4</code> → Score Lead</td><td class="expect">Score ~100, <b>Grade A</b> + reasons</td></tr>
+      <tr><td class="step">15.5</td><td>Source = <code>CSV</code>, Status = <code>lost</code>, Activity = <code>0</code> → Score</td><td class="expect">Low score, <b>Grade D</b></td></tr>
+    </tbody></table>
+    <div class="pass">✓ Pass: Chat reply aaye aur scoring grade badle</div>
+  </section>
+
+  <!-- 16 -->
+  <section id="s16">
+    <div class="s-head"><div class="s-num">16</div><div><h2>Responsive / UI</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">16.1</td><td>Window chhota karo (mobile)</td><td class="expect">Sidebar hide, hamburger (☰)</td></tr>
+      <tr><td class="step">16.2</td><td>☰ dabao</td><td class="expect">Sidebar slide-in</td></tr>
+      <tr><td class="step">16.3</td><td>Kisi page pe refresh (F5)</td><td class="expect">Logged-in raho (token persist)</td></tr>
+    </tbody></table>
+  </section>
+
+  <!-- smoke -->
+  <section id="smoke" class="smoke">
+    <div class="s-head"><div class="s-num">★</div><div><h2>Quick Smoke Test — 2 minute</h2><p style="color:rgba(255,255,255,.6)">In 6 steps se pura system verify</p></div></div>
+    <ol>
+      <li>Login → Dashboard charts dikhe</li>
+      <li>Leads → naya lead banao</li>
+      <li>Revenue → Gross <code>10000</code>, Commission <code>1500</code> → Net <code>8500</code> auto</li>
+      <li>Payroll → New → Net Pay auto-calc</li>
+      <li>AI Assistant → lead score karo (Grade aaye)</li>
+      <li>Logout</li>
+    </ol>
+    <p style="margin-top:16px;font-size:15px">Agar ye 6 chal gaye — <b>pura system theek hai.</b> 🎉</p>
+  </section>
+
+</div>
+
+<footer>DAGOS CRM · Testing Guide · admin@dagos.com / admin123 · © 2026</footer>
+
+</body>
+</html>
