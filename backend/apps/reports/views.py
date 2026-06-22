@@ -48,6 +48,7 @@ def my_dashboard(request):
         .order_by("followup_date")
         .values("id", "lead__name", "activity_type", "followup_date", "next_action")[:6]
     )
+    my_revenue = Revenue.objects.filter(customer__lead__assigned_to=user)
     return Response({
         "my_leads": my_leads.count(),
         "my_new_leads": my_leads.filter(status="new").count(),
@@ -55,6 +56,8 @@ def my_dashboard(request):
         "my_open_opportunities": my_opps.filter(status="open").count(),
         "my_won": my_opps.filter(stage="won").count(),
         "my_pipeline_value": _money(my_opps.filter(status="open"), "expected_revenue"),
+        "my_revenue": _money(my_revenue, "net_revenue"),
+        "my_gross_revenue": _money(my_revenue, "gross_revenue"),
         "my_activities_today": my_acts.filter(created_at__date=today).count(),
         "my_followups_due": my_acts.filter(followup_date__gte=today).count(),
         "my_targets": TargetAssignment.objects.filter(user=user).count(),
@@ -69,7 +72,21 @@ def dashboard_summary(request):
     """High-level KPI cards for the main dashboard."""
     gross = _money(Revenue.objects.all(), "gross_revenue")
     net = _money(Revenue.objects.all(), "net_revenue")
+    reps = []
+    for u in User.objects.all():
+        leads = Lead.objects.filter(assigned_to=u).count()
+        if not leads:
+            continue
+        reps.append({
+            "name": u.name,
+            "role": getattr(u.role, "name", ""),
+            "leads": leads,
+            "won": Opportunity.objects.filter(assigned_to=u, stage="won").count(),
+            "revenue": float(_money(Revenue.objects.filter(customer__lead__assigned_to=u), "net_revenue")),
+        })
+    reps.sort(key=lambda r: -r["revenue"])
     return Response({
+        "top_reps": reps[:6],
         "total_leads": Lead.objects.count(),
         "new_leads": Lead.objects.filter(status="new").count(),
         "converted_leads": Lead.objects.filter(status="converted").count(),
@@ -176,8 +193,13 @@ def support_dashboard(request):
 @api_view(["GET"])
 def sales_dashboard(request):
     """Sales Manager — company-wide sales (no HR/finance)."""
+    from apps.crm.models import Target
+    from apps.crm.serializers import TargetSerializer
+
     rev = _scoped_revenue(request.user)
+    targets = TargetSerializer(Target.objects.all().order_by("end_date")[:6], many=True).data
     return Response({
+        "targets": targets,
         "total_leads": Lead.objects.count(),
         "converted_leads": Lead.objects.filter(status="converted").count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),

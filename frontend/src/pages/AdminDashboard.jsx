@@ -200,6 +200,40 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* team performance */}
+      <div className="card p-5">
+        <CardHead title="Team Performance" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
+                <th className="pb-3 pr-4 font-semibold">S/N</th>
+                <th className="pb-3 px-4 font-semibold">Name</th>
+                <th className="pb-3 px-4 font-semibold">Role</th>
+                <th className="pb-3 px-4 font-semibold text-right">Leads</th>
+                <th className="pb-3 px-4 font-semibold text-right">Won</th>
+                <th className="pb-3 px-4 font-semibold text-right">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(kpi.top_reps || []).map((r, i) => (
+                <tr key={i} className="border-t border-ink-100 hover:bg-ink-50/70">
+                  <td className="py-3 pr-4 text-ink-400">{String(i + 1).padStart(2, "0")}</td>
+                  <td className="py-3 px-4 font-medium text-ink-800">{r.name}</td>
+                  <td className="py-3 px-4 text-ink-500">{r.role}</td>
+                  <td className="py-3 px-4 text-right tabular-nums text-ink-700">{r.leads}</td>
+                  <td className="py-3 px-4 text-right tabular-nums font-semibold text-emerald-600">{r.won}</td>
+                  <td className="py-3 px-4 text-right tabular-nums font-semibold text-ink-900">{money(r.revenue)}</td>
+                </tr>
+              ))}
+              {(!kpi.top_reps || kpi.top_reps.length === 0) && (
+                <tr><td colSpan={6} className="py-6 text-center text-ink-400">No team activity yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* recent tickets */}
       <div className="card p-5">
         <CardHead title="Recent Support Tickets" />

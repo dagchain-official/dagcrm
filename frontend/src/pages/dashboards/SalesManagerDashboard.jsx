@@ -51,6 +51,8 @@ export default function SalesManagerDashboard() {
   const byStage = d.by_stage || [];
   const leadsBySource = d.leads_by_source || [];
   const topReps = d.top_reps || [];
+  const targets = d.targets || [];
+  const barColor = (p) => (p >= 100 ? "bg-emerald-500" : p >= 50 ? "bg-brand-500" : "bg-amber-500");
 
   return (
     <div className="space-y-5">
@@ -104,6 +106,29 @@ export default function SalesManagerDashboard() {
             ))}
             {leadsBySource.length === 0 && <span className="text-sm text-ink-400">No leads yet</span>}
           </div>
+        </div>
+      </div>
+
+      {/* targets */}
+      <div className="card p-5">
+        <CardHead title="Targets vs Achieved" />
+        <div className="space-y-4">
+          {targets.map((t) => (
+            <div key={t.id}>
+              <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="font-semibold text-ink-800">{t.name}</span>
+                <span className="text-ink-500 tabular-nums">
+                  {t.target_type === "revenue" ? `$${Number(t.achieved).toLocaleString()} / $${Number(t.value).toLocaleString()}`
+                    : `${t.achieved} / ${t.value}`}
+                  <span className="ml-2 font-bold text-ink-700">{t.progress_pct}%</span>
+                </span>
+              </div>
+              <div className="h-2.5 rounded-full bg-ink-200 overflow-hidden">
+                <div className={`h-full ${barColor(t.progress_pct)}`} style={{ width: `${Math.min(100, t.progress_pct)}%` }} />
+              </div>
+            </div>
+          ))}
+          {targets.length === 0 && <p className="text-sm text-ink-400 py-4 text-center">No targets set yet</p>}
         </div>
       </div>
 

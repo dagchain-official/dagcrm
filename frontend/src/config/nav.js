@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Shield, UsersRound, Building2, Package,
   Radio, UserPlus, Activity, Target, Briefcase, UserCheck, MessageSquare,
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
-  Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck,
+  Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
@@ -10,7 +10,7 @@ import {
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
   if (to === "/reports") return "reports";
-  if (to === "/permissions") return "__admin__";
+  if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
 };
@@ -78,6 +78,7 @@ export const NAV = [
       { to: "/m/roles", label: "Roles", icon: Shield },
       { to: "/m/teams", label: "Teams", icon: UsersRound },
       { to: "/permissions", label: "Permission Matrix", icon: ShieldCheck },
+      { to: "/integrations", label: "Integration Hub", icon: Plug },
       { to: "/reports", label: "Reports", icon: BarChart3 },
     ],
   },

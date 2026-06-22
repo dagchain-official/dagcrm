@@ -7,6 +7,7 @@ import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
+import Integrations from "./pages/Integrations";
 import Customer360 from "./pages/Customer360";
 import TicketDetail from "./pages/TicketDetail";
 import MyAttendance from "./pages/MyAttendance";
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="ai" element={<AIAssistant />} />
         <Route path="reports" element={<Reports />} />
         <Route path="permissions" element={<Permissions />} />
+        <Route path="integrations" element={<Integrations />} />
         <Route path="profile" element={<ProfileSettings />} />
         <Route path="customers/:id" element={<Customer360 />} />
         <Route path="tickets/:id" element={<TicketDetail />} />

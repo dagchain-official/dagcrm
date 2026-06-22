@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   UserPlus, Target, TrendingUp, CalendarClock, MoreHorizontal, ArrowUpRight,
-  Trophy, Activity, ChevronRight,
+  Trophy, Activity, ChevronRight, DollarSign,
 } from "lucide-react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -76,8 +76,8 @@ export default function UserDashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Kpi icon={UserPlus} label="My Leads" value={d.my_leads} trend={`${d.my_new_leads} new`} color="bg-orange-100 text-orange-600" />
+        <Kpi icon={DollarSign} label="My Revenue" value={money(d.my_revenue)} trend={`${d.my_won} deals won`} color="bg-emerald-100 text-emerald-600" />
         <Kpi icon={Target} label="My Open Deals" value={d.my_open_opportunities} trend={money(d.my_pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
-        <Kpi icon={Trophy} label="Deals Won" value={d.my_won} trend={`${d.my_converted} leads converted`} color="bg-emerald-100 text-emerald-600" />
         <Kpi icon={CalendarClock} label="Follow-ups Due" value={d.my_followups_due} trend={`${d.my_activities_today} done today`} color="bg-rose-100 text-rose-500" />
       </div>
 
