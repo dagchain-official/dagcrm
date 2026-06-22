@@ -51,6 +51,8 @@ class CheckInView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if request.user.is_superuser:
+            return Response({"detail": "Attendance is not applicable for admin."}, status=400)
         att = today_attendance(request.user)
         if not att.checkin:
             att.checkin = timezone.now()
@@ -91,6 +93,8 @@ class ActivityHeartbeatView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if request.user.is_superuser:
+            return Response({"detail": "Activity not tracked for admin."}, status=200)
         act = today_activity(request.user)
         active = 1 if request.data.get("active") else 0
         act.login_duration += 1
@@ -116,6 +120,8 @@ class MyLeavesView(APIView):
 
     def post(self, request):
         from .services import ensure_employee
+        if request.user.is_superuser:
+            return Response({"detail": "Admin does not apply for leave."}, status=400)
         emp = ensure_employee(request.user)
         data = request.data
         if not data.get("start_date") or not data.get("end_date"):

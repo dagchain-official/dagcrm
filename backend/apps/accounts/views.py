@@ -36,6 +36,7 @@ def me_payload(user):
     if ids is not None:
         businesses = businesses.filter(id__in=ids)
     data["dashboard"] = "admin" if user.is_superuser else ROLE_DASHBOARD.get(role, "sales-exec")
+    data["is_superuser"] = user.is_superuser
     data["modules"] = role_permissions(user)
     data["business_ids"] = ids  # null = all
     data["businesses"] = [{"id": b.id, "name": b.name} for b in businesses]

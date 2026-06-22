@@ -11,6 +11,7 @@ import { useTheme } from "../context/ThemeContext";
 import useActivityTracker from "../hooks/useActivityTracker";
 import GlobalSearch from "./GlobalSearch";
 import NotificationBell from "./NotificationBell";
+import ErrorBoundary from "./ErrorBoundary";
 
 const today = new Date().toLocaleDateString("en-GB", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -19,11 +20,13 @@ const today = new Date().toLocaleDateString("en-GB", {
 function Sidebar({ open }) {
   const { user, can } = useAuth();
   const isAdmin = user?.dashboard === "admin";
+  const isSuper = !!user?.is_superuser;
 
   const visible = (it) => {
+    if (it.hideForSuper && isSuper) return false; // founder doesn't mark own attendance/leave
     const mod = moduleOf(it.to);
     if (mod === null) return true; // dashboard, AI
-    if (mod === "__admin__") return isAdmin; // permission matrix
+    if (mod === "__admin__") return isAdmin; // permission matrix / integrations
     return can(mod, "view");
   };
   const groups = NAV
@@ -95,7 +98,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { toggle, isDark } = useTheme();
   const loc = useLocation();
-  useActivityTracker(!!user); // background heartbeat while logged in
+  useActivityTracker(!!user && !user.is_superuser); // not tracked for admin
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -144,7 +147,9 @@ export default function Layout() {
         </header>
 
         <main key={loc.pathname} className="flex-1 overflow-y-auto p-4 lg:p-6 bg-ink-50">
-          <Outlet />
+          <ErrorBoundary routeKey={loc.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

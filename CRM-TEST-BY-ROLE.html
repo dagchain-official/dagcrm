@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DAGOS CRM — Role-by-Role Test Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --brand:#6366f1; --brand-d:#4f46e5; --ink9:#0f172a; --ink8:#1e293b; --ink7:#334155;
+    --ink5:#64748b; --ink4:#94a3b8; --ink2:#e2e8f0; --ink1:#f1f5f9; --ink0:#f8fafc;
+    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --violet:#8b5cf6; --blue:#3b82f6; --teal:#06b6d4; --rose:#f43f5e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:Inter,system-ui,sans-serif;background:var(--ink1);color:var(--ink7);line-height:1.6}
+  a{color:var(--brand-d);text-decoration:none}
+  code{background:var(--ink1);padding:2px 7px;border-radius:6px;font-family:ui-monospace,monospace;font-size:.85em;color:var(--brand-d)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+
+  header{background:linear-gradient(135deg,#1e1b4b,#4338ca);color:#fff;position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;top:-140px;right:-60px;width:420px;height:420px;border-radius:50%;background:rgba(129,140,248,.4);filter:blur(90px)}
+  .hd{position:relative;padding:50px 0 42px}
+  .logo{display:flex;align-items:center;gap:13px;margin-bottom:22px}
+  .hex{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#a5b4fc,#4f46e5);display:grid;place-items:center;font-weight:900;font-size:21px}
+  .logo b{font-size:23px;font-weight:900;letter-spacing:-.5px}
+  .logo span{font-size:10px;letter-spacing:3px;color:#c7d2fe;text-transform:uppercase;display:block;margin-top:-3px}
+  h1{font-size:36px;font-weight:900;letter-spacing:-1px;margin-bottom:10px}
+  .sub{color:#c7d2fe;max-width:640px;font-size:16px}
+  .note{margin-top:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:13px;padding:13px 18px;font-size:14px;color:#e0e7ff}
+  .note b{color:#fff}
+
+  .services{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:-24px 0 26px;position:relative;z-index:3}
+  .svc{background:#fff;border:1px solid var(--ink2);border-radius:16px;padding:15px 18px;box-shadow:0 6px 24px rgba(15,23,42,.07)}
+  .svc .dot{width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block;margin-right:8px;box-shadow:0 0 0 4px rgba(34,197,94,.15)}
+  .svc h4{font-size:14px;color:var(--ink9);font-weight:700}.svc a{font-size:13px;font-family:ui-monospace,monospace}
+
+  .toc{background:#fff;border:1px solid var(--ink2);border-radius:18px;padding:20px 24px;margin-bottom:28px}
+  .toc h3{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--ink5);margin-bottom:12px}
+  .toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+  .toc-grid a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:var(--ink7);font-size:14px;font-weight:500}
+  .toc-grid a:hover{background:var(--ink1)}
+  .toc-grid .av{width:30px;height:30px;border-radius:9px;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center;flex-shrink:0}
+
+  /* role section */
+  .role{background:#fff;border:1px solid var(--ink2);border-radius:20px;margin-bottom:22px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+  .role-head{padding:22px 28px;color:#fff;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .role-head .ava{width:54px;height:54px;border-radius:15px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:24px;font-weight:900;flex-shrink:0}
+  .role-head h2{font-size:24px;font-weight:900;letter-spacing:-.4px}
+  .role-head .cred{font-family:ui-monospace,monospace;font-size:13px;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:10px;margin-top:4px;display:inline-block}
+  .role-head .scope{margin-left:auto;text-align:right;font-size:13px;opacity:.92}
+  .role-body{padding:24px 28px}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  @media(max-width:720px){.twocol{grid-template-columns:1fr}}
+  .panel{border:1px solid var(--ink2);border-radius:14px;padding:16px 18px}
+  .panel h4{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink5);margin-bottom:10px;font-weight:700}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:12.5px;padding:5px 11px;border-radius:8px;font-weight:600;background:var(--ink1);color:var(--ink7)}
+  .chip.ok{background:#ecfdf5;color:#059669}.chip.no{background:#fef2f2;color:#dc2626}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0}
+  th{text-align:left;color:var(--ink4);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;border-bottom:2px solid var(--ink1)}
+  td{padding:10px 12px;border-bottom:1px solid var(--ink1);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .step{font-weight:800;color:var(--brand-d);white-space:nowrap}
+
+  .flowbox{background:var(--ink9);border-radius:12px;padding:16px 18px;margin-top:8px}
+  .flowbox pre{color:#cbd5e1;font-family:ui-monospace,monospace;font-size:12.5px;overflow-x:auto}
+  .why{border-left:4px solid var(--brand);background:#eef2ff;padding:11px 16px;border-radius:0 10px 10px 0;margin-top:14px;font-size:13.5px}
+  .why b{color:var(--brand-d)}
+  .pass{display:inline-flex;gap:8px;margin-top:12px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:7px 13px;border-radius:9px;font-size:13px;font-weight:700}
+
+  .scenario{background:linear-gradient(135deg,#0f172a,#312e81);color:#fff;border-radius:20px;padding:30px 32px;margin-bottom:22px}
+  .scenario h2{font-size:23px;font-weight:900;margin-bottom:4px}
+  .scenario h4{color:#c7d2fe;font-size:15px;margin:18px 0 6px}
+  .scenario ol{list-style:none;counter-reset:s;margin:6px 0}
+  .scenario li{counter-increment:s;padding:9px 0 9px 44px;position:relative;border-bottom:1px solid rgba(255,255,255,.08);font-size:14.5px}
+  .scenario li:last-child{border-bottom:none}
+  .scenario li::before{content:counter(s);position:absolute;left:0;top:7px;width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.14);display:grid;place-items:center;font-weight:800;font-size:12px}
+  .scenario code{background:rgba(255,255,255,.16);color:#fff}.scenario b{color:#fff}
+  .tag{display:inline-block;background:rgba(255,255,255,.18);padding:2px 9px;border-radius:6px;font-size:12px;font-weight:700;margin-right:4px}
+
+  footer{text-align:center;color:var(--ink4);font-size:13px;padding:32px 0 54px}
+  @media print{body{background:#fff}header::after{display:none}.toc{display:none}.role,.scenario{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <div class="logo"><div class="hex">⬡</div><div><b>DAGOS</b><span>CRM Suite</span></div></div>
+    <h1>Role-by-Role Test Guide</h1>
+    <p class="sub">Har user ke <b style="color:#fff">apne side</b> se pura CRM test karo — login, dashboard, kya kar sakte ho, kya nahi, aur step-by-step flow. Super Admin se le kar har role tak.</p>
+    <div class="note">🔑 <b>Login:</b> Super Admin = <code style="color:#fff;background:rgba(255,255,255,.15)">admin@dagos.com / admin123</code> · baaki saare 8 users ka password = <code style="color:#fff;background:rgba(255,255,255,.15)">demo123</code></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="services">
+    <div class="svc"><h4><span class="dot"></span>Frontend</h4><a href="http://localhost:5173" target="_blank">localhost:5173</a></div>
+    <div class="svc"><h4><span class="dot"></span>Backend API</h4><a href="http://localhost:8010/api/docs/" target="_blank">localhost:8010/api/docs</a></div>
+    <div class="svc"><h4><span class="dot"></span>AI Service</h4><a href="http://localhost:8101/docs" target="_blank">localhost:8101/docs</a></div>
+  </div>
+
+  <div class="toc">
+    <h3>Roles — Quick Jump</h3>
+    <div class="toc-grid">
+      <a href="#r1"><span class="av" style="background:#4f46e5">SA</span>Super Admin</a>
+      <a href="#r2"><span class="av" style="background:#0891b2">BH</span>Business Head</a>
+      <a href="#r3"><span class="av" style="background:#7c3aed">SM</span>Sales Manager</a>
+      <a href="#r4"><span class="av" style="background:#2563eb">TL</span>Team Leader</a>
+      <a href="#r5"><span class="av" style="background:#ea580c">RA</span>Sales Exec A</a>
+      <a href="#r6"><span class="av" style="background:#16a34a">RB</span>Sales Exec B</a>
+      <a href="#r7"><span class="av" style="background:#db2777">HR</span>HR</a>
+      <a href="#r8"><span class="av" style="background:#0d9488">SU</span>Support</a>
+      <a href="#r9"><span class="av" style="background:#ca8a04">FI</span>Finance</a>
+      <a href="#scn"><span class="av" style="background:#0f172a">★</span>Cross-Role Flow</a>
+    </div>
+  </div>
+
+  <!-- ============ SUPER ADMIN ============ -->
+  <div class="role" id="r1">
+    <div class="role-head" style="background:linear-gradient(135deg,#4f46e5,#6366f1)">
+      <div class="ava">SA</div>
+      <div><h2>Super Admin</h2><div class="cred">admin@dagos.com / admin123</div></div>
+      <div class="scope">Sab kuch dikhe<br>Full control</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">🏢 Company Dashboard — Total Leads, Revenue, charts, AI Insights, <b>Team Performance</b>, Recent Revenue + Tickets</p></div>
+        <div class="panel"><h4>Sidebar (sab modules)</h4><div class="chips"><span class="chip">Leads</span><span class="chip">Customers</span><span class="chip">Revenue</span><span class="chip">HR</span><span class="chip">Finance</span><span class="chip">Tickets</span><span class="chip">Users</span><span class="chip">Permission Matrix</span><span class="chip">Integration Hub</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Dashboard</td><td>Saare KPIs + charts + Team Performance table</td></tr>
+        <tr><td class="step">2</td><td>Koi bhi module kholo (Leads, Payroll, Finance…)</td><td>Sab accessible, sab CRUD</td></tr>
+        <tr><td class="step">3</td><td>Administration → <b>Permission Matrix</b> → kisi role ka koi permission toggle</td><td>Live save — Layer-3 control</td></tr>
+        <tr><td class="step">4</td><td>Administration → <b>Integration Hub</b> → platform Connect → Send Test Lead</td><td>Test lead Leads page me aaye</td></tr>
+        <tr><td class="step">5</td><td>Leads → Distribute / Import / Export</td><td>Sab actions allowed</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why?</b> Founder/Admin ko poori company ka control chahiye — har data dekhe, permissions set kare, integrations manage kare. Ye "master" view hai.</div>
+      <div class="pass">✓ Super Admin = unrestricted everything</div>
+    </div>
+  </div>
+
+  <!-- ============ BUSINESS HEAD ============ -->
+  <div class="role" id="r2">
+    <div class="role-head" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">
+      <div class="ava">BH</div>
+      <div><h2>Business Head</h2><div class="cred">bh@dagos.com / demo123</div></div>
+      <div class="scope">Company-wide<br>view</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">🏢 Company Dashboard — Business Revenue, Leads, <b>Team Performance</b> widget</p></div>
+        <div class="panel"><h4>Kya dekhe</h4><div class="chips"><span class="chip ok">Leads</span><span class="chip ok">Revenue</span><span class="chip ok">Customers</span><span class="chip ok">Reports</span><span class="chip ok">Team Performance</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Dashboard</td><td>Company revenue, leads, team performance</td></tr>
+        <tr><td class="step">2</td><td>Reports kholo</td><td>Revenue by business, leads by status</td></tr>
+        <tr><td class="step">3</td><td>Saare businesses dikhte hain</td><td>Koi business-restriction nahi</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why?</b> Business Head ko company ki overall health + team performance dekhni hai, par day-to-day operations (jaise permissions/integrations) admin ke paas. Strategic view.</div>
+    </div>
+  </div>
+
+  <!-- ============ SALES MANAGER ============ -->
+  <div class="role" id="r3">
+    <div class="role-head" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6)">
+      <div class="ava">SM</div>
+      <div><h2>Sales Manager</h2><div class="cred">smgr@dagos.com / demo123</div></div>
+      <div class="scope">Saare sales leads<br>Distribute kare</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">📊 Sales Dashboard — Team Leads, Revenue, <b>Targets vs Achieved</b>, Top Performers, Leads by Source</p></div>
+        <div class="panel"><h4>CAN / CAN'T</h4><div class="chips"><span class="chip ok">Leads (full)</span><span class="chip ok">Distribute</span><span class="chip ok">Targets</span><span class="chip no">Revenue edit ✗</span><span class="chip no">Payroll ✗</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Sales Dashboard</td><td>Pipeline, top reps, <b>Targets progress bars</b></td></tr>
+        <tr><td class="step">2</td><td>Leads → <b>Distribute</b> → strategy → Run</td><td>Leads RMs me bant jayein</td></tr>
+        <tr><td class="step">3</td><td>Revenue page kholo</td><td>Data dikhe par <b>New/Edit/Delete buttons NAHI</b> (view-only)</td></tr>
+        <tr><td class="step">4</td><td>HR / Payroll dhoondo sidebar me</td><td>Nahi milega (access nahi)</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why?</b> Sales Manager team ko leads baante + targets monitor kare. Revenue <b>dekhe</b> (forecast ke liye) par <b>edit na kare</b> (galti se paise na badle — wo Finance ka kaam). Yahi Layer-3 hai.</div>
+      <div class="pass">✓ Distribute + Targets ✓ · Revenue view-only ✓</div>
+    </div>
+  </div>
+
+  <!-- ============ TEAM LEADER ============ -->
+  <div class="role" id="r4">
+    <div class="role-head" style="background:linear-gradient(135deg,#2563eb,#3b82f6)">
+      <div class="ava">TL</div>
+      <div><h2>Team Leader</h2><div class="cred">tl@dagos.com / demo123</div></div>
+      <div class="scope">Sirf apni TEAM<br>ka data</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">👥 Team Dashboard — Team Leads, Team Performance, Followups, Members breakdown</p></div>
+        <div class="panel"><h4>Khaas power</h4><div class="chips"><span class="chip ok">Team leads</span><span class="chip ok">Approve team leaves</span><span class="chip no">Doosri team ✗</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Team Dashboard</td><td>Team size, team leads, members performance</td></tr>
+        <tr><td class="step">2</td><td>Leads page kholo</td><td>Sirf apni team (rm.a, rm.b) ke leads — sabke nahi</td></tr>
+        <tr><td class="step">3</td><td>Leaves page</td><td>Apni team ki leaves → <b>Approve/Reject</b> buttons</td></tr>
+        <tr><td class="step">4</td><td>rm.b ki pending leave approve karo</td><td>rm.b ko notification jaye</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why?</b> Team Leader apni team chalata hai — unke leads dekhe, leaves approve kare (kyunki wahi janta hai kaun chhutti le sakta). Doosri team ka data nahi — clean boundaries.</div>
+    </div>
+  </div>
+
+  <!-- ============ SALES EXEC A ============ -->
+  <div class="role" id="r5">
+    <div class="role-head" style="background:linear-gradient(135deg,#ea580c,#f97316)">
+      <div class="ava">RA</div>
+      <div><h2>Sales Executive — Rao A</h2><div class="cred">rm.a@dagos.com / demo123</div></div>
+      <div class="scope">Sirf 3 businesses<br>(Layer-2 demo)</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">👤 My Workspace — My Leads, <b>My Revenue</b>, My Open Deals, Follow-ups Due</p></div>
+        <div class="panel"><h4>Business Access</h4><div class="chips"><span class="chip ok">FX Artha</span><span class="chip ok">DAGChain</span><span class="chip ok">DAGGPT</span><span class="chip no">Energy DAO ✗</span><span class="chip no">DAGDB ✗</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → My Workspace</td><td>Sirf apne leads/deals/revenue</td></tr>
+        <tr><td class="step">2</td><td><b>Businesses page</b> kholo</td><td>Sirf <b>3 businesses</b> (FX Artha, DAGChain, DAGGPT) <span class="step">← Layer 2!</span></td></tr>
+        <tr><td class="step">3</td><td>Leads page</td><td>Sirf apne assigned leads (dusre RM ke nahi)</td></tr>
+        <tr><td class="step">4</td><td>My Attendance → Check In</td><td>Attendance record</td></tr>
+        <tr><td class="step">5</td><td>My Leaves → Apply</td><td>Leave request (manager ko jaye)</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why 3 businesses?</b> Admin ne Permission Matrix → Business Access se rm.a ko sirf 3 businesses diye. Energy DAO uska kaam nahi → uski leads/revenue bhi nahi dikhein. Compare karo rm.b se (jise 6 dikhte hain).</div>
+      <div class="pass">✓ Layer 2 (business restriction) yahan saaf dikhta hai</div>
+    </div>
+  </div>
+
+  <!-- ============ SALES EXEC B ============ -->
+  <div class="role" id="r6">
+    <div class="role-head" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+      <div class="ava">RB</div>
+      <div><h2>Sales Executive — Rao B</h2><div class="cred">rm.b@dagos.com / demo123</div></div>
+      <div class="scope">Saare 6 businesses<br>(no restriction)</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">👤 My Workspace — same as Rao A, par <b>saare 6 businesses</b></p></div>
+        <div class="panel"><h4>Test ka maqsad</h4><p style="font-size:14px">Rao A se compare — same role, alag business access. Yahi Layer-2 ka demo.</p></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Businesses page</td><td>Saare <b>6 businesses</b> dikhein</td></tr>
+        <tr><td class="step">2</td><td>My Attendance → Check In → kaam karo</td><td>Activity tracking</td></tr>
+        <tr><td class="step">3</td><td>Lead Activities → ek <code>call</code> log</td><td>Attendance me "calls" counter auto +1</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why compare?</b> rm.a aur rm.b dono <b>same role</b> (Sales Executive) hain, par rm.a → 3 businesses, rm.b → 6. Ye dikhata hai access <b>per-user</b> control hota hai, sirf role se nahi.</div>
+    </div>
+  </div>
+
+  <!-- ============ HR ============ -->
+  <div class="role" id="r7">
+    <div class="role-head" style="background:linear-gradient(135deg,#db2777,#ec4899)">
+      <div class="ava">HR</div>
+      <div><h2>HR</h2><div class="cred">hr@dagos.com / demo123</div></div>
+      <div class="scope">People, payroll<br>leaves</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">👔 HR Dashboard — Employees, Present Today, Pending Leaves, Payroll total, Headcount by dept</p></div>
+        <div class="panel"><h4>CAN / CAN'T</h4><div class="chips"><span class="chip ok">Employees</span><span class="chip ok">Attendance</span><span class="chip ok">Payroll</span><span class="chip ok">All Leaves</span><span class="chip no">Leads ✗</span><span class="chip no">Revenue ✗</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → HR Dashboard</td><td>Headcount, attendance, leaves</td></tr>
+        <tr><td class="step">2</td><td>Sidebar dekho</td><td>Sirf HR modules — <b>koi Leads/Revenue/Sales nahi</b></td></tr>
+        <tr><td class="step">3</td><td>Payroll → + New → Payslip PDF download</td><td>Branded payslip</td></tr>
+        <tr><td class="step">4</td><td>Leaves → kisi ki leave Approve</td><td>HR sab ki leaves dekhe + approve kare</td></tr>
+        <tr><td class="step">5</td><td>Employees / Attendance / Incentives</td><td>Full CRUD</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why?</b> HR ko sales ke leads/revenue se koi matlab nahi — usko employees, attendance, payroll chahiye. Layer-1 (role) sales modules chhupa deta hai → focused, clean.</div>
+    </div>
+  </div>
+
+  <!-- ============ SUPPORT ============ -->
+  <div class="role" id="r8">
+    <div class="role-head" style="background:linear-gradient(135deg,#0d9488,#14b8a6)">
+      <div class="ava">SU</div>
+      <div><h2>Support</h2><div class="cred">support@dagos.com / demo123</div></div>
+      <div class="scope">Sirf tickets</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">🎫 Support Dashboard — Open/Resolved/Urgent tickets, by Status, by Priority</p></div>
+        <div class="panel"><h4>CAN / CAN'T</h4><div class="chips"><span class="chip ok">Tickets (full)</span><span class="chip ok">Customers (view)</span><span class="chip no">Leads ✗</span><span class="chip no">Payroll ✗</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Support Dashboard</td><td>Ticket counts + priority charts</td></tr>
+        <tr><td class="step">2</td><td>Tickets → 👁 → Ticket Detail</td><td><b>SLA tracker</b> + comments + attachments</td></tr>
+        <tr><td class="step">3</td><td>SLA card dekho</td><td>Elapsed vs target (urgent=4h…) → On-track/Breached</td></tr>
+        <tr><td class="step">4</td><td>Comment add + status update</td><td>Thread me aaye; ticket update auto-count</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why?</b> Support agent ka kaam tickets solve karna — usko sales/HR data nahi chahiye. SLA isliye taake urgent tickets time pe solve hon, late na hon.</div>
+    </div>
+  </div>
+
+  <!-- ============ FINANCE ============ -->
+  <div class="role" id="r9">
+    <div class="role-head" style="background:linear-gradient(135deg,#ca8a04,#eab308)">
+      <div class="ava">FI</div>
+      <div><h2>Finance</h2><div class="cred">finance@dagos.com / demo123</div></div>
+      <div class="scope">Revenue, expenses<br>commissions, profit</div>
+    </div>
+    <div class="role-body">
+      <div class="twocol">
+        <div class="panel"><h4>Dashboard</h4><p style="font-size:14px">💰 Finance Dashboard — Gross/Net Revenue, Expenses, Commissions, <b>Profit</b>, Revenue by business</p></div>
+        <div class="panel"><h4>CAN / CAN'T</h4><div class="chips"><span class="chip ok">Revenue (full)</span><span class="chip ok">Expenses</span><span class="chip ok">Commissions</span><span class="chip ok">Payroll</span><span class="chip no">Leads ✗</span></div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Test step</th><th>Expected</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>Login → Finance Dashboard</td><td>Revenue, expenses, <b>profit</b> calc</td></tr>
+        <tr><td class="step">2</td><td>Revenue → + New → Gross 10000, Commission 1500</td><td><b>Net = $8,500</b> auto</td></tr>
+        <tr><td class="step">3</td><td>Expenses / Commissions add</td><td>Profit recompute</td></tr>
+        <tr><td class="step">4</td><td>Note: Finance Revenue <b>edit</b> kar sakta hai (Sales Manager nahi!)</td><td>Yahi Layer-3 ka farak</td></tr>
+      </tbody></table>
+      <div class="why"><b>Why Finance Revenue edit kar sakta, Sales Manager nahi?</b> Paise ka asli zimmedar Finance hai. Manager dekh sakta hai (forecast), par badal sirf Finance sakta hai. Same module, alag permission per role.</div>
+    </div>
+  </div>
+
+  <!-- ============ CROSS-ROLE SCENARIO ============ -->
+  <div class="scenario" id="scn">
+    <h2>★ Cross-Role Flow — Ek lead sab roles ke through</h2>
+    <p style="color:#c7d2fe;font-size:14px">Real business jaise — ek lead alag-alag logins se travel karta hai. Har login karke ye dekho:</p>
+
+    <h4>🎯 Lead → Paisa (poora cycle, role-by-role)</h4>
+    <ol>
+      <li><span class="tag">admin</span> Integration Hub → platform Connect → <b>Send Test Lead</b> (ya Leads → Import)</li>
+      <li><span class="tag">smgr</span> Leads → <b>Distribute</b> → lead RM ko assign + RM notify</li>
+      <li><span class="tag">rm.b</span> My Workspace me lead dikhe → call log → status <code>qualified</code></li>
+      <li><span class="tag">rm.b</span> <b>Opportunity</b> banao → stage <code>won</code></li>
+      <li><span class="tag">rm.b</span> Customer 360 → Add Revenue</li>
+      <li><span class="tag">tl</span> Team Dashboard me rm.b ki performance dikhe (monitor)</li>
+      <li><span class="tag">finance</span> Finance Dashboard me revenue + profit update</li>
+      <li><span class="tag">admin</span> Incentives → <b>Auto-Calculate</b> → RM ko incentive → Payroll me flow</li>
+      <li><span class="tag">hr</span> Payroll me incentive included → <b>Payslip PDF</b></li>
+    </ol>
+    <p style="font-size:13px;color:#c7d2fe;margin-top:8px">→ 6 alag logins, ek lead — sab connected. Har role apna part dekhe, sirf utna jitna uska kaam.</p>
+
+    <h4>🏖️ Leave cycle (3 roles)</h4>
+    <ol>
+      <li><span class="tag">rm.b</span> My Leaves → Apply</li>
+      <li><span class="tag">tl</span> 🔔 notification → Leaves → Approve (sirf apni team)</li>
+      <li><span class="tag">rm.b</span> 🔔 "approved" → status updated</li>
+    </ol>
+
+    <h4>🔐 Permission change (live, 2 roles)</h4>
+    <ol>
+      <li><span class="tag">admin</span> Permission Matrix → Sales Manager → Revenue "Edit" ON</li>
+      <li><span class="tag">smgr</span> Revenue page → ab <b>Edit button aa gaya</b></li>
+    </ol>
+  </div>
+
+  <!-- quick checklist -->
+  <div class="role">
+    <div class="role-head" style="background:linear-gradient(135deg,#334155,#0f172a)">
+      <div class="ava">✓</div><div><h2>Quick Test Checklist</h2><div class="cred">9 logins, 9 minutes</div></div>
+    </div>
+    <div class="role-body">
+      <table><thead><tr><th>#</th><th>Login</th><th>Check (1 cheez)</th></tr></thead><tbody>
+        <tr><td class="step">1</td><td>admin</td><td>Sab modules + Permission Matrix + Integration Hub dikhe ✓</td></tr>
+        <tr><td class="step">2</td><td>bh</td><td>Company dashboard + Team Performance ✓</td></tr>
+        <tr><td class="step">3</td><td>smgr</td><td>Sales dashboard + Targets; Revenue view-only ✓</td></tr>
+        <tr><td class="step">4</td><td>tl</td><td>Team dashboard; sirf team ke leads ✓</td></tr>
+        <tr><td class="step">5</td><td>rm.a</td><td>Businesses = 3 (Layer 2) ✓</td></tr>
+        <tr><td class="step">6</td><td>rm.b</td><td>Businesses = 6 ✓</td></tr>
+        <tr><td class="step">7</td><td>hr</td><td>Sirf HR modules; koi Leads nahi ✓</td></tr>
+        <tr><td class="step">8</td><td>support</td><td>Sirf tickets + SLA ✓</td></tr>
+        <tr><td class="step">9</td><td>finance</td><td>Finance dashboard; Revenue EDIT kar sake ✓</td></tr>
+      </tbody></table>
+      <div class="pass">✓ Ye 9 chal gaye → 3-layer access + role dashboards sab perfect</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>DAGOS CRM · Role-by-Role Test Guide · 9 logins · admin@dagos.com / admin123 · baaki demo123 · © 2026</footer>
+
+</body>
+</html>

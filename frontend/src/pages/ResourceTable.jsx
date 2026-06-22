@@ -551,9 +551,16 @@ export default function ResourceTable() {
             {distResult && (
               distResult.error ? (
                 <div className="px-3 py-2 rounded-xl bg-rose-50 text-rose-600 text-sm">{distResult.error}</div>
+              ) : !distResult.assigned ? (
+                <div className="px-3 py-2 rounded-xl bg-amber-50 text-amber-700 text-sm">
+                  {distResult.detail || "No unassigned leads to distribute."}
+                </div>
               ) : (
                 <div className="p-3 rounded-xl bg-emerald-50 text-sm">
-                  <p className="font-semibold text-emerald-700">✓ {distResult.assigned} leads assigned ({distResult.strategy.replace("_", " ")})</p>
+                  <p className="font-semibold text-emerald-700">
+                    ✓ {distResult.assigned} lead{distResult.assigned !== 1 ? "s" : ""} assigned
+                    {distResult.strategy ? ` (${distResult.strategy.replace(/_/g, " ")})` : ""}
+                  </p>
                   {distResult.breakdown && (
                     <div className="mt-1 text-xs text-ink-600">
                       {Object.entries(distResult.breakdown).map(([n, c]) => <span key={n} className="inline-block mr-3">{n}: {c}</span>)}
