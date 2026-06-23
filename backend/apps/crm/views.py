@@ -75,6 +75,8 @@ class LeadViewSet(viewsets.ModelViewSet):
         remarks = request.data.get("remarks", "")
         message = request.data.get("message", "")
         user = request.user if request.user.is_authenticated else None
+        if user and user.is_superuser:
+            user = None  # founder's actions not tracked as activity
 
         labels = {"call": "Call placed", "whatsapp": "WhatsApp sent", "email": "Email sent",
                   "proposal": "Proposal sent", "meeting": "Meeting", "note": "Note"}
@@ -135,10 +137,11 @@ class LeadViewSet(viewsets.ModelViewSet):
             counts[u.name] = len(leads)
             rm_by_name[u.name] = u
         else:
+            from apps.accounts.access import ASSIGNABLE_LEAD_ROLES
             rms = list(User.objects.filter(
-                role__name__in=["Sales Executive", "Team Leader"], is_active=True))
+                role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True))
             if not rms:
-                return Response({"detail": "No RMs available to assign."}, status=400)
+                return Response({"detail": "No sales reps available to assign."}, status=400)
 
             if strategy == "performance":
                 # top performers (higher conversion rate) get proportionally more
@@ -269,13 +272,16 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
     filterset_fields = ["lead", "user", "activity_type"]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        # Super Admin's activity is never shown to anyone
+        qs = super().get_queryset().exclude(user__is_superuser=True)
         if not is_admin_view(self.request.user):
             qs = qs.filter(user=self.request.user)
         return qs
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
+        if user and user.is_superuser:
+            user = None  # founder's actions are not tracked as activity
         obj = serializer.save(user=user)
         # Auto activity tracking: real call/note actions bump the counters.
         if user:

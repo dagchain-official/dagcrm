@@ -104,7 +104,7 @@ export default function MyLeaves() {
           <div>
             <label className="label">Leave Type</label>
             <select className="input" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
-              <option value="">— select —</option>
+              <option value="">Select Leave Type</option>
               {data.leave_types.map((t) => <option key={t.id} value={t.id}>{t.leave_name}</option>)}
             </select>
           </div>

@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -154,6 +155,18 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     filterset_fields = ["role", "status", "manager"]
     search_fields = ["name", "email", "employee_id", "phone"]
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def assignable(self, request):
+        """Users a lead can be assigned to — sales roles only.
+        (Super Admin / Business Head / Support / HR / Finance excluded.)"""
+        from .access import ASSIGNABLE_LEAD_ROLES
+        users = (User.objects.filter(role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True)
+                 .select_related("role").order_by("name"))
+        return Response([
+            {"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", "")}
+            for u in users
+        ])
 
 
 class UserPermissionViewSet(viewsets.ModelViewSet):

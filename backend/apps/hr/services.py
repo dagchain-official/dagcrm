@@ -5,7 +5,9 @@ from .models import Attendance, Employee, EmployeeActivity
 
 
 def ensure_employee(user):
-    """Every user maps to one Employee record (auto-created on first use)."""
+    """Map a user to one Employee record. Super Admin is NOT an employee."""
+    if not user or not user.is_authenticated or user.is_superuser:
+        return None
     emp, _ = Employee.objects.get_or_create(
         user=user, defaults={"designation": getattr(user.role, "name", "") or "Staff"}
     )
@@ -14,6 +16,8 @@ def ensure_employee(user):
 
 def today_attendance(user):
     emp = ensure_employee(user)
+    if not emp:
+        return None
     att, _ = Attendance.objects.get_or_create(
         employee=emp, date=timezone.localdate(), defaults={"status": "present"}
     )
@@ -22,14 +26,18 @@ def today_attendance(user):
 
 def today_activity(user):
     emp = ensure_employee(user)
+    if not emp:
+        return None
     act, _ = EmployeeActivity.objects.get_or_create(employee=emp, date=timezone.localdate())
     return act
 
 
 def bump_activity(user, field, n=1):
     """Auto-increment an activity counter from a real action (call/note/ticket)."""
-    if not user or not user.is_authenticated:
+    if not user or not user.is_authenticated or user.is_superuser:
         return
     act = today_activity(user)
+    if not act:
+        return
     setattr(act, field, getattr(act, field) + n)
     act.save(update_fields=[field])

@@ -7,7 +7,12 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
   const [form, setForm] = useState(() => ({ ...initial }));
   const [errors, setErrors] = useState({});
   const set = (k, v) => {
-    setForm((f) => ({ ...f, [k]: v }));
+    setForm((f) => {
+      const next = { ...f, [k]: v };
+      // changing a parent field resets any field that depends on it
+      fields.forEach((fld) => { if (fld.dependsOn === k) next[fld.key] = ""; });
+      return next;
+    });
     setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
   };
 
@@ -39,10 +44,15 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
               {f.label} {f.required && <span className="text-rose-500">*</span>}
             </label>
             {f.type === "ref" ? (
-              <RefSelect field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} />
+              <RefSelect
+                field={f}
+                value={form[f.key]}
+                onChange={(v) => set(f.key, v)}
+                filterParam={f.dependsOn && form[f.dependsOn] ? { [f.dependsParam || f.dependsOn]: form[f.dependsOn] } : undefined}
+              />
             ) : f.type === "select" ? (
               <select className={inputCls(f)} value={form[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)}>
-                <option value="">— select —</option>
+                <option value="">Select {f.label}</option>
                 {f.options.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}

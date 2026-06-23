@@ -78,14 +78,20 @@ class AttendanceTodayView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(_att_payload(today_attendance(request.user)))
+        att = today_attendance(request.user)
+        if not att:
+            return Response({"detail": "Not applicable", "checked_in": False, "checked_out": False})
+        return Response(_att_payload(att))
 
 
 class ActivityTodayView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(_act_payload(today_activity(request.user)))
+        act = today_activity(request.user)
+        if not act:
+            return Response({"detail": "Not applicable"})
+        return Response(_act_payload(act))
 
 
 class ActivityHeartbeatView(APIView):
@@ -154,20 +160,20 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.select_related("user", "department", "manager").all()
+    queryset = Employee.objects.select_related("user", "department", "manager").exclude(user__is_superuser=True)
     serializer_class = EmployeeSerializer
     filterset_fields = ["department", "manager"]
     search_fields = ["user__name", "designation"]
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
-    queryset = Attendance.objects.select_related("employee", "employee__user").all()
+    queryset = Attendance.objects.select_related("employee", "employee__user").exclude(employee__user__is_superuser=True)
     serializer_class = AttendanceSerializer
     filterset_fields = ["employee", "status", "date"]
 
 
 class EmployeeActivityViewSet(viewsets.ModelViewSet):
-    queryset = EmployeeActivity.objects.select_related("employee", "employee__user").all()
+    queryset = EmployeeActivity.objects.select_related("employee", "employee__user").exclude(employee__user__is_superuser=True)
     serializer_class = EmployeeActivitySerializer
     filterset_fields = ["employee", "date"]
 
@@ -183,7 +189,7 @@ class LeaveViewSet(viewsets.ModelViewSet):
     filterset_fields = ["employee", "status", "leave_type"]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().exclude(employee__user__is_superuser=True)
         user = self.request.user
         if can_manage_all_leaves(user):
             return qs  # HR / top management — everyone
@@ -224,7 +230,7 @@ class LeaveViewSet(viewsets.ModelViewSet):
 
 
 class PayrollViewSet(viewsets.ModelViewSet):
-    queryset = Payroll.objects.select_related("employee", "employee__user").all()
+    queryset = Payroll.objects.select_related("employee", "employee__user").exclude(employee__user__is_superuser=True)
     serializer_class = PayrollSerializer
     filterset_fields = ["employee", "month", "year"]
 
@@ -322,7 +328,7 @@ class IncentiveRuleViewSet(BusinessScopedMixin, viewsets.ModelViewSet):
 
 
 class IncentiveViewSet(viewsets.ModelViewSet):
-    queryset = Incentive.objects.select_related("employee", "employee__user", "rule").all()
+    queryset = Incentive.objects.select_related("employee", "employee__user", "rule").exclude(employee__user__is_superuser=True)
     serializer_class = IncentiveSerializer
     filterset_fields = ["employee", "month", "year"]
 

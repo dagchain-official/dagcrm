@@ -238,7 +238,7 @@ export default function ResourceTable() {
   const openDistribute = () => {
     setDistResult(null);
     setDistOpen(true);
-    if (!users.length) api.get("/users/?page_size=200").then(({ data }) => setUsers(data.results || data)).catch(() => {});
+    if (!users.length) api.get("/users/assignable/").then(({ data }) => setUsers(data.results || data)).catch(() => {});
   };
   const runDistribute = async () => {
     setDistRunning(true);
@@ -280,8 +280,8 @@ export default function ResourceTable() {
         <div className="flex items-center gap-2 flex-wrap">
           {(cfg.filters || []).map((f) => (
             f.ref ? (
-              <div key={f.key} className="w-40">
-                <RefSelect field={f} value={filters[f.key] ?? ""} onChange={(v) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: v })); }} />
+              <div key={f.key} className="w-44">
+                <RefSelect field={f} placeholder={`All ${f.label}s`} value={filters[f.key] ?? ""} onChange={(v) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: v })); }} />
               </div>
             ) : (
               <select key={f.key} className="input !py-2 w-auto" value={filters[f.key] ?? ""}

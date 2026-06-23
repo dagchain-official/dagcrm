@@ -50,11 +50,12 @@ def normalize(platform, payload):
 
 
 def _next_rm():
-    """Pick the Sales Executive / Team Leader with the fewest leads (load-balanced)."""
+    """Pick the sales rep with the fewest leads (load-balanced)."""
     from django.contrib.auth import get_user_model
+    from apps.accounts.access import ASSIGNABLE_LEAD_ROLES
     from apps.crm.models import Lead
     User = get_user_model()
-    rms = list(User.objects.filter(role__name__in=["Sales Executive", "Team Leader"], is_active=True))
+    rms = list(User.objects.filter(role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True))
     if not rms:
         return None
     return min(rms, key=lambda u: Lead.objects.filter(assigned_to=u).count())

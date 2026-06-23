@@ -120,14 +120,18 @@ export const RESOURCES = {
       { key: "phone", label: "Phone" },
       { key: "country", label: "Country" },
       { key: "source", label: "Source", type: "ref", ref: "lead-sources", labelKey: "name" },
-      { key: "assigned_to", label: "Assign to", type: "ref", ref: "users", labelKey: "name" },
+      { key: "assigned_to", label: "Assign to", type: "ref", ref: "users/assignable", labelKey: "name" },
       { key: "status", label: "Status", type: "select", options: sel("new", "contacted", "qualified", "converted", "lost") },
     ],
   },
   "lead-activities": {
     title: "Lead Activities", endpoint: "lead-activities", search: false,
+    filters: [
+      { key: "lead", label: "Lead", ref: "leads", labelKey: "name" },
+      { key: "activity_type", label: "Type", options: sel("call", "whatsapp", "email", "meeting", "note", "proposal") },
+    ],
     columns: [
-      { key: "lead", label: "Lead #" },
+      { key: "lead_name", label: "Lead" },
       { key: "activity_type", label: "Type", badge: true },
       { key: "remarks", label: "Remarks" },
       { key: "followup_date", label: "Follow-up" },
@@ -181,7 +185,13 @@ export const RESOURCES = {
   },
   communications: {
     title: "Communications", endpoint: "communications",
+    filters: [
+      { key: "lead", label: "Lead", ref: "leads", labelKey: "name" },
+      { key: "customer", label: "Customer", ref: "customers", labelKey: "name" },
+      { key: "channel", label: "Channel", options: sel("whatsapp", "email", "sms", "telegram") },
+    ],
     columns: [
+      { key: "contact", label: "Contact" },
       { key: "channel", label: "Channel", badge: true },
       { key: "direction", label: "Direction" },
       { key: "message", label: "Message" },
@@ -231,7 +241,7 @@ export const RESOURCES = {
     fields: [
       { key: "customer", label: "Customer", type: "ref", ref: "customers", labelKey: "name", required: true },
       { key: "business", label: "Business", type: "ref", ref: "businesses", labelKey: "name" },
-      { key: "product", label: "Product", type: "ref", ref: "products", labelKey: "name" },
+      { key: "product", label: "Product", type: "ref", ref: "products", labelKey: "name", dependsOn: "business" },
       { key: "gross_revenue", label: "Gross revenue", type: "number", required: true },
       { key: "commission", label: "Commission", type: "number" },
     ],
@@ -268,15 +278,16 @@ export const RESOURCES = {
     title: "Employees", endpoint: "employees", search: true,
     columns: [
       { key: "user_name", label: "Name" },
-      { key: "designation", label: "Designation" },
+      { key: "role_name", label: "Role" },
       { key: "department_name", label: "Department" },
       { key: "salary", label: "Salary", money: true },
       { key: "joining_date", label: "Joined" },
     ],
     fields: [
-      { key: "user", label: "User", type: "ref", ref: "users", labelKey: "name", required: true },
+      { key: "name", label: "Name", required: true },
+      { key: "email", label: "Email", type: "email" },
+      { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
       { key: "department", label: "Department", type: "ref", ref: "departments", labelKey: "department_name" },
-      { key: "designation", label: "Designation" },
       { key: "salary", label: "Salary", type: "number" },
       { key: "joining_date", label: "Joining date", type: "date" },
     ],
@@ -373,13 +384,14 @@ export const RESOURCES = {
   "incentive-rules": {
     title: "Incentive Rules", endpoint: "incentive-rules",
     columns: [
-      { key: "business", label: "Business #" },
+      { key: "business_name", label: "Business" },
+      { key: "product_name", label: "Product" },
       { key: "formula_type", label: "Type", badge: true },
       { key: "formula_value", label: "Value" },
     ],
     fields: [
       { key: "business", label: "Business", type: "ref", ref: "businesses", labelKey: "name", required: true },
-      { key: "product", label: "Product", type: "ref", ref: "products", labelKey: "name" },
+      { key: "product", label: "Product", type: "ref", ref: "products", labelKey: "name", dependsOn: "business" },
       { key: "formula_type", label: "Formula type", type: "select", options: sel("percentage", "fixed", "slab") },
       { key: "formula_value", label: "Value", type: "number" },
     ],
@@ -389,7 +401,7 @@ export const RESOURCES = {
     recalc: { path: "incentives/calculate", title: "Auto-Calculate Incentives" },
     filters: [],
     columns: [
-      { key: "employee", label: "Employee #" },
+      { key: "employee_name", label: "Employee" },
       { key: "amount", label: "Amount", money: true },
       { key: "month", label: "Month" },
       { key: "year", label: "Year" },

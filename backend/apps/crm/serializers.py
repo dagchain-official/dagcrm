@@ -57,10 +57,11 @@ class LeadInterestSerializer(serializers.ModelSerializer):
 
 class LeadActivitySerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.name", read_only=True)
+    lead_name = serializers.CharField(source="lead.name", read_only=True)
 
     class Meta:
         model = LeadActivity
-        fields = ["id", "lead", "user", "user_name", "activity_type", "remarks",
+        fields = ["id", "lead", "lead_name", "user", "user_name", "activity_type", "remarks",
                   "followup_date", "next_action", "created_at"]
         read_only_fields = ["created_at"]
 
@@ -110,10 +111,22 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class CommunicationSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source="lead.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    contact = serializers.SerializerMethodField()
+
     class Meta:
         model = Communication
-        fields = "__all__"
+        fields = ["id", "lead", "lead_name", "customer", "customer_name", "contact",
+                  "channel", "message", "direction", "created_at"]
         read_only_fields = ["created_at"]
+
+    def get_contact(self, obj):
+        if obj.customer_id and obj.customer:
+            return obj.customer.name
+        if obj.lead_id and obj.lead:
+            return obj.lead.name
+        return "—"
 
 
 class TargetAssignmentSerializer(serializers.ModelSerializer):

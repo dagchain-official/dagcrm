@@ -14,6 +14,9 @@ ROLES = [
 # Roles that see ALL data (company-wide), bypass business scoping.
 MANAGER_ROLES = {"Super Admin", "Business Head"}
 
+# Roles that leads can be assigned to (sales chain only).
+ASSIGNABLE_LEAD_ROLES = ["Sales Manager", "Team Leader", "Sales Executive"]
+
 # Which dashboard each role lands on (frontend route key).
 ROLE_DASHBOARD = {
     "Super Admin": "admin",
