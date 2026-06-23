@@ -52,6 +52,57 @@ class LeadViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
 
+    @action(detail=True, methods=["get"])
+    def overview(self, request, pk=None):
+        """Lead 360 — profile + activity timeline + opportunities."""
+        lead = self.get_object()
+        acts = lead.activities.select_related("user").all()
+        opps = lead.opportunities.select_related("product").all()
+        return Response({
+            "lead": LeadSerializer(lead).data,
+            "activities": LeadActivitySerializer(acts, many=True).data,
+            "opportunities": OpportunitySerializer(opps, many=True).data,
+        })
+
+    @action(detail=True, methods=["post"])
+    def engage(self, request, pk=None):
+        """Call / WhatsApp / Email / Proposal — logs activity, auto-advances
+        status (via signal), and triggers Twilio for call/whatsapp."""
+        from .telephony import make_call, send_whatsapp
+
+        lead = self.get_object()
+        kind = request.data.get("type", "note")          # call|whatsapp|email|proposal|note
+        remarks = request.data.get("remarks", "")
+        message = request.data.get("message", "")
+        user = request.user if request.user.is_authenticated else None
+
+        labels = {"call": "Call placed", "whatsapp": "WhatsApp sent", "email": "Email sent",
+                  "proposal": "Proposal sent", "meeting": "Meeting", "note": "Note"}
+        activity = LeadActivity.objects.create(
+            lead=lead, user=user, activity_type=kind,
+            remarks=remarks or labels.get(kind, kind),
+        )
+
+        telephony = None
+        if kind in ("whatsapp", "email", "proposal"):
+            Communication.objects.create(
+                lead=lead,
+                channel="whatsapp" if kind == "whatsapp" else "email",
+                direction="outbound",
+                message=message or (f"{labels.get(kind)} to {lead.name}"),
+            )
+        if kind == "call":
+            telephony = make_call(lead.phone, getattr(user, "phone", "") or None)
+        elif kind == "whatsapp":
+            telephony = send_whatsapp(lead.phone, message or f"Hi {lead.name}, following up.")
+
+        lead.refresh_from_db()  # status may have auto-advanced via signal
+        return Response({
+            "activity": LeadActivitySerializer(activity).data,
+            "lead": LeadSerializer(lead).data,
+            "telephony": telephony,
+        })
+
     @action(detail=False, methods=["post"])
     def distribute(self, request):
         """Auto-assign leads to RMs: round_robin | performance | manual."""

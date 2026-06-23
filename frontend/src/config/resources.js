@@ -97,7 +97,7 @@ export const RESOURCES = {
     fields: [{ key: "name", label: "Source name", required: true }],
   },
   leads: {
-    title: "Leads", endpoint: "leads", search: true, importable: true,
+    title: "Leads", endpoint: "leads", search: true, importable: true, detailPath: "/leads",
     distribute: { path: "leads/distribute" },
     filters: [
       { key: "status", label: "Status", options: sel("new", "contacted", "qualified", "converted", "lost") },

@@ -69,7 +69,7 @@ class LeadInterest(models.Model):
 
 class LeadActivity(models.Model):
     TYPES = [("call", "Call"), ("whatsapp", "WhatsApp"), ("email", "Email"),
-             ("meeting", "Meeting"), ("note", "Note")]
+             ("meeting", "Meeting"), ("note", "Note"), ("proposal", "Proposal")]
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="activities")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     activity_type = models.CharField(max_length=20, choices=TYPES, default="call")

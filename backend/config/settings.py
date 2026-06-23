@@ -148,3 +148,13 @@ else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "DAGOS CRM <no-reply@dagos.com>")
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "1") == "1"  # email on in-app notifications
+
+# ---- Twilio (telephony / WhatsApp). Set these to enable LIVE calling/messaging. ----
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")       # voice caller id
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")   # e.g. +14155238886
+
+# ---- FX Artha external CRM API (read-only). Set these to go live. ----
+FXARTHA_API_URL = os.getenv("FXARTHA_API_URL", "")   # e.g. https://admin.fxartha.com/api/v1/crm
+FXARTHA_API_KEY = os.getenv("FXARTHA_API_KEY", "")
