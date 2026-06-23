@@ -27,7 +27,6 @@ function Sidebar({ open }) {
     const mod = moduleOf(it.to);
     if (mod === null) return true; // dashboard, AI
     if (mod === "__admin__") return isAdmin; // permission matrix / integrations
-    if (mod === "__manager__") return isAdmin || user?.role_name === "Sales Manager"; // FX Artha
     return can(mod, "view");
   };
   const groups = NAV

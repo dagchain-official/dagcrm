@@ -8,7 +8,6 @@ import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
 import Integrations from "./pages/Integrations";
-import FXArtha from "./pages/FXArtha";
 import Customer360 from "./pages/Customer360";
 import LeadDetail from "./pages/LeadDetail";
 import TicketDetail from "./pages/TicketDetail";
@@ -48,7 +47,6 @@ export default function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="integrations" element={<Integrations />} />
-        <Route path="fxartha" element={<FXArtha />} />
         <Route path="profile" element={<ProfileSettings />} />
         <Route path="customers/:id" element={<Customer360 />} />
         <Route path="leads/:id" element={<LeadDetail />} />
