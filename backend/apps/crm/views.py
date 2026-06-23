@@ -8,7 +8,8 @@ from apps.accounts.utils import is_admin_view
 
 from .models import (
     Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, Opportunity, Product, Proposal, Target, TargetAssignment,
+    LeadInterest, LeadSource, Opportunity, Product, Proposal, ProposalItem, Target,
+    TargetAssignment,
 )
 from .serializers import (
     AttachmentSerializer, BusinessSerializer, CommunicationSerializer,
@@ -413,23 +414,133 @@ class ProposalViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
 
+    def _actor(self, request):
+        """Logged-in user, except the founder/superuser (whose actions aren't tracked)."""
+        user = request.user if request.user.is_authenticated else None
+        return None if (user and getattr(user, "is_superuser", False)) else user
+
     @action(detail=True, methods=["post"])
     def send(self, request, pk=None):
         """Mark a proposal as sent + log it on the lead's timeline (auto-advances status)."""
         from django.utils import timezone
         proposal = self.get_object()
+        if proposal.status not in ("draft", "revised"):
+            return Response({"detail": f"Cannot send a {proposal.status} proposal."}, status=400)
         proposal.status = "sent"
         proposal.sent_at = timezone.now()
-        proposal.save(update_fields=["status", "sent_at"])
+        proposal.sent_by = self._actor(request)
+        proposal.save(update_fields=["status", "sent_at", "sent_by"])
         if proposal.lead_id:
-            user = request.user if request.user.is_authenticated else None
-            if user and getattr(user, "is_superuser", False):
-                user = None
             LeadActivity.objects.create(
-                lead=proposal.lead, user=user, activity_type="proposal",
-                remarks=f"Proposal sent: {proposal.title} (${proposal.total})",
+                lead=proposal.lead, user=self._actor(request), activity_type="proposal",
+                remarks=f"Proposal {proposal.reference} sent: {proposal.title} (${proposal.total})",
             )
         return Response(self.get_serializer(proposal).data)
+
+    @action(detail=True, methods=["post"])
+    def revise(self, request, pk=None):
+        """Create the next version of a proposal. The old version is frozen
+        (is_current=False) so the full revision history is preserved."""
+        old = self.get_object()
+        siblings = Proposal.objects.filter(number=old.number) if old.number else Proposal.objects.filter(pk=old.pk)
+        next_version = max((s.version for s in siblings), default=old.version) + 1
+
+        new = Proposal.objects.create(
+            number=old.number, version=next_version, parent=old, is_current=True,
+            title=old.title, lead=old.lead, customer=old.customer, business=old.business,
+            status="draft", valid_until=old.valid_until, notes=old.notes,
+            tax_percent=old.tax_percent, created_by=self._actor(request),
+        )
+        for it in old.items.all():
+            ProposalItem.objects.create(
+                proposal=new, description=it.description, quantity=it.quantity,
+                unit_price=it.unit_price, discount=it.discount,
+            )
+        new.recompute()
+        # freeze every other version under this number
+        siblings.exclude(pk=new.pk).update(is_current=False)
+        return Response(self.get_serializer(new).data, status=201)
+
+    @action(detail=True, methods=["post"])
+    def accept(self, request, pk=None):
+        """Accept a proposal and drive the full CRM flow:
+        lead → customer (convert) → opportunity (won) → revenue → customer products."""
+        from django.utils import timezone
+        from apps.sales.models import Revenue
+
+        p = self.get_object()
+        if p.status == "accepted":
+            return Response({"detail": "Proposal already accepted."}, status=400)
+
+        p.status = "accepted"
+        p.accepted_at = timezone.now()
+        p.save(update_fields=["status", "accepted_at"])
+
+        customer = p.customer
+        # 1) Convert the lead into a customer if needed.
+        if not customer and p.lead_id:
+            lead = p.lead
+            customer = Customer.objects.create(
+                name=lead.name, email=lead.email, phone=lead.phone,
+                country=lead.country, lead=lead,
+            )
+            if lead.status != "converted":
+                lead.status = "converted"
+                lead.save(update_fields=["status"])
+            p.customer = customer
+            p.save(update_fields=["customer"])
+
+        # match proposal line items back to catalogue products (by name within the business)
+        matched = []
+        if p.business_id:
+            for it in p.items.all():
+                prod = Product.objects.filter(business_id=p.business_id, name=it.description).first()
+                if prod:
+                    matched.append(prod)
+
+        # 2) Close-won opportunity off the lead.
+        if p.lead_id:
+            Opportunity.objects.create(
+                lead=p.lead, product=matched[0] if matched else None,
+                assigned_to=p.lead.assigned_to, stage="won",
+                expected_revenue=p.total, status="closed",
+            )
+
+        # 3) Book revenue + attach products to the Customer 360 profile.
+        if customer:
+            for prod in matched:
+                CustomerProduct.objects.get_or_create(
+                    customer=customer, business_id=p.business_id, product=prod,
+                    defaults={"status": "active"},
+                )
+            Revenue.objects.create(
+                customer=customer, business_id=p.business_id,
+                product=matched[0] if matched else None,
+                gross_revenue=p.total, commission=0,
+            )
+
+        # 4) Timeline note for accountability.
+        if p.lead_id:
+            LeadActivity.objects.create(
+                lead=p.lead, user=self._actor(request), activity_type="note",
+                remarks=f"Proposal {p.reference} accepted (${p.total}) — converted to revenue.",
+            )
+        return Response(self.get_serializer(p).data)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        """Mark a proposal as rejected (lost) and log it."""
+        from django.utils import timezone
+        p = self.get_object()
+        p.status = "rejected"
+        p.rejected_at = timezone.now()
+        p.save(update_fields=["status", "rejected_at"])
+        if p.lead_id:
+            LeadActivity.objects.create(
+                lead=p.lead, user=self._actor(request), activity_type="note",
+                remarks=f"Proposal {p.reference} rejected by client.",
+            )
+        return Response(self.get_serializer(p).data)
 
     @action(detail=True, methods=["get"])
     def pdf(self, request, pk=None):
@@ -446,16 +557,22 @@ class ProposalViewSet(viewsets.ModelViewSet):
         c = canvas.Canvas(buf, pagesize=A4)
         w, h = A4
         brand = colors.HexColor("#4f46e5")
+        biz = p.business.name if p.business_id else "DAGOS"
 
+        # ---- branded header (per-business letterhead) ----
         c.setFillColor(brand)
         c.rect(0, h - 32 * mm, w, 32 * mm, fill=1, stroke=0)
         c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 22)
-        c.drawString(20 * mm, h - 18 * mm, "DAGOS")
-        c.setFont("Helvetica", 11)
-        c.drawString(20 * mm, h - 25 * mm, "Proposal")
-        c.setFont("Helvetica-Bold", 11)
-        c.drawRightString(w - 20 * mm, h - 18 * mm, p.status.upper())
+        c.drawString(20 * mm, h - 18 * mm, biz)
+        c.setFont("Helvetica", 10)
+        c.drawString(20 * mm, h - 25 * mm, "Commercial Proposal")
+        c.setFont("Helvetica-Bold", 12)
+        c.drawRightString(w - 20 * mm, h - 15 * mm, p.number or "DRAFT")
+        c.setFont("Helvetica", 10)
+        c.drawRightString(w - 20 * mm, h - 21 * mm, f"Version {p.version}  ·  {p.status.upper()}")
+        if p.valid_until:
+            c.drawRightString(w - 20 * mm, h - 27 * mm, f"Valid until {p.valid_until}")
 
         y = h - 46 * mm
         c.setFillColor(colors.HexColor("#0f172a"))
@@ -464,45 +581,73 @@ class ProposalViewSet(viewsets.ModelViewSet):
         c.setFont("Helvetica", 10)
         c.setFillColor(colors.HexColor("#475569"))
         contact = (p.customer.name if p.customer_id else p.lead.name if p.lead_id else "—")
-        c.drawString(20 * mm, y - 7 * mm, f"For: {contact}")
-        if p.valid_until:
-            c.drawString(20 * mm, y - 12 * mm, f"Valid until: {p.valid_until}")
+        c.drawString(20 * mm, y - 7 * mm, f"Prepared for: {contact}")
+        if p.created_by_id:
+            c.drawString(20 * mm, y - 12 * mm, f"Prepared by: {p.created_by.name}")
 
-        # items table
+        # ---- items table (with discount column) ----
         ty = y - 24 * mm
         c.setFillColor(colors.HexColor("#0f172a"))
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(20 * mm, ty, "Service")
-        c.drawRightString(w - 90 * mm, ty, "Qty")
-        c.drawRightString(w - 55 * mm, ty, "Unit Price")
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(20 * mm, ty, "Service / Product")
+        c.drawRightString(w - 95 * mm, ty, "Qty")
+        c.drawRightString(w - 70 * mm, ty, "Unit Price")
+        c.drawRightString(w - 45 * mm, ty, "Disc %")
         c.drawRightString(w - 20 * mm, ty, "Amount")
         c.setStrokeColor(colors.HexColor("#e2e8f0"))
         c.line(20 * mm, ty - 2 * mm, w - 20 * mm, ty - 2 * mm)
-        c.setFont("Helvetica", 10)
+        c.setFont("Helvetica", 9)
         c.setFillColor(colors.HexColor("#334155"))
         ry = ty - 9 * mm
         for it in p.items.all():
-            c.drawString(20 * mm, ry, (it.description or "")[:50])
-            c.drawRightString(w - 90 * mm, ry, f"{it.quantity:g}")
-            c.drawRightString(w - 55 * mm, ry, f"${it.unit_price:,.2f}")
+            c.drawString(20 * mm, ry, (it.description or "")[:46])
+            c.drawRightString(w - 95 * mm, ry, f"{it.quantity:g}")
+            c.drawRightString(w - 70 * mm, ry, f"${it.unit_price:,.2f}")
+            c.drawRightString(w - 45 * mm, ry, f"{it.discount:g}%")
             c.drawRightString(w - 20 * mm, ry, f"${it.amount:,.2f}")
             ry -= 8 * mm
 
+        # ---- totals breakdown ----
+        c.setStrokeColor(colors.HexColor("#e2e8f0"))
+        c.line(w - 80 * mm, ry - 1 * mm, w - 20 * mm, ry - 1 * mm)
+        by = ry - 7 * mm
+        c.setFont("Helvetica", 10)
+        c.setFillColor(colors.HexColor("#475569"))
+        for label, val in [("Subtotal", p.subtotal), ("Discount", -p.discount_total),
+                           (f"Tax ({p.tax_percent:g}%)", p.tax_amount)]:
+            c.drawString(w - 80 * mm, by, label)
+            c.drawRightString(w - 20 * mm, by, f"${val:,.2f}")
+            by -= 6 * mm
+
         c.setFillColor(brand)
-        c.roundRect(w - 80 * mm, ry - 16 * mm, 60 * mm, 12 * mm, 3 * mm, fill=1, stroke=0)
+        c.roundRect(w - 80 * mm, by - 13 * mm, 60 * mm, 12 * mm, 3 * mm, fill=1, stroke=0)
         c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(w - 76 * mm, ry - 12 * mm, "TOTAL")
-        c.drawRightString(w - 24 * mm, ry - 12 * mm, f"${p.total:,.2f}")
+        c.drawString(w - 76 * mm, by - 9 * mm, "TOTAL")
+        c.drawRightString(w - 24 * mm, by - 9 * mm, f"${p.total:,.2f}")
 
+        # ---- notes, terms & signature ----
+        fy = by - 28 * mm
+        c.setFillColor(colors.HexColor("#64748b"))
+        c.setFont("Helvetica", 9)
         if p.notes:
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.setFont("Helvetica", 9)
-            c.drawString(20 * mm, ry - 26 * mm, f"Notes: {p.notes[:90]}")
+            c.drawString(20 * mm, fy, f"Notes: {p.notes[:95]}")
+            fy -= 6 * mm
+        c.drawString(20 * mm, fy, "Terms: Prices in USD. This proposal is valid until the date above "
+                                  "and subject to acceptance.")
+        c.setStrokeColor(colors.HexColor("#cbd5e1"))
+        c.line(20 * mm, 28 * mm, 80 * mm, 28 * mm)
+        c.line(w - 80 * mm, 28 * mm, w - 20 * mm, 28 * mm)
+        c.setFillColor(colors.HexColor("#94a3b8"))
+        c.setFont("Helvetica", 8)
+        c.drawString(20 * mm, 24 * mm, "Authorised Signature")
+        c.drawString(w - 80 * mm, 24 * mm, "Client Acceptance")
+        c.drawCentredString(w / 2, 12 * mm, f"{biz} · Generated by DAGOS · {p.reference}")
 
         c.showPage()
         c.save()
         buf.seek(0)
         resp = HttpResponse(buf, content_type="application/pdf")
-        resp["Content-Disposition"] = f'attachment; filename="proposal_{p.id}.pdf"'
+        fname = (p.number or f"proposal_{p.id}").replace(" ", "_")
+        resp["Content-Disposition"] = f'attachment; filename="{fname}_v{p.version}.pdf"'
         return resp

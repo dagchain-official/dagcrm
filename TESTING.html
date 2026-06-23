@@ -126,17 +126,18 @@
       <a href="#s3"><span class="n">3</span>Leads</a>
       <a href="#s4"><span class="n">4</span>Lead Activities</a>
       <a href="#s5"><span class="n">5</span>Opportunities</a>
-      <a href="#s6"><span class="n">6</span>Customers</a>
-      <a href="#s7"><span class="n">7</span>Communications</a>
-      <a href="#s8"><span class="n">8</span>Targets & Revenue</a>
-      <a href="#s9"><span class="n">9</span>Setup</a>
-      <a href="#s10"><span class="n">10</span>Support Desk</a>
-      <a href="#s11"><span class="n">11</span>HR & People</a>
-      <a href="#s12"><span class="n">12</span>Finance</a>
-      <a href="#s13"><span class="n">13</span>Administration</a>
-      <a href="#s14"><span class="n">14</span>Reports</a>
-      <a href="#s15"><span class="n">15</span>AI Assistant</a>
-      <a href="#s16"><span class="n">16</span>Responsive UI</a>
+      <a href="#s6"><span class="n">6</span>Proposals</a>
+      <a href="#s7"><span class="n">7</span>Customers</a>
+      <a href="#s8"><span class="n">8</span>Communications</a>
+      <a href="#s9"><span class="n">9</span>Targets & Revenue</a>
+      <a href="#s10"><span class="n">10</span>Setup</a>
+      <a href="#s11"><span class="n">11</span>Support Desk</a>
+      <a href="#s12"><span class="n">12</span>HR & People</a>
+      <a href="#s13"><span class="n">13</span>Finance</a>
+      <a href="#s14"><span class="n">14</span>Administration</a>
+      <a href="#s15"><span class="n">15</span>Reports</a>
+      <a href="#s16"><span class="n">16</span>AI Assistant</a>
+      <a href="#s17"><span class="n">17</span>Responsive UI</a>
       <a href="#smoke"><span class="n">★</span>Smoke Test</a>
     </div>
   </div>
@@ -221,135 +222,156 @@ cd "e:/crm doc/frontend" && npm run dev</pre>
 
   <!-- 6 -->
   <section id="s6">
-    <div class="s-head"><div class="s-num">6</div><div><h2>Customers</h2></div></div>
+    <div class="s-head"><div class="s-num">6</div><div><h2>Proposals <span class="badge b-violet">professional flow</span></h2><p>Versioning · discount/tax · accept → revenue tak pura CRM flow</p></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">6.1</td><td>Sidebar → <b>Customers</b></td><td class="expect">~29 customers</td></tr>
-      <tr><td class="step">6.2</td><td>Search me naam</td><td class="expect">Filter ho</td></tr>
-      <tr><td class="step">6.3</td><td>+ New → Name, Email, Phone, Country → Save</td><td class="expect">Naya customer</td></tr>
+      <tr><td class="step">6.1</td><td>Sidebar → <b>Proposals</b></td><td class="expect">Ref #, Title, For, Items, Total, Status, Sent + 3 cards</td></tr>
+      <tr><td class="step">6.2</td><td><b>+ New Proposal</b></td><td class="expect">Wide form — header card + Services table</td></tr>
+      <tr><td class="step">6.3</td><td>Title, For = Lead, lead select, Business = <code>FX Artha</code></td><td class="expect">Services dropdown me us business ke products</td></tr>
+      <tr><td class="step">6.4</td><td>Item: Qty <code>2</code>, Unit <code>1000</code>, Disc <code>10%</code>, Tax <code>18%</code></td><td class="expect">Subtotal 2,500 → −200 → Tax 414 → <b>Total 2,714</b></td></tr>
+      <tr><td class="step">6.5</td><td><b>Save Draft</b></td><td class="expect">Ref <code>PRO-2026-00xx</code>, <b>v1</b>, <span class="badge">draft</span></td></tr>
+      <tr><td class="step">6.6</td><td>Draft → <b>Send</b></td><td class="expect"><span class="badge b-green">sent</span> + lead timeline activity</td></tr>
+      <tr><td class="step">6.7</td><td>Sent → <b>Accept</b> ✓</td><td class="expect"><span class="badge b-green">accepted</span> — opportunity won + revenue booked</td></tr>
+      <tr><td class="step">6.8</td><td>Customers / Customer 360 kholo</td><td class="expect">Lead <b>customer</b> ban gaya + Revenue record + product linked</td></tr>
+      <tr><td class="step">6.9</td><td>Opportunities kholo</td><td class="expect">Naya <span class="badge b-green">won</span> opp (Expected = total)</td></tr>
+      <tr><td class="step">6.10</td><td><b>Revise</b> (branch icon)</td><td class="expect">Naya <b>v2</b> draft, purana version freeze</td></tr>
+      <tr><td class="step">6.11</td><td>Accepted ko <b>Edit</b></td><td class="expect">Block — "create a revision instead"</td></tr>
+      <tr><td class="step">6.12</td><td><b>PDF</b> download</td><td class="expect">Branded PDF: letterhead, Ref+version, totals breakdown, signature</td></tr>
     </tbody></table>
+    <div class="key"><b>Key test:</b> Accept → lead→customer + revenue + won-opportunity teeno auto. Har edit = naya version (audit trail).</div>
   </section>
 
   <!-- 7 -->
   <section id="s7">
-    <div class="s-head"><div class="s-num">7</div><div><h2>Communications</h2></div></div>
+    <div class="s-head"><div class="s-num">7</div><div><h2>Customers</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">7.1</td><td>Sidebar → <b>Communications</b></td><td class="expect">Channel, Direction, Message, When</td></tr>
-      <tr><td class="step">7.2</td><td>+ New → Channel = <code>whatsapp</code>, Direction = outbound, Customer, Message → Save</td><td class="expect">Naya record</td></tr>
+      <tr><td class="step">7.1</td><td>Sidebar → <b>Customers</b></td><td class="expect">~29 customers</td></tr>
+      <tr><td class="step">7.2</td><td>Search me naam</td><td class="expect">Filter ho</td></tr>
+      <tr><td class="step">7.3</td><td>+ New → Name, Email, Phone, Country → Save</td><td class="expect">Naya customer</td></tr>
     </tbody></table>
   </section>
 
   <!-- 8 -->
   <section id="s8">
-    <div class="s-head"><div class="s-num">8</div><div><h2>Targets &amp; Revenue</h2></div></div>
+    <div class="s-head"><div class="s-num">8</div><div><h2>Communications</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">8.1</td><td><b>Targets</b> → table</td><td class="expect">Har business ka Q-Target</td></tr>
-      <tr><td class="step">8.2</td><td><b>Revenue</b> → Gross, Commission, Net columns</td><td class="expect">Net = Gross − Commission</td></tr>
-      <tr><td class="step">8.3</td><td>Revenue + New → Gross = <code>10000</code>, Commission = <code>1500</code> → Save</td><td class="expect">Net = <b>$8,500</b> (auto)</td></tr>
+      <tr><td class="step">8.1</td><td>Sidebar → <b>Communications</b></td><td class="expect">Channel, Direction, Message, When</td></tr>
+      <tr><td class="step">8.2</td><td>+ New → Channel = <code>whatsapp</code>, Direction = outbound, Customer, Message → Save</td><td class="expect">Naya record</td></tr>
     </tbody></table>
-    <div class="key"><b>Key test:</b> Net revenue backend me khud calculate hota hai (save override).</div>
   </section>
 
   <!-- 9 -->
   <section id="s9">
-    <div class="s-head"><div class="s-num">9</div><div><h2>Setup — Business / Products / Sources</h2></div></div>
+    <div class="s-head"><div class="s-num">9</div><div><h2>Targets &amp; Revenue</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">9.1</td><td><b>Businesses</b></td><td class="expect">6 businesses (FX Artha, DAGChain…) + product count</td></tr>
-      <tr><td class="step">9.2</td><td><b>Products</b></td><td class="expect">Business ke saath products</td></tr>
-      <tr><td class="step">9.3</td><td>+ New Product → Name, Business, Status → Save</td><td class="expect">Naya product</td></tr>
+      <tr><td class="step">9.1</td><td><b>Targets</b> → table</td><td class="expect">Har business ka Q-Target</td></tr>
+      <tr><td class="step">9.2</td><td><b>Revenue</b> → Gross, Commission, Net columns</td><td class="expect">Net = Gross − Commission</td></tr>
+      <tr><td class="step">9.3</td><td>Revenue + New → Gross = <code>10000</code>, Commission = <code>1500</code> → Save</td><td class="expect">Net = <b>$8,500</b> (auto)</td></tr>
     </tbody></table>
+    <div class="key"><b>Key test:</b> Net revenue backend me khud calculate hota hai (save override).</div>
   </section>
 
   <!-- 10 -->
   <section id="s10">
-    <div class="s-head"><div class="s-num">10</div><div><h2>Support Desk</h2></div></div>
+    <div class="s-head"><div class="s-num">10</div><div><h2>Setup — Business / Products / Sources</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">10.1</td><td>Sidebar → Support → <b>Support Desk</b></td><td class="expect">~40 tickets</td></tr>
-      <tr><td class="step">10.2</td><td>Priority badges</td><td class="expect"><span class="badge b-red">urgent</span> <span class="badge b-amber">high</span> <span class="badge b-blue">medium</span></td></tr>
-      <tr><td class="step">10.3</td><td>+ New → Ticket no <code>TK9999</code>, Priority = high → Save</td><td class="expect">Naya ticket</td></tr>
-      <tr><td class="step">10.4</td><td>Edit → Status open → <code>resolved</code></td><td class="expect"><span class="badge b-green">resolved</span></td></tr>
+      <tr><td class="step">10.1</td><td><b>Businesses</b></td><td class="expect">6 businesses (FX Artha, DAGChain…) + product count</td></tr>
+      <tr><td class="step">10.2</td><td><b>Products</b></td><td class="expect">Business ke saath products</td></tr>
+      <tr><td class="step">10.3</td><td>+ New Product → Name, Business, Status → Save</td><td class="expect">Naya product</td></tr>
     </tbody></table>
   </section>
 
   <!-- 11 -->
   <section id="s11">
-    <div class="s-head"><div class="s-num">11</div><div><h2>HR &amp; People</h2></div></div>
+    <div class="s-head"><div class="s-num">11</div><div><h2>Support Desk</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">11.1</td><td><b>Employees</b></td><td class="expect">15 employees + Salary</td></tr>
-      <tr><td class="step">11.2</td><td><b>Departments</b></td><td class="expect">Sales, Support, HR, Finance, Tech</td></tr>
-      <tr><td class="step">11.3</td><td><b>Attendance</b></td><td class="expect">Date-wise, Hours, Status</td></tr>
-      <tr><td class="step">11.4</td><td><b>Activity Tracking</b></td><td class="expect">Active min, Calls, Tickets</td></tr>
-      <tr><td class="step">11.5</td><td><b>Leaves</b></td><td class="expect">From/To, Reason, Status</td></tr>
-      <tr><td class="step">11.7</td><td>Payroll + New → Basic <code>50000</code>, Incentive <code>5000</code>, Bonus <code>2000</code>, Deduction <code>1000</code>, Month 6, Year 2026 → Save</td><td class="expect"><b>Net Pay = $56,000</b> (50000+5000+2000−1000)</td></tr>
-      <tr><td class="step">11.8</td><td><b>Incentives / Incentive Rules</b></td><td class="expect">Tables load</td></tr>
+      <tr><td class="step">11.1</td><td>Sidebar → Support → <b>Support Desk</b></td><td class="expect">~40 tickets</td></tr>
+      <tr><td class="step">11.2</td><td>Priority badges</td><td class="expect"><span class="badge b-red">urgent</span> <span class="badge b-amber">high</span> <span class="badge b-blue">medium</span></td></tr>
+      <tr><td class="step">11.3</td><td>+ New → Ticket no <code>TK9999</code>, Priority = high → Save</td><td class="expect">Naya ticket</td></tr>
+      <tr><td class="step">11.4</td><td>Edit → Status open → <code>resolved</code></td><td class="expect"><span class="badge b-green">resolved</span></td></tr>
     </tbody></table>
-    <div class="key"><b>Key test:</b> Payroll final salary formula khud chale.</div>
   </section>
 
   <!-- 12 -->
   <section id="s12">
-    <div class="s-head"><div class="s-num">12</div><div><h2>Finance</h2></div></div>
+    <div class="s-head"><div class="s-num">12</div><div><h2>HR &amp; People</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">12.1</td><td><b>Expenses</b></td><td class="expect">Type, Department, Amount, Date</td></tr>
-      <tr><td class="step">12.2</td><td><b>Commissions</b></td><td class="expect">Partner, Business, Amount</td></tr>
-      <tr><td class="step">12.3</td><td>Dono me + New se record add</td><td class="expect">Save ho jaye</td></tr>
+      <tr><td class="step">12.1</td><td><b>Employees</b></td><td class="expect">15 employees + Salary</td></tr>
+      <tr><td class="step">12.2</td><td><b>Departments</b></td><td class="expect">Sales, Support, HR, Finance, Tech</td></tr>
+      <tr><td class="step">12.3</td><td><b>Attendance</b></td><td class="expect">Date-wise, Hours, Status</td></tr>
+      <tr><td class="step">12.4</td><td><b>Activity Tracking</b></td><td class="expect">Active min, Calls, Tickets</td></tr>
+      <tr><td class="step">12.5</td><td><b>Leaves</b></td><td class="expect">From/To, Reason, Status</td></tr>
+      <tr><td class="step">12.7</td><td>Payroll + New → Basic <code>50000</code>, Incentive <code>5000</code>, Bonus <code>2000</code>, Deduction <code>1000</code>, Month 6, Year 2026 → Save</td><td class="expect"><b>Net Pay = $56,000</b> (50000+5000+2000−1000)</td></tr>
+      <tr><td class="step">12.8</td><td><b>Incentives / Incentive Rules</b></td><td class="expect">Tables load</td></tr>
     </tbody></table>
+    <div class="key"><b>Key test:</b> Payroll final salary formula khud chale.</div>
   </section>
 
   <!-- 13 -->
   <section id="s13">
-    <div class="s-head"><div class="s-num">13</div><div><h2>Administration</h2></div></div>
+    <div class="s-head"><div class="s-num">13</div><div><h2>Finance</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">13.1</td><td><b>Users</b></td><td class="expect">15 users, Role, Status</td></tr>
-      <tr><td class="step">13.2</td><td>+ New User → Name, Email, Role, Password → Save</td><td class="expect">Naya user (login bhi kar sakta hai)</td></tr>
-      <tr><td class="step">13.3</td><td><b>Roles</b></td><td class="expect">8 roles</td></tr>
-      <tr><td class="step">13.4</td><td><b>Teams</b></td><td class="expect">Team A/B/C with leaders</td></tr>
+      <tr><td class="step">13.1</td><td><b>Expenses</b></td><td class="expect">Type, Department, Amount, Date</td></tr>
+      <tr><td class="step">13.2</td><td><b>Commissions</b></td><td class="expect">Partner, Business, Amount</td></tr>
+      <tr><td class="step">13.3</td><td>Dono me + New se record add</td><td class="expect">Save ho jaye</td></tr>
     </tbody></table>
   </section>
 
   <!-- 14 -->
   <section id="s14">
-    <div class="s-head"><div class="s-num">14</div><div><h2>Reports</h2></div></div>
+    <div class="s-head"><div class="s-num">14</div><div><h2>Administration</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">14.1</td><td>Sidebar → <b>Reports</b></td><td class="expect">Leads by Status (bar) + Revenue by Business (horizontal bar)</td></tr>
-      <tr><td class="step">14.2</td><td>Neeche Revenue table</td><td class="expect">Business-wise Gross/Net</td></tr>
+      <tr><td class="step">14.1</td><td><b>Users</b></td><td class="expect">15 users, Role, Status</td></tr>
+      <tr><td class="step">14.2</td><td>+ New User → Name, Email, Role, Password → Save</td><td class="expect">Naya user (login bhi kar sakta hai)</td></tr>
+      <tr><td class="step">14.3</td><td><b>Roles</b></td><td class="expect">8 roles</td></tr>
+      <tr><td class="step">14.4</td><td><b>Teams</b></td><td class="expect">Team A/B/C with leaders</td></tr>
     </tbody></table>
   </section>
 
   <!-- 15 -->
   <section id="s15">
-    <div class="s-head"><div class="s-num">15</div><div><h2>AI Assistant <span class="badge b-violet">interesting</span></h2></div></div>
+    <div class="s-head"><div class="s-num">15</div><div><h2>Reports</h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">15.1</td><td>Sidebar → Overview → <b>AI Assistant</b></td><td class="expect">Left: chat, Right: Lead Scorer</td></tr>
-      <tr><td class="step">15.2</td><td>Chat: <code>how many leads do I have?</code> → Send</td><td class="expect">AI reply with lead count</td></tr>
-      <tr><td class="step">15.3</td><td>Chat: <code>what is my revenue?</code></td><td class="expect">AI reply with net revenue</td></tr>
-      <tr><td class="step">15.4</td><td>Lead Scorer: Source = <code>Referral</code>, Status = <code>qualified</code>, Activity = <code>4</code> → Score Lead</td><td class="expect">Score ~100, <b>Grade A</b> + reasons</td></tr>
-      <tr><td class="step">15.5</td><td>Source = <code>CSV</code>, Status = <code>lost</code>, Activity = <code>0</code> → Score</td><td class="expect">Low score, <b>Grade D</b></td></tr>
+      <tr><td class="step">15.1</td><td>Sidebar → <b>Reports</b></td><td class="expect">Leads by Status (bar) + Revenue by Business (horizontal bar)</td></tr>
+      <tr><td class="step">15.2</td><td>Neeche Revenue table</td><td class="expect">Business-wise Gross/Net</td></tr>
     </tbody></table>
-    <div class="pass">✓ Pass: Chat reply aaye aur scoring grade badle</div>
   </section>
 
   <!-- 16 -->
   <section id="s16">
-    <div class="s-head"><div class="s-num">16</div><div><h2>Responsive / UI</h2></div></div>
+    <div class="s-head"><div class="s-num">16</div><div><h2>AI Assistant <span class="badge b-violet">interesting</span></h2></div></div>
     <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
-      <tr><td class="step">16.1</td><td>Window chhota karo (mobile)</td><td class="expect">Sidebar hide, hamburger (☰)</td></tr>
-      <tr><td class="step">16.2</td><td>☰ dabao</td><td class="expect">Sidebar slide-in</td></tr>
-      <tr><td class="step">16.3</td><td>Kisi page pe refresh (F5)</td><td class="expect">Logged-in raho (token persist)</td></tr>
+      <tr><td class="step">16.1</td><td>Sidebar → Overview → <b>AI Assistant</b></td><td class="expect">Left: chat, Right: Lead Scorer</td></tr>
+      <tr><td class="step">16.2</td><td>Chat: <code>how many leads do I have?</code> → Send</td><td class="expect">AI reply with lead count</td></tr>
+      <tr><td class="step">16.3</td><td>Chat: <code>what is my revenue?</code></td><td class="expect">AI reply with net revenue</td></tr>
+      <tr><td class="step">16.4</td><td>Lead Scorer: Source = <code>Referral</code>, Status = <code>qualified</code>, Activity = <code>4</code> → Score Lead</td><td class="expect">Score ~100, <b>Grade A</b> + reasons</td></tr>
+      <tr><td class="step">16.5</td><td>Source = <code>CSV</code>, Status = <code>lost</code>, Activity = <code>0</code> → Score</td><td class="expect">Low score, <b>Grade D</b></td></tr>
+    </tbody></table>
+    <div class="pass">✓ Pass: Chat reply aaye aur scoring grade badle</div>
+  </section>
+
+  <!-- 17 -->
+  <section id="s17">
+    <div class="s-head"><div class="s-num">17</div><div><h2>Responsive / UI</h2></div></div>
+    <table><thead><tr><th>#</th><th>Step</th><th>Expected Result</th></tr></thead><tbody>
+      <tr><td class="step">17.1</td><td>Window chhota karo (mobile)</td><td class="expect">Sidebar hide, hamburger (☰)</td></tr>
+      <tr><td class="step">17.2</td><td>☰ dabao</td><td class="expect">Sidebar slide-in</td></tr>
+      <tr><td class="step">17.3</td><td>Kisi page pe refresh (F5)</td><td class="expect">Logged-in raho (token persist)</td></tr>
     </tbody></table>
   </section>
 
   <!-- smoke -->
   <section id="smoke" class="smoke">
-    <div class="s-head"><div class="s-num">★</div><div><h2>Quick Smoke Test — 2 minute</h2><p style="color:rgba(255,255,255,.6)">In 6 steps se pura system verify</p></div></div>
+    <div class="s-head"><div class="s-num">★</div><div><h2>Quick Smoke Test — 2 minute</h2><p style="color:rgba(255,255,255,.6)">In 7 steps se pura system verify</p></div></div>
     <ol>
       <li>Login → Dashboard charts dikhe</li>
       <li>Leads → naya lead banao</li>
+      <li>Proposal → New → Save &amp; Send → Accept → customer + revenue auto bane</li>
       <li>Revenue → Gross <code>10000</code>, Commission <code>1500</code> → Net <code>8500</code> auto</li>
       <li>Payroll → New → Net Pay auto-calc</li>
       <li>AI Assistant → lead score karo (Grade aaye)</li>
       <li>Logout</li>
     </ol>
-    <p style="margin-top:16px;font-size:15px">Agar ye 6 chal gaye — <b>pura system theek hai.</b> 🎉</p>
+    <p style="margin-top:16px;font-size:15px">Agar ye 7 chal gaye — <b>pura system theek hai.</b> 🎉</p>
   </section>
 
 </div>

@@ -97,126 +97,149 @@ cd "e:/crm doc/frontend" && npm run dev
 
 ---
 
-## 6. CUSTOMERS
+## 6. PROPOSALS (professional flow)
+
+> Sales flow ka **Proposal** step. Versioning + discount/tax + **accept → revenue** tak pura CRM flow.
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 6.1 | Sidebar → **Customers** | ~29 customers table |
-| 6.2 | Search me naam type karo | Filter ho |
-| 6.3 | **+ New** → Name, Email, Phone, Country → Save | Naya customer |
+| 6.1 | Sidebar → **Sales & CRM → Proposals** | Table: Ref #, Title, For, Items, Total, Status, Sent + upar 3 cards (Total/Sent/Draft) |
+| 6.2 | **+ New Proposal** | Wide form khule — header card (Title, For, Business) + Services table |
+| 6.3 | Title `Test Plan`, For = `Lead`, koi lead select, Business = `FX Artha` | Business select karte hi Services dropdown me us business ke products aa jaayein |
+| 6.4 | Item: product select, Qty `2`, Unit Price `1000`, **Disc %** `10`; neeche Tax `18` | Live breakdown: Subtotal `2,500` → Discount `−200` → Tax `414` → **Total `2,714`** |
+| 6.5 | **Save Draft** | List me naya row — Ref # `PRO-2026-00xx`, **v1**, status `draft` |
+| 6.6 | Draft row pe **Send** | Status `sent` (blue), Sent date set; lead timeline pe "Proposal sent" activity |
+| 6.7 | Sent row pe **Accept** (green ✓) | Toast: opportunity won + revenue booked; status `accepted` |
+| 6.8 | **Customers / Customer 360** kholo | Lead ab **customer** ban gaya — uska **Revenue** record + product linked dikhe |
+| 6.9 | **Opportunities** kholo | Naya **won / closed** opportunity us lead ka (Expected = proposal total) |
+| 6.10 | Accepted/Sent row pe **Revise** (violet branch icon) | Naya **v2** draft bane (same Ref #), purana version freeze (faded row) |
+| 6.11 | Accepted proposal **Edit** karne ki koshish (API) | Block — "Only draft proposals can be edited. Create a revision." |
+| 6.12 | Kisi bhi row pe **PDF** (download icon) | Branded PDF: business letterhead, Ref # + version, items + Subtotal/Discount/Tax/Total, signature block |
+
+✅ **Key test:** Accept pe **lead→customer + revenue + won-opportunity** teeno auto ban jaate hai (pura CRM flow). Har edit ek **naya version** banata hai — audit trail safe.
 
 ---
 
-## 7. COMMUNICATIONS
+## 7. CUSTOMERS
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 7.1 | Sidebar → **Communications** | Channel, Direction, Message, When |
-| 7.2 | **+ New** → Channel = `whatsapp`, Direction = `outbound`, Customer select, Message type karo → Save | Naya record |
+| 7.1 | Sidebar → **Customers** | ~29 customers table |
+| 7.2 | Search me naam type karo | Filter ho |
+| 7.3 | **+ New** → Name, Email, Phone, Country → Save | Naya customer |
 
 ---
 
-## 8. TARGETS & REVENUE
+## 8. COMMUNICATIONS
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 8.1 | **Targets** → table dikhe (har business ka Q-Target) | — |
-| 8.2 | **Revenue** → Gross, Commission, Net columns | Net = Gross − Commission (auto) |
-| 8.3 | Revenue **+ New** → Customer select, Gross = `10000`, Commission = `1500` → Save | Net column me `$8,500` aaye (backend auto-calc) |
+| 8.1 | Sidebar → **Communications** | Channel, Direction, Message, When |
+| 8.2 | **+ New** → Channel = `whatsapp`, Direction = `outbound`, Customer select, Message type karo → Save | Naya record |
+
+---
+
+## 9. TARGETS & REVENUE
+
+| # | Step | Expected Result |
+|---|------|-----------------|
+| 9.1 | **Targets** → table dikhe (har business ka Q-Target) | — |
+| 9.2 | **Revenue** → Gross, Commission, Net columns | Net = Gross − Commission (auto) |
+| 9.3 | Revenue **+ New** → Customer select, Gross = `10000`, Commission = `1500` → Save | Net column me `$8,500` aaye (backend auto-calc) |
 
 ✅ **Key test:** Net revenue khud calculate hota hai.
 
 ---
 
-## 9. SETUP (Business / Products / Lead Sources)
+## 10. SETUP (Business / Products / Lead Sources)
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 9.1 | **Businesses** → 6 businesses (FX Artha, DAGChain…) | Products count dikhe |
-| 9.2 | **Products** → business ke saath products | — |
-| 9.3 | **+ New** Product → Name, Business select, Status → Save | Naya product |
+| 10.1 | **Businesses** → 6 businesses (FX Artha, DAGChain…) | Products count dikhe |
+| 10.2 | **Products** → business ke saath products | — |
+| 10.3 | **+ New** Product → Name, Business select, Status → Save | Naya product |
 
 ---
 
-## 10. SUPPORT DESK
+## 11. SUPPORT DESK
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 10.1 | Sidebar → **Support → Support Desk** | ~40 tickets: Ticket#, Customer, Category, Priority, Agent, Status |
-| 10.2 | Priority badges dekho | urgent=red, high=amber, etc. |
-| 10.3 | **+ New** → Ticket no `TK9999`, Customer, Priority = `high`, Status = `open` → Save | Naya ticket |
-| 10.4 | Edit → Status `open` → `resolved` | Badge green |
+| 11.1 | Sidebar → **Support → Support Desk** | ~40 tickets: Ticket#, Customer, Category, Priority, Agent, Status |
+| 11.2 | Priority badges dekho | urgent=red, high=amber, etc. |
+| 11.3 | **+ New** → Ticket no `TK9999`, Customer, Priority = `high`, Status = `open` → Save | Naya ticket |
+| 11.4 | Edit → Status `open` → `resolved` | Badge green |
 
 ---
 
-## 11. HR & PEOPLE
+## 12. HR & PEOPLE
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 11.1 | **Employees** → 15 employees, Salary column | — |
-| 11.2 | **Departments** → Sales, Support, HR, Finance, Tech | — |
-| 11.3 | **Attendance** → date-wise, Hours, Status badges | — |
-| 11.4 | **Activity Tracking** → Active min, Calls, Tickets | — |
-| 11.5 | **Leaves** → From/To, Reason, Status (pending/approved) | — |
-| 11.6 | **Payroll** → **Net Pay** auto-calc test ↓ | |
-| 11.7 | Payroll **+ New** → Employee select, Basic = `50000`, Incentive = `5000`, Bonus = `2000`, Deduction = `1000`, Month = `6`, Year = `2026` → Save | **Net Pay = $56,000** (50000+5000+2000−1000) |
-| 11.8 | **Incentives** / **Incentive Rules** → tables load | — |
+| 12.1 | **Employees** → 15 employees, Salary column | — |
+| 12.2 | **Departments** → Sales, Support, HR, Finance, Tech | — |
+| 12.3 | **Attendance** → date-wise, Hours, Status badges | — |
+| 12.4 | **Activity Tracking** → Active min, Calls, Tickets | — |
+| 12.5 | **Leaves** → From/To, Reason, Status (pending/approved) | — |
+| 12.6 | **Payroll** → **Net Pay** auto-calc test ↓ | |
+| 12.7 | Payroll **+ New** → Employee select, Basic = `50000`, Incentive = `5000`, Bonus = `2000`, Deduction = `1000`, Month = `6`, Year = `2026` → Save | **Net Pay = $56,000** (50000+5000+2000−1000) |
+| 12.8 | **Incentives** / **Incentive Rules** → tables load | — |
 
 ✅ **Key test:** Payroll final salary formula auto chale.
 
 ---
 
-## 12. FINANCE
+## 13. FINANCE
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 12.1 | **Expenses** → Type, Department, Amount, Date | — |
-| 12.2 | **Commissions** → Partner, Business, Amount | — |
-| 12.3 | Dono me **+ New** se record add karke check karo | Save ho jaye |
+| 13.1 | **Expenses** → Type, Department, Amount, Date | — |
+| 13.2 | **Commissions** → Partner, Business, Amount | — |
+| 13.3 | Dono me **+ New** se record add karke check karo | Save ho jaye |
 
 ---
 
-## 13. ADMINISTRATION
+## 14. ADMINISTRATION
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 13.1 | **Users** → 15 users, Role, Status | — |
-| 13.2 | **+ New** User → Name, Email, Role select, Password set → Save | Naya user (ye user login bhi kar sakta hai) |
-| 13.3 | **Roles** → 8 roles (Super Admin, RM, HR…) | — |
-| 13.4 | **Teams** → Team A/B/C with leaders | — |
+| 14.1 | **Users** → 15 users, Role, Status | — |
+| 14.2 | **+ New** User → Name, Email, Role select, Password set → Save | Naya user (ye user login bhi kar sakta hai) |
+| 14.3 | **Roles** → 8 roles (Super Admin, RM, HR…) | — |
+| 14.4 | **Teams** → Team A/B/C with leaders | — |
 
 ---
 
-## 14. REPORTS
+## 15. REPORTS
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 14.1 | Sidebar → **Reports** | 2 charts: Leads by Status (bar), Revenue by Business (horizontal bar) |
-| 14.2 | Neeche Revenue table | Business-wise Gross/Net breakdown |
+| 15.1 | Sidebar → **Reports** | 2 charts: Leads by Status (bar), Revenue by Business (horizontal bar) |
+| 15.2 | Neeche Revenue table | Business-wise Gross/Net breakdown |
 
 ---
 
-## 15. AI ASSISTANT (sabse interesting)
+## 16. AI ASSISTANT (sabse interesting)
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 15.1 | Sidebar → **Overview → AI Assistant** | Left: chat box, Right: Lead Scorer |
-| 15.2 | Chat me type karo: `how many leads do I have?` → Send | AI reply with lead count |
-| 15.3 | Chat: `what is my revenue?` | AI reply with net revenue figure |
-| 15.4 | Right panel **Lead Scorer**: Source = `Referral`, Status = `qualified`, Activity count = `4` → **Score Lead** | Bada number (e.g. 100), **Grade A**, reasons list, recommended action |
-| 15.5 | Source = `CSV`, Status = `lost`, Activity = `0` → Score Lead | Low score, **Grade D** |
+| 16.1 | Sidebar → **Overview → AI Assistant** | Left: chat box, Right: Lead Scorer |
+| 16.2 | Chat me type karo: `how many leads do I have?` → Send | AI reply with lead count |
+| 16.3 | Chat: `what is my revenue?` | AI reply with net revenue figure |
+| 16.4 | Right panel **Lead Scorer**: Source = `Referral`, Status = `qualified`, Activity count = `4` → **Score Lead** | Bada number (e.g. 100), **Grade A**, reasons list, recommended action |
+| 16.5 | Source = `CSV`, Status = `lost`, Activity = `0` → Score Lead | Low score, **Grade D** |
 
 ✅ **Pass:** Chat reply aaye aur scoring grade badle.
 
 ---
 
-## 16. RESPONSIVE / UI
+## 17. RESPONSIVE / UI
 
 | # | Step | Expected Result |
 |---|------|-----------------|
-| 16.1 | Browser window chhota karo (mobile size) | Sidebar hide ho, hamburger menu (☰) aaye |
-| 16.2 | ☰ dabao | Sidebar slide-in ho |
-| 16.3 | Kisi bhi page pe refresh (F5) karo | Logged-in raho (token persist) |
+| 17.1 | Browser window chhota karo (mobile size) | Sidebar hide ho, hamburger menu (☰) aaye |
+| 17.2 | ☰ dabao | Sidebar slide-in ho |
+| 17.3 | Kisi bhi page pe refresh (F5) karo | Logged-in raho (token persist) |
 
 ---
 
@@ -236,9 +259,10 @@ cd "e:/crm doc/frontend" && npm run dev
 
 1. Login → Dashboard charts dikhe ✅
 2. Leads → New lead banao ✅
-3. Revenue → Gross 10000, Commission 1500 → Net 8500 auto ✅
-4. Payroll → New → Net Pay auto-calc ✅
-5. AI Assistant → Lead score karo (Grade aaye) ✅
-6. Logout ✅
+3. Proposal → New → Save & Send → Accept → customer + revenue auto bane ✅
+4. Revenue → Gross 10000, Commission 1500 → Net 8500 auto ✅
+5. Payroll → New → Net Pay auto-calc ✅
+6. AI Assistant → Lead score karo (Grade aaye) ✅
+7. Logout ✅
 
 Agar ye 6 chal gaye, **pura system theek hai.** 🎉

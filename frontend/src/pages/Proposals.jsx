@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FileText, Plus, Trash2, Pencil, Send, FileDown, Search } from "lucide-react";
+import { FileText, Plus, Trash2, Pencil, Send, FileDown, Search, Check, Ban, GitBranch } from "lucide-react";
 import api from "../api/client";
 import { Badge, Spinner, EmptyState, ConfirmModal } from "../components/ui";
 import ProposalBuilder, { blankProposal, blankItem } from "../components/ProposalBuilder";
@@ -45,11 +45,23 @@ export default function Proposals() {
     setBuilder({
       id: data.id, title: data.title, contactType: data.customer ? "customer" : "lead",
       lead: data.lead || "", customer: data.customer || "", business: data.business || "",
-      valid_until: data.valid_until || "", notes: data.notes || "",
+      valid_until: data.valid_until || "", notes: data.notes || "", tax_percent: data.tax_percent || 0,
       items: data.items.length ? data.items : [blankItem()],
     });
   };
   const send = async (row) => { await api.post(`/proposals/${row.id}/send/`); toast.success("Proposal sent"); load(); };
+  const revise = async (row) => {
+    const { data } = await api.post(`/proposals/${row.id}/revise/`);
+    toast.success(`Revision v${data.version} created (draft)`);
+    edit(data);
+    load();
+  };
+  const accept = async (row) => {
+    await api.post(`/proposals/${row.id}/accept/`);
+    toast.success("Accepted → opportunity won, revenue booked & customer updated");
+    load();
+  };
+  const reject = async (row) => { await api.post(`/proposals/${row.id}/reject/`); toast.info("Proposal marked rejected"); load(); };
   const pdf = async (row) => {
     const { data, headers } = await api.get(`/proposals/${row.id}/pdf/`, { responseType: "blob" });
     const url = URL.createObjectURL(new Blob([data], { type: headers["content-type"] }));
@@ -93,6 +105,7 @@ export default function Proposals() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
+                  <th className="pb-3 px-3 font-semibold">Ref #</th>
                   <th className="pb-3 px-3 font-semibold">Title</th>
                   <th className="pb-3 px-3 font-semibold">For</th>
                   <th className="pb-3 px-3 font-semibold">Items</th>
@@ -104,7 +117,12 @@ export default function Proposals() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-ink-100 hover:bg-ink-50/70">
+                  <tr key={r.id} className={`border-t border-ink-100 hover:bg-ink-50/70 ${r.is_current ? "" : "opacity-60"}`}>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <span className="font-mono text-xs text-ink-700">{r.number || "—"}</span>
+                      <span className="ml-1.5 text-[10px] font-bold text-brand-600">v{r.version}</span>
+                      {r.revision_count > 1 && <span className="ml-1 text-[10px] text-ink-400">/{r.revision_count}</span>}
+                    </td>
                     <td className="py-3 px-3 font-medium text-ink-800">{r.title}</td>
                     <td className="py-3 px-3 text-ink-500">{r.contact}</td>
                     <td className="py-3 px-3 text-ink-500">{r.item_count}</td>
@@ -114,9 +132,15 @@ export default function Proposals() {
                     <td className="py-3 px-3">
                       <div className="flex justify-end gap-1">
                         {r.status === "draft" && <button className="btn text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" onClick={() => send(r)}><Send size={13} /> Send</button>}
-                        <button className="btn-ghost p-1.5 text-brand-600" title="PDF" onClick={() => pdf(r)}><FileDown size={15} /></button>
-                        <button className="btn-ghost p-1.5" title="Edit" onClick={() => edit(r)}><Pencil size={15} /></button>
-                        <button className="btn-ghost p-1.5 text-rose-500 hover:bg-rose-50" title="Delete" onClick={() => setConfirmRow(r)}><Trash2 size={15} /></button>
+                        {r.status === "sent" && <>
+                          <button className="btn text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" title="Mark accepted" onClick={() => accept(r)}><Check size={13} /> Accept</button>
+                          <button className="btn text-xs px-2 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100" title="Mark rejected" onClick={() => reject(r)}><Ban size={13} /></button>
+                        </>}
+                        <button className="btn-ghost p-1.5 text-brand-600" title="Download PDF" onClick={() => pdf(r)}><FileDown size={15} /></button>
+                        {r.status === "draft"
+                          ? <button className="btn-ghost p-1.5" title="Edit draft" onClick={() => edit(r)}><Pencil size={15} /></button>
+                          : <button className="btn-ghost p-1.5 text-violet-600" title="Create new version" onClick={() => revise(r)}><GitBranch size={15} /></button>}
+                        {r.status !== "accepted" && <button className="btn-ghost p-1.5 text-rose-500 hover:bg-rose-50" title="Delete" onClick={() => setConfirmRow(r)}><Trash2 size={15} /></button>}
                       </div>
                     </td>
                   </tr>

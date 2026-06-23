@@ -10,7 +10,7 @@ from .models import (
 class ProposalItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProposalItem
-        fields = ["id", "description", "quantity", "unit_price", "amount"]
+        fields = ["id", "description", "quantity", "unit_price", "discount", "amount"]
         read_only_fields = ["amount"]
 
 
@@ -20,15 +20,21 @@ class ProposalSerializer(serializers.ModelSerializer):
     lead_name = serializers.CharField(source="lead.name", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     item_count = serializers.IntegerField(source="items.count", read_only=True)
+    reference = serializers.CharField(read_only=True)
+    revision_count = serializers.SerializerMethodField()
 
     business_name = serializers.CharField(source="business.name", read_only=True)
 
     class Meta:
         model = Proposal
-        fields = ["id", "title", "lead", "lead_name", "customer", "customer_name", "contact",
-                  "business", "business_name", "status", "valid_until", "notes", "total",
-                  "item_count", "items", "sent_at", "created_at"]
-        read_only_fields = ["total", "sent_at", "created_at"]
+        fields = ["id", "number", "version", "parent", "is_current", "reference", "revision_count",
+                  "title", "lead", "lead_name", "customer", "customer_name", "contact",
+                  "business", "business_name", "status", "valid_until", "notes",
+                  "tax_percent", "subtotal", "discount_total", "tax_amount", "total",
+                  "item_count", "items", "sent_at", "accepted_at", "rejected_at", "created_at"]
+        read_only_fields = ["number", "version", "parent", "is_current", "subtotal",
+                            "discount_total", "tax_amount", "total", "sent_at",
+                            "accepted_at", "rejected_at", "created_at"]
 
     def get_contact(self, obj):
         if obj.customer_id and obj.customer:
@@ -37,15 +43,27 @@ class ProposalSerializer(serializers.ModelSerializer):
             return obj.lead.name
         return "—"
 
+    def get_revision_count(self, obj):
+        # how many versions exist under this proposal number
+        if not obj.number:
+            return 1
+        return Proposal.objects.filter(number=obj.number).count()
+
     def create(self, validated_data):
         items = validated_data.pop("items", [])
         proposal = Proposal.objects.create(**validated_data)
         for it in items:
             ProposalItem.objects.create(proposal=proposal, **it)
         proposal.recompute()
+        proposal.assign_number()
         return proposal
 
     def update(self, instance, validated_data):
+        # Professionalism: once a proposal leaves draft it is locked — edits must
+        # go through a new version (the `revise` action), preserving the audit trail.
+        if instance.status != "draft":
+            raise serializers.ValidationError(
+                "Only draft proposals can be edited. Create a revision to change a sent/accepted proposal.")
         items = validated_data.pop("items", None)
         for k, v in validated_data.items():
             setattr(instance, k, v)
@@ -54,7 +72,7 @@ class ProposalSerializer(serializers.ModelSerializer):
             instance.items.all().delete()
             for it in items:
                 ProposalItem.objects.create(proposal=instance, **it)
-            instance.recompute()
+        instance.recompute()
         return instance
 
 

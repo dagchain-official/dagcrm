@@ -160,7 +160,17 @@ class TargetAssignment(models.Model):
 
 # ------------------------------------------------------------------ Proposals
 class Proposal(models.Model):
-    STATUS = [("draft", "Draft"), ("sent", "Sent"), ("accepted", "Accepted"), ("rejected", "Rejected")]
+    STATUS = [
+        ("draft", "Draft"), ("sent", "Sent"), ("accepted", "Accepted"),
+        ("rejected", "Rejected"), ("revised", "Revised"), ("expired", "Expired"),
+    ]
+    # Versioning: all versions of one proposal share `number`; `version` differs.
+    # `parent` points to the version it was revised from; `is_current` flags latest.
+    number = models.CharField(max_length=30, blank=True, db_index=True)
+    version = models.PositiveIntegerField(default=1)
+    parent = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="revisions")
+    is_current = models.BooleanField(default=True)
+
     title = models.CharField(max_length=200)
     lead = models.ForeignKey(Lead, on_delete=models.SET_NULL, null=True, blank=True, related_name="proposals")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="proposals")
@@ -168,17 +178,51 @@ class Proposal(models.Model):
     status = models.CharField(max_length=20, choices=STATUS, default="draft")
     valid_until = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
+
+    # Money breakdown (all derived from items + tax_percent via recompute()).
+    tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)        # gross, before discount
+    discount_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    # Audit trail.
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    sent_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="proposals_sent")
     sent_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
 
+    def __str__(self):
+        return f"{self.number or '—'} v{self.version} · {self.title}"
+
+    @property
+    def reference(self):
+        return f"{self.number} v{self.version}" if self.number else self.title
+
     def recompute(self):
-        self.total = sum((i.amount for i in self.items.all()), 0)
-        self.save(update_fields=["total"])
+        """Roll up items into subtotal/discount/tax/total."""
+        from decimal import Decimal
+        items = list(self.items.all())
+        subtotal = sum((Decimal(i.quantity or 0) * Decimal(i.unit_price or 0) for i in items), Decimal("0"))
+        taxable = sum((Decimal(i.amount or 0) for i in items), Decimal("0"))   # already net of line discounts
+        tax_amount = (taxable * Decimal(self.tax_percent or 0) / Decimal("100")).quantize(Decimal("0.01"))
+        self.subtotal = subtotal
+        self.discount_total = (subtotal - taxable).quantize(Decimal("0.01"))
+        self.tax_amount = tax_amount
+        self.total = (taxable + tax_amount).quantize(Decimal("0.01"))
+        self.save(update_fields=["subtotal", "discount_total", "tax_amount", "total"])
+
+    def assign_number(self):
+        """Give a brand-new proposal a professional reference (PRO-YYYY-####)."""
+        if not self.number and self.pk:
+            from django.utils import timezone
+            self.number = f"PRO-{timezone.now().year}-{self.pk:04d}"
+            self.save(update_fields=["number"])
 
 
 class ProposalItem(models.Model):
@@ -186,10 +230,13 @@ class ProposalItem(models.Model):
     description = models.CharField(max_length=200)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # percent off this line
+    amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)   # net = qty*price*(1-discount%)
 
     def save(self, *args, **kwargs):
-        self.amount = (self.quantity or 0) * (self.unit_price or 0)
+        from decimal import Decimal
+        q, u, d = Decimal(self.quantity or 0), Decimal(self.unit_price or 0), Decimal(self.discount or 0)
+        self.amount = (q * u * (Decimal("1") - d / Decimal("100"))).quantize(Decimal("0.01"))
         super().save(*args, **kwargs)
 
 

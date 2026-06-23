@@ -55,11 +55,16 @@ export function EmptyState({ title = "Nothing here yet", hint }) {
   );
 }
 
-export function Modal({ open, onClose, title, children, footer }) {
+const MODAL_SIZES = {
+  sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg",
+  xl: "max-w-xl", "2xl": "max-w-2xl", "3xl": "max-w-3xl", "4xl": "max-w-4xl",
+};
+
+export function Modal({ open, onClose, title, children, footer, size = "lg" }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="card w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className={`card w-full ${MODAL_SIZES[size] || MODAL_SIZES.lg} max-h-[90vh] flex flex-col`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200">
           <h3 className="font-bold text-ink-900">{title}</h3>
           <button onClick={onClose} className="text-ink-400 hover:text-ink-700">
