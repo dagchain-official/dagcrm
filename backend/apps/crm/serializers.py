@@ -2,8 +2,60 @@ from rest_framework import serializers
 
 from .models import (
     Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, Opportunity, Product, Target, TargetAssignment,
+    LeadInterest, LeadSource, Opportunity, Product, Proposal, ProposalItem, Target,
+    TargetAssignment,
 )
+
+
+class ProposalItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProposalItem
+        fields = ["id", "description", "quantity", "unit_price", "amount"]
+        read_only_fields = ["amount"]
+
+
+class ProposalSerializer(serializers.ModelSerializer):
+    items = ProposalItemSerializer(many=True, required=False)
+    contact = serializers.SerializerMethodField()
+    lead_name = serializers.CharField(source="lead.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    item_count = serializers.IntegerField(source="items.count", read_only=True)
+
+    business_name = serializers.CharField(source="business.name", read_only=True)
+
+    class Meta:
+        model = Proposal
+        fields = ["id", "title", "lead", "lead_name", "customer", "customer_name", "contact",
+                  "business", "business_name", "status", "valid_until", "notes", "total",
+                  "item_count", "items", "sent_at", "created_at"]
+        read_only_fields = ["total", "sent_at", "created_at"]
+
+    def get_contact(self, obj):
+        if obj.customer_id and obj.customer:
+            return obj.customer.name
+        if obj.lead_id and obj.lead:
+            return obj.lead.name
+        return "—"
+
+    def create(self, validated_data):
+        items = validated_data.pop("items", [])
+        proposal = Proposal.objects.create(**validated_data)
+        for it in items:
+            ProposalItem.objects.create(proposal=proposal, **it)
+        proposal.recompute()
+        return proposal
+
+    def update(self, instance, validated_data):
+        items = validated_data.pop("items", None)
+        for k, v in validated_data.items():
+            setattr(instance, k, v)
+        instance.save()
+        if items is not None:
+            instance.items.all().delete()
+            for it in items:
+                ProposalItem.objects.create(proposal=instance, **it)
+            instance.recompute()
+        return instance
 
 
 class AttachmentSerializer(serializers.ModelSerializer):

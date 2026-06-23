@@ -8,13 +8,13 @@ from apps.accounts.utils import is_admin_view
 
 from .models import (
     Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, Opportunity, Product, Target, TargetAssignment,
+    LeadInterest, LeadSource, Opportunity, Product, Proposal, Target, TargetAssignment,
 )
 from .serializers import (
     AttachmentSerializer, BusinessSerializer, CommunicationSerializer,
     CustomerProductSerializer, CustomerSerializer, LeadActivitySerializer,
     LeadInterestSerializer, LeadSerializer, LeadSourceSerializer, OpportunitySerializer,
-    ProductSerializer, TargetAssignmentSerializer, TargetSerializer,
+    ProductSerializer, ProposalSerializer, TargetAssignmentSerializer, TargetSerializer,
 )
 
 
@@ -402,3 +402,107 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user if self.request.user.is_authenticated else None)
+
+
+class ProposalViewSet(viewsets.ModelViewSet):
+    queryset = Proposal.objects.select_related("lead", "customer").prefetch_related("items").all()
+    serializer_class = ProposalSerializer
+    filterset_fields = ["status", "lead", "customer"]
+    search_fields = ["title", "lead__name", "customer__name"]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+
+    @action(detail=True, methods=["post"])
+    def send(self, request, pk=None):
+        """Mark a proposal as sent + log it on the lead's timeline (auto-advances status)."""
+        from django.utils import timezone
+        proposal = self.get_object()
+        proposal.status = "sent"
+        proposal.sent_at = timezone.now()
+        proposal.save(update_fields=["status", "sent_at"])
+        if proposal.lead_id:
+            user = request.user if request.user.is_authenticated else None
+            if user and getattr(user, "is_superuser", False):
+                user = None
+            LeadActivity.objects.create(
+                lead=proposal.lead, user=user, activity_type="proposal",
+                remarks=f"Proposal sent: {proposal.title} (${proposal.total})",
+            )
+        return Response(self.get_serializer(proposal).data)
+
+    @action(detail=True, methods=["get"])
+    def pdf(self, request, pk=None):
+        import io
+
+        from django.http import HttpResponse
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.pdfgen import canvas
+
+        p = self.get_object()
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=A4)
+        w, h = A4
+        brand = colors.HexColor("#4f46e5")
+
+        c.setFillColor(brand)
+        c.rect(0, h - 32 * mm, w, 32 * mm, fill=1, stroke=0)
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 22)
+        c.drawString(20 * mm, h - 18 * mm, "DAGOS")
+        c.setFont("Helvetica", 11)
+        c.drawString(20 * mm, h - 25 * mm, "Proposal")
+        c.setFont("Helvetica-Bold", 11)
+        c.drawRightString(w - 20 * mm, h - 18 * mm, p.status.upper())
+
+        y = h - 46 * mm
+        c.setFillColor(colors.HexColor("#0f172a"))
+        c.setFont("Helvetica-Bold", 15)
+        c.drawString(20 * mm, y, p.title)
+        c.setFont("Helvetica", 10)
+        c.setFillColor(colors.HexColor("#475569"))
+        contact = (p.customer.name if p.customer_id else p.lead.name if p.lead_id else "—")
+        c.drawString(20 * mm, y - 7 * mm, f"For: {contact}")
+        if p.valid_until:
+            c.drawString(20 * mm, y - 12 * mm, f"Valid until: {p.valid_until}")
+
+        # items table
+        ty = y - 24 * mm
+        c.setFillColor(colors.HexColor("#0f172a"))
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(20 * mm, ty, "Service")
+        c.drawRightString(w - 90 * mm, ty, "Qty")
+        c.drawRightString(w - 55 * mm, ty, "Unit Price")
+        c.drawRightString(w - 20 * mm, ty, "Amount")
+        c.setStrokeColor(colors.HexColor("#e2e8f0"))
+        c.line(20 * mm, ty - 2 * mm, w - 20 * mm, ty - 2 * mm)
+        c.setFont("Helvetica", 10)
+        c.setFillColor(colors.HexColor("#334155"))
+        ry = ty - 9 * mm
+        for it in p.items.all():
+            c.drawString(20 * mm, ry, (it.description or "")[:50])
+            c.drawRightString(w - 90 * mm, ry, f"{it.quantity:g}")
+            c.drawRightString(w - 55 * mm, ry, f"${it.unit_price:,.2f}")
+            c.drawRightString(w - 20 * mm, ry, f"${it.amount:,.2f}")
+            ry -= 8 * mm
+
+        c.setFillColor(brand)
+        c.roundRect(w - 80 * mm, ry - 16 * mm, 60 * mm, 12 * mm, 3 * mm, fill=1, stroke=0)
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(w - 76 * mm, ry - 12 * mm, "TOTAL")
+        c.drawRightString(w - 24 * mm, ry - 12 * mm, f"${p.total:,.2f}")
+
+        if p.notes:
+            c.setFillColor(colors.HexColor("#64748b"))
+            c.setFont("Helvetica", 9)
+            c.drawString(20 * mm, ry - 26 * mm, f"Notes: {p.notes[:90]}")
+
+        c.showPage()
+        c.save()
+        buf.seek(0)
+        resp = HttpResponse(buf, content_type="application/pdf")
+        resp["Content-Disposition"] = f'attachment; filename="proposal_{p.id}.pdf"'
+        return resp

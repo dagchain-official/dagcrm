@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
 
 export function Badge({ value, map }) {
   const cls = map?.[value] || "bg-ink-100 text-ink-600";
@@ -68,6 +68,31 @@ export function Modal({ open, onClose, title, children, footer }) {
         </div>
         <div className="px-6 py-5 overflow-y-auto">{children}</div>
         {footer && <div className="px-6 py-4 border-t border-ink-200 flex justify-end gap-2">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+export function ConfirmModal({
+  open, onClose, onConfirm, busy,
+  title = "Are you sure?", message = "This action cannot be undone.",
+  confirmLabel = "Delete",
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="card w-full max-w-sm p-6">
+        <div className="grid place-items-center w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 mx-auto">
+          <AlertTriangle size={26} />
+        </div>
+        <h3 className="text-lg font-extrabold text-ink-900 text-center mt-4">{title}</h3>
+        <p className="text-sm text-ink-500 text-center mt-1.5">{message}</p>
+        <div className="flex gap-2 mt-6">
+          <button className="btn-ghost flex-1 border border-ink-200" onClick={onClose} disabled={busy}>Cancel</button>
+          <button className="btn flex-1 bg-rose-600 text-white hover:bg-rose-700" onClick={onConfirm} disabled={busy}>
+            {busy ? "Deleting…" : confirmLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -158,6 +158,41 @@ class TargetAssignment(models.Model):
     department = models.ForeignKey("hr.Department", on_delete=models.SET_NULL, null=True, blank=True)
 
 
+# ------------------------------------------------------------------ Proposals
+class Proposal(models.Model):
+    STATUS = [("draft", "Draft"), ("sent", "Sent"), ("accepted", "Accepted"), ("rejected", "Rejected")]
+    title = models.CharField(max_length=200)
+    lead = models.ForeignKey(Lead, on_delete=models.SET_NULL, null=True, blank=True, related_name="proposals")
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="proposals")
+    business = models.ForeignKey(Business, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="draft")
+    valid_until = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def recompute(self):
+        self.total = sum((i.amount for i in self.items.all()), 0)
+        self.save(update_fields=["total"])
+
+
+class ProposalItem(models.Model):
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name="items")
+    description = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    def save(self, *args, **kwargs):
+        self.amount = (self.quantity or 0) * (self.unit_price or 0)
+        super().save(*args, **kwargs)
+
+
 # ------------------------------------------------------------------ Attachments
 class Attachment(models.Model):
     file = models.FileField(upload_to="attachments/%Y/%m/")

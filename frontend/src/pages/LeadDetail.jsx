@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "../api/client";
 import { Badge, Spinner, EmptyState, Modal, ScorePill } from "../components/ui";
+import ProposalBuilder, { blankProposal } from "../components/ProposalBuilder";
 import { STATUS_COLORS } from "../config/resources";
 import { useToast } from "../context/ToastContext";
 
@@ -31,6 +32,7 @@ export default function LeadDetail() {
   const [busy, setBusy] = useState(false);
   const [msgModal, setMsgModal] = useState(null); // {type}
   const [msg, setMsg] = useState("");
+  const [proposal, setProposal] = useState(null);
 
   const load = () => api.get(`/leads/${id}/overview/`).then((r) => setD(r.data)).catch(() => setErr(true));
   useEffect(() => { load(); }, [id]);
@@ -59,8 +61,13 @@ export default function LeadDetail() {
   const l = d.lead;
   const rank = FUNNEL.indexOf(l.status);
 
+  const onAction = (type) => {
+    if (type === "proposal") return setProposal({ ...blankProposal(), contactType: "lead", lead: id, title: `Proposal for ${l.name}` });
+    if (type === "whatsapp" || type === "email") return setMsgModal({ type });
+    engage(type);
+  };
   const ActionBtn = ({ type, icon: Icon, label, cls }) => (
-    <button disabled={busy} onClick={() => (type === "whatsapp" || type === "email" ? setMsgModal({ type }) : engage(type))}
+    <button disabled={busy} onClick={() => onAction(type)}
       className={`btn ${cls} flex-1 min-w-[120px] py-2.5`}>
       <Icon size={16} /> {label}
     </button>
@@ -155,6 +162,11 @@ export default function LeadDetail() {
           </div>
         )}
       </Modal>
+
+      {proposal && (
+        <ProposalBuilder initial={proposal} onClose={() => setProposal(null)}
+          onSaved={() => { setProposal(null); load(); }} />
+      )}
     </div>
   );
 }

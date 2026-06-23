@@ -5,7 +5,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../api/client";
 import { RESOURCES, STATUS_COLORS } from "../config/resources";
-import { Badge, EmptyState, Modal, ScorePill, TableSkeleton } from "../components/ui";
+import { Badge, ConfirmModal, EmptyState, Modal, ScorePill, TableSkeleton } from "../components/ui";
 import DataForm from "../components/DataForm";
 import RefSelect from "../components/RefSelect";
 import { useAuth } from "../context/AuthContext";
@@ -85,6 +85,8 @@ export default function ResourceTable() {
   const [count, setCount] = useState(0);
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [confirmRow, setConfirmRow] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -168,15 +170,19 @@ export default function ResourceTable() {
     }
   };
 
-  const remove = async (row) => {
-    if (!confirm("Delete this record?")) return;
+  const remove = async () => {
+    const row = confirmRow;
+    setDeleting(true);
     try {
       await api.delete(`/${cfg.endpoint}/${row.id}/`);
       if (rows.length === 1 && page > 1) setPage(page - 1);
       else load();
       toast.success("Deleted");
+      setConfirmRow(null);
     } catch {
       toast.error("Delete failed");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -386,7 +392,7 @@ export default function ResourceTable() {
                           </button>
                         )}
                         {canDelete && (
-                          <button className="btn-ghost p-1.5 text-rose-500 hover:bg-rose-50" onClick={() => remove(row)}>
+                          <button className="btn-ghost p-1.5 text-rose-500 hover:bg-rose-50" onClick={() => setConfirmRow(row)}>
                             <Trash2 size={15} />
                           </button>
                         )}
@@ -424,6 +430,15 @@ export default function ResourceTable() {
             onSubmit={save} onCancel={() => setModal(null)} />
         )}
       </Modal>
+
+      <ConfirmModal
+        open={!!confirmRow}
+        busy={deleting}
+        onClose={() => setConfirmRow(null)}
+        onConfirm={remove}
+        title={`Delete ${cfg.title.replace(/s$/, "")}?`}
+        message="Ye record permanently delete ho jayega. Confirm karein."
+      />
 
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title={`Import ${cfg.title} from CSV`}>
         <div className="space-y-4">

@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AttachmentViewSet, BusinessViewSet, CommunicationViewSet, CustomerProductViewSet,
     CustomerViewSet, LeadActivityViewSet, LeadInterestViewSet, LeadSourceViewSet,
-    LeadViewSet, OpportunityViewSet, ProductViewSet, TargetAssignmentViewSet, TargetViewSet,
+    LeadViewSet, OpportunityViewSet, ProductViewSet, ProposalViewSet,
+    TargetAssignmentViewSet, TargetViewSet,
 )
 
 router = DefaultRouter()
@@ -20,5 +21,6 @@ router.register("communications", CommunicationViewSet)
 router.register("targets", TargetViewSet)
 router.register("target-assignments", TargetAssignmentViewSet)
 router.register("attachments", AttachmentViewSet)
+router.register("proposals", ProposalViewSet)
 
 urlpatterns = router.urls

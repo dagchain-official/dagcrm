@@ -31,7 +31,7 @@ ROLE_DASHBOARD = {
 
 # ---- Every CRUD module key (matches frontend resource + viewset map) ----
 MODULES = [
-    "leads", "lead-activities", "opportunities", "customers", "communications",
+    "leads", "lead-activities", "opportunities", "proposals", "customers", "communications",
     "targets", "revenues", "businesses", "products", "lead-sources", "tickets",
     "employees", "departments", "attendance", "employee-activities", "leaves",
     "leave-types", "payrolls", "incentives", "incentive-rules", "expenses",
@@ -57,19 +57,19 @@ ROLE_MATRIX = {
     "Super Admin": _full(MODULES),
     "Business Head": _full(MODULES),
     "Sales Manager": {
-        **_full(_split("leads lead-activities opportunities customers communications targets")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications targets")),
         **_view(_split("revenues products businesses lead-sources tickets reports teams users")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Team Leader": {
-        **_full(_split("leads lead-activities opportunities customers communications")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications")),
         **_view(_split("targets tickets reports")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Sales Executive": {
-        **_full(_split("leads lead-activities opportunities customers communications")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications")),
         **_view(_split("tickets businesses products")),
     },
     "Support": {
@@ -93,6 +93,7 @@ VIEWSET_MODULE = {
     "LeadActivityViewSet": "lead-activities",
     "LeadInterestViewSet": "leads",
     "OpportunityViewSet": "opportunities",
+    "ProposalViewSet": "proposals",
     "CustomerViewSet": "customers",
     "CustomerProductViewSet": "customers",
     "CommunicationViewSet": "communications",
