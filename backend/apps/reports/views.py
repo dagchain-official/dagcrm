@@ -4,6 +4,8 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from .assistant import answer_question
+
 from django.contrib.auth import get_user_model
 
 from apps.accounts.access import allowed_business_ids
@@ -254,3 +256,10 @@ def revenue_trend(request):
             .values("month").annotate(net=Sum("net_revenue")).order_by("month"))
     return Response([{"month": d["month"].strftime("%b %Y") if d["month"] else "",
                       "net": d["net"] or 0} for d in data])
+
+
+@api_view(["POST"])
+def ai_ask(request):
+    """Natural-language Q&A over the live CRM database (role-scoped)."""
+    question = (request.data or {}).get("message", "")
+    return Response({"reply": answer_question(request.user, question)})

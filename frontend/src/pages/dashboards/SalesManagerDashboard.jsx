@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -7,6 +7,7 @@ import {
   Users, Target, Trophy, DollarSign, MoreHorizontal, ArrowUpRight,
 } from "lucide-react";
 import api from "../../api/client";
+import usePolling from "../../hooks/usePolling";
 import { Spinner } from "../../components/ui";
 
 const DONUT = ["#f97316", "#fb7185", "#8b5cf6", "#6366f1", "#22c55e", "#06b6d4"];
@@ -42,9 +43,9 @@ function CardHead({ title }) {
 export default function SalesManagerDashboard() {
   const [d, setD] = useState(null);
 
-  useEffect(() => {
-    api.get("/reports/sales-dashboard/").then((r) => setD(r.data)).catch(() => setD(null));
-  }, []);
+  usePolling(() => {
+    api.get("/reports/sales-dashboard/").then((r) => setD(r.data)).catch(() => {});
+  });
 
   if (!d) return <Spinner label="Loading sales dashboard…" />;
 

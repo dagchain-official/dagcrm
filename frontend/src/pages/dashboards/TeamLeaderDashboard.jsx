@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Users, UserPlus, Target, CalendarClock, MoreHorizontal, ArrowUpRight,
 } from "lucide-react";
 import api from "../../api/client";
+import usePolling from "../../hooks/usePolling";
 import { Spinner, Badge } from "../../components/ui";
 import { STATUS_COLORS } from "../../config/resources";
 
@@ -33,9 +34,9 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
 export default function TeamLeaderDashboard() {
   const [d, setD] = useState(null);
 
-  useEffect(() => {
-    api.get("/reports/team-dashboard/").then((r) => setD(r.data)).catch(() => setD(null));
-  }, []);
+  usePolling(() => {
+    api.get("/reports/team-dashboard/").then((r) => setD(r.data)).catch(() => {});
+  });
 
   if (!d) return <Spinner label="Loading your team…" />;
 

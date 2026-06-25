@@ -71,11 +71,13 @@ function exportCsv(name, columns, rows) {
 export default function ResourceTable() {
   const { resource } = useParams();
   const cfg = RESOURCES[resource];
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const toast = useToast();
   const canCreate = can(resource, "create");
   const canEdit = can(resource, "edit");
   const canDelete = can(resource, "delete");
+  // `adminOnly` columns (e.g. Lead phone) are visible only to super admin / business head
+  const columns = cfg.columns.filter((c) => !c.adminOnly || user?.is_admin_view);
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,9 +104,9 @@ export default function ResourceTable() {
   const [distRunning, setDistRunning] = useState(false);
   const [users, setUsers] = useState([]);
 
-  const load = useCallback(() => {
+  const load = useCallback((silent = false) => {
     if (!cfg) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const params = { search: search || undefined, page, page_size: PAGE_SIZE, ...filters };
     Object.keys(params).forEach((k) => (params[k] === "" || params[k] == null) && delete params[k]);
     api
@@ -113,8 +115,8 @@ export default function ResourceTable() {
         setRows(data.results || data);
         setCount(data.count ?? (data.results || data).length);
       })
-      .catch(() => { setRows([]); setCount(0); })
-      .finally(() => setLoading(false));
+      .catch(() => { if (!silent) { setRows([]); setCount(0); } })
+      .finally(() => { if (!silent) setLoading(false); });
   }, [cfg, search, filters, page]);
 
   useEffect(() => {
@@ -126,6 +128,12 @@ export default function ResourceTable() {
     const t = setTimeout(load, search ? 350 : 0);
     return () => clearTimeout(t);
   }, [load, search]);
+
+  // live auto-refresh — list updates without manual reload
+  useEffect(() => {
+    const id = setInterval(() => { if (!document.hidden) load(true); }, 1000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
@@ -145,7 +153,7 @@ export default function ResourceTable() {
   const doExport = async (fmt) => {
     try {
       const all = await fetchAll();
-      (fmt === "pdf" ? exportPdf : exportCsv)(cfg.title, cfg.columns, all);
+      (fmt === "pdf" ? exportPdf : exportCsv)(cfg.title, columns, all);
       toast.success(`Exported ${all.length} ${cfg.title.toLowerCase()} as ${fmt.toUpperCase()}`);
     } catch {
       toast.error("Export failed");
@@ -319,7 +327,7 @@ export default function ResourceTable() {
               )}
             </div>
           )}
-          {cfg.distribute && canEdit && (
+          {cfg.distribute && canEdit && user?.can_assign_leads && (
             <button className="chip !py-2" onClick={openDistribute} title="Auto-assign leads to RMs">
               <Shuffle size={15} /> Distribute
             </button>
@@ -334,7 +342,7 @@ export default function ResourceTable() {
               <Calculator size={15} /> Auto-Calculate
             </button>
           )}
-          {canCreate && (
+          {canCreate && (resource !== "leads" || user?.can_assign_leads) && (
             <button className="btn-primary" onClick={() => setModal({ mode: "create", row: blank })}>
               <Plus size={16} /> New
             </button>
@@ -344,7 +352,7 @@ export default function ResourceTable() {
 
       <div className="card p-5">
         {loading ? (
-          <TableSkeleton cols={Math.min(cfg.columns.length + 1, 6)} />
+          <TableSkeleton cols={Math.min(columns.length + 1, 6)} />
         ) : rows.length === 0 ? (
           <EmptyState title="No records" hint="Try adjusting filters or click “New”." />
         ) : (
@@ -353,7 +361,7 @@ export default function ResourceTable() {
               <thead>
                 <tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
                   <th className="pb-3 pr-4 font-semibold">S/N</th>
-                  {cfg.columns.map((c) => (
+                  {columns.map((c) => (
                     <th key={c.key} className="pb-3 px-4 font-semibold whitespace-nowrap">{c.label}</th>
                   ))}
                   <th className="pb-3 px-4 text-right font-semibold">Actions</th>
@@ -363,7 +371,7 @@ export default function ResourceTable() {
                 {rows.map((row, i) => (
                   <tr key={row.id} className="border-t border-ink-100 hover:bg-ink-50/70 transition">
                     <td className="py-3.5 pr-4 text-ink-400 tabular-nums">{String(i + 1).padStart(2, "0")}</td>
-                    {cfg.columns.map((c) => (
+                    {columns.map((c) => (
                       <td key={c.key} className="py-3.5 px-4 text-ink-700 whitespace-nowrap max-w-[220px] truncate">
                         {cell(c, row)}
                       </td>

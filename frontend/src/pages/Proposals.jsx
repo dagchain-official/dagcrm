@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FileText, Plus, Trash2, Pencil, Send, FileDown, Search, Check, Ban, GitBranch } from "lucide-react";
 import api from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, ConfirmModal } from "../components/ui";
 import ProposalBuilder, { blankProposal, blankItem } from "../components/ProposalBuilder";
 import { STATUS_COLORS } from "../config/resources";
@@ -20,8 +21,9 @@ export default function Proposals() {
   const [params, setParams] = useSearchParams();
 
   const load = () => api.get("/proposals/", { params: { search: search || undefined, page_size: 100 } })
-    .then(({ data }) => setRows(data.results || data)).catch(() => setRows([]));
+    .then(({ data }) => setRows(data.results || data)).catch(() => setRows((r) => r || []));
   useEffect(() => { const t = setTimeout(load, search ? 300 : 0); return () => clearTimeout(t); }, [search]);
+  usePolling(load);   // live background refresh (no manual reload)
 
   // opened from a Lead/Customer profile "Send Proposal" → pre-fill the builder
   useEffect(() => {

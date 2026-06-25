@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarOff, Plus } from "lucide-react";
 import api from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
 
@@ -13,8 +14,8 @@ export default function MyLeaves() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  const load = () => api.get("/my-leaves/").then((r) => setData(r.data)).catch(() => setData({ leaves: [], leave_types: [] }));
-  useEffect(() => { load(); }, []);
+  const load = () => api.get("/my-leaves/").then((r) => setData(r.data)).catch(() => setData((d) => d || { leaves: [], leave_types: [] }));
+  usePolling(load);
 
   const apply = async (e) => {
     e.preventDefault();

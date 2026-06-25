@@ -149,6 +149,28 @@ class LeadSerializer(serializers.ModelSerializer):
                   "score", "interests", "activity_count", "created_at"]
         read_only_fields = ["created_at", "score"]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Super admin / business head see everything. Assigned employees (RMs)
+        # must NOT see the phone number — email & rest stay visible. They still
+        # call/WhatsApp via the system (number is used server-side only).
+        from apps.accounts.access import is_admin_view
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user and not is_admin_view(user):
+            data["phone"] = ""          # hidden from employees
+            data["phone_hidden"] = True
+        return data
+
+    def update(self, instance, validated_data):
+        # employees can't change/blank the number (their view sends it empty)
+        from apps.accounts.access import is_admin_view
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user and not is_admin_view(user):
+            validated_data.pop("phone", None)
+        return super().update(instance, validated_data)
+
 
 class OpportunitySerializer(serializers.ModelSerializer):
     lead_name = serializers.CharField(source="lead.name", read_only=True)

@@ -8,10 +8,15 @@ def ensure_employee(user):
     """Map a user to one Employee record. Super Admin is NOT an employee."""
     if not user or not user.is_authenticated or user.is_superuser:
         return None
-    emp, _ = Employee.objects.get_or_create(
-        user=user, defaults={"designation": getattr(user.role, "name", "") or "Staff"}
+    # tolerate (and self-heal) duplicate rows so .get_or_create can't blow up
+    emps = list(Employee.objects.filter(user=user).order_by("id"))
+    if emps:
+        if len(emps) > 1:                       # keep the oldest, drop the rest
+            Employee.objects.filter(id__in=[e.id for e in emps[1:]]).delete()
+        return emps[0]
+    return Employee.objects.create(
+        user=user, designation=getattr(user.role, "name", "") or "Staff"
     )
-    return emp
 
 
 def today_attendance(user):

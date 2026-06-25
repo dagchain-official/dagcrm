@@ -50,8 +50,33 @@ class LeadViewSet(viewsets.ModelViewSet):
             qs = qs.filter(assigned_to=self.request.user)
         return qs
 
+    def _notify_assignee(self, lead, actor):
+        """Tell an RM when a lead lands on them (skip self-assignment)."""
+        if lead.assigned_to_id and lead.assigned_to_id != getattr(actor, "id", None):
+            from apps.notifications.models import notify
+            notify(lead.assigned_to, title="New lead assigned",
+                   body=f"{lead.name} ({lead.lead_code}) was assigned to you.",
+                   kind="info", link="/m/leads")
+
+    def _enforce_assignment(self, serializer):
+        """Non-assigners (e.g. Sales Executive) can't hand a lead to someone else —
+        force it onto themselves regardless of what they sent."""
+        from apps.accounts.access import can_assign_leads
+        user = self.request.user
+        if user.is_authenticated and not can_assign_leads(user):
+            serializer.validated_data["assigned_to"] = user
+
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        self._enforce_assignment(serializer)
+        lead = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        self._notify_assignee(lead, self.request.user)
+
+    def perform_update(self, serializer):
+        prev = self.get_object().assigned_to_id
+        self._enforce_assignment(serializer)
+        lead = serializer.save()
+        if lead.assigned_to_id != prev:          # assignee changed -> notify the new one
+            self._notify_assignee(lead, self.request.user)
 
     @action(detail=True, methods=["get"])
     def overview(self, request, pk=None):
@@ -60,7 +85,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         acts = lead.activities.select_related("user").all()
         opps = lead.opportunities.select_related("product").all()
         return Response({
-            "lead": LeadSerializer(lead).data,
+            "lead": LeadSerializer(lead, context={"request": request}).data,
             "activities": LeadActivitySerializer(acts, many=True).data,
             "opportunities": OpportunitySerializer(opps, many=True).data,
         })
@@ -102,7 +127,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         lead.refresh_from_db()  # status may have auto-advanced via signal
         return Response({
             "activity": LeadActivitySerializer(activity).data,
-            "lead": LeadSerializer(lead).data,
+            "lead": LeadSerializer(lead, context={"request": request}).data,
             "telephony": telephony,
         })
 
@@ -113,7 +138,11 @@ class LeadViewSet(viewsets.ModelViewSet):
 
         from django.contrib.auth import get_user_model
 
+        from apps.accounts.access import can_assign_leads
         from apps.notifications.models import notify
+
+        if not can_assign_leads(request.user):
+            return Response({"detail": "You are not allowed to distribute leads."}, status=403)
 
         User = get_user_model()
         strategy = request.data.get("strategy", "round_robin")
@@ -366,7 +395,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "revenues": RevenueSerializer(revenues, many=True).data,
             "tickets": TicketSerializer(tickets, many=True).data,
             "communications": CommunicationSerializer(comms, many=True).data,
-            "origin_lead": LeadSerializer(lead).data if lead else None,
+            "origin_lead": LeadSerializer(lead, context={"request": request}).data if lead else None,
             "attachments": AttachmentSerializer(customer.attachments.all(), many=True, context={"request": request}).data,
             "timeline": timeline,
         })

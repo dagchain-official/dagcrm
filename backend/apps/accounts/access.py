@@ -17,6 +17,16 @@ MANAGER_ROLES = {"Super Admin", "Business Head"}
 # Roles that leads can be assigned to (sales chain only).
 ASSIGNABLE_LEAD_ROLES = ["Sales Manager", "Team Leader", "Sales Executive"]
 
+# Roles that may ASSIGN/DISTRIBUTE leads to others. Sales Executive is the last
+# rung — it works its own leads but cannot assign to anyone.
+LEAD_ASSIGNER_ROLES = {"Super Admin", "Business Head", "Sales Manager", "Team Leader"}
+
+
+def can_assign_leads(user):
+    if getattr(user, "is_superuser", False):
+        return True
+    return getattr(getattr(user, "role", None), "name", None) in LEAD_ASSIGNER_ROLES
+
 # Which dashboard each role lands on (frontend route key).
 ROLE_DASHBOARD = {
     "Super Admin": "admin",
@@ -79,7 +89,8 @@ ROLE_MATRIX = {
     "HR": {
         **_full(_split("employees departments attendance employee-activities leaves "
                        "leave-types payrolls incentives incentive-rules")),
-        **_view(_split("users reports")),
+        # businesses + products are read-only lookups the incentive-rule form needs
+        **_view(_split("users reports businesses products")),
     },
     "Finance": {
         **_full(_split("revenues expenses commissions payrolls")),

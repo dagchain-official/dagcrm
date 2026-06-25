@@ -51,7 +51,11 @@ export default function UserDashboard() {
   const [d, setD] = useState(null);
 
   useEffect(() => {
-    api.get("/reports/my-dashboard/").then((r) => setD(r.data)).catch(() => setD(null));
+    const fetchData = () => api.get("/reports/my-dashboard/").then((r) => setD(r.data)).catch(() => {});
+    fetchData();
+    // live auto-refresh — new assigned leads appear without manual reload
+    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 1000);
+    return () => clearInterval(id);
   }, []);
 
   if (!d) return <Spinner label="Loading your workspace…" />;

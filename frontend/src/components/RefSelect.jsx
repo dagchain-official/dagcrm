@@ -20,7 +20,7 @@ export default function RefSelect({ field, value, onChange, placeholder, filterP
       <option value="">{placeholder || `Select ${field.label || "option"}`}</option>
       {opts.map((o) => (
         <option key={o.id} value={o.id}>
-          {o[field.labelKey] || o.name || `#${o.id}`}
+          {o[field.labelKey] || o.label || o.name || o.title || `#${o.id}`}
         </option>
       ))}
     </select>

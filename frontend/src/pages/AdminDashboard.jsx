@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -8,6 +8,7 @@ import {
   Sparkles, TrendingUp,
 } from "lucide-react";
 import api, { ai } from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Badge, Spinner } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
 
@@ -50,7 +51,8 @@ export default function AdminDashboard() {
   const [tickets, setTickets] = useState([]);
   const [insights, setInsights] = useState([]);
 
-  useEffect(() => {
+  const insightsDone = useRef(false);
+  usePolling(() => {
     Promise.all([
       api.get("/reports/dashboard/"),
       api.get("/reports/opportunities-by-stage/"),
@@ -65,9 +67,13 @@ export default function AdminDashboard() {
       setTrend(tr.data);
       setRevenue(rev.data.results || rev.data);
       setTickets(tk.data.results || tk.data);
-      ai.post("/insights/summary", d.data).then((r) => setInsights(r.data.insights)).catch(() => {});
-    });
-  }, []);
+      // AI insights are expensive — fetch once, not every poll
+      if (!insightsDone.current) {
+        insightsDone.current = true;
+        ai.post("/insights/summary", d.data).then((r) => setInsights(r.data.insights)).catch(() => {});
+      }
+    }).catch(() => {});
+  });
 
   if (!kpi) return <Spinner label="Loading dashboard…" />;
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -7,6 +7,7 @@ import {
   LifeBuoy, Inbox, CheckCircle2, AlertTriangle, MoreHorizontal, ArrowUpRight,
 } from "lucide-react";
 import api from "../../api/client";
+import usePolling from "../../hooks/usePolling";
 import { Spinner, Badge } from "../../components/ui";
 import { STATUS_COLORS } from "../../config/resources";
 
@@ -40,9 +41,9 @@ function CardHead({ title }) {
 export default function SupportDashboard() {
   const [d, setD] = useState(null);
 
-  useEffect(() => {
-    api.get("/reports/support-dashboard/").then((r) => setD(r.data)).catch(() => setD(null));
-  }, []);
+  usePolling(() => {
+    api.get("/reports/support-dashboard/").then((r) => setD(r.data)).catch(() => {});
+  });
 
   if (!d) return <Spinner label="Loading support dashboard…" />;
 

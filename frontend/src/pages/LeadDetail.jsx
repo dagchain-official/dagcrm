@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Phone, MessageCircle, Mail, FileText, Mic, StickyNote,
   Calendar, MapPin, Target as TargetIcon, Clock, Send,
 } from "lucide-react";
 import api from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal, ScorePill } from "../components/ui";
 import ProposalBuilder, { blankProposal } from "../components/ProposalBuilder";
 import { STATUS_COLORS } from "../config/resources";
@@ -34,8 +35,8 @@ export default function LeadDetail() {
   const [msg, setMsg] = useState("");
   const [proposal, setProposal] = useState(null);
 
-  const load = () => api.get(`/leads/${id}/overview/`).then((r) => setD(r.data)).catch(() => setErr(true));
-  useEffect(() => { load(); }, [id]);
+  const load = () => api.get(`/leads/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
+  usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
 
   const engage = async (type, message = "") => {
     setBusy(true);
@@ -156,7 +157,7 @@ export default function LeadDetail() {
         </>}>
         {msgModal && (
           <div>
-            <p className="text-sm text-ink-500 mb-3">To: <b>{l.name}</b> ({msgModal.type === "whatsapp" ? l.phone : l.email})</p>
+            <p className="text-sm text-ink-500 mb-3">To: <b>{l.name}</b>{(msgModal.type === "whatsapp" ? l.phone : l.email) ? ` (${msgModal.type === "whatsapp" ? l.phone : l.email})` : ""}</p>
             <textarea className="input min-h-[110px]" placeholder="Type your message…" value={msg} onChange={(e) => setMsg(e.target.value)} />
             <p className="text-xs text-ink-400 mt-2">Twilio configured ho to live bhejega, warna activity me log hoga.</p>
           </div>

@@ -129,11 +129,19 @@ class PayrollSerializer(serializers.ModelSerializer):
 class IncentiveRuleSerializer(serializers.ModelSerializer):
     business_name = serializers.CharField(source="business.name", read_only=True)
     product_name = serializers.CharField(source="product.name", read_only=True)
+    label = serializers.SerializerMethodField()
 
     class Meta:
         model = IncentiveRule
         fields = ["id", "business", "business_name", "product", "product_name",
-                  "formula_type", "formula_value"]
+                  "formula_type", "formula_value", "label"]
+
+    def get_label(self, obj):
+        scope = obj.business.name if obj.business_id else "All businesses"
+        if obj.product_id:
+            scope += f" · {obj.product.name}"
+        val = f"{obj.formula_value}%" if obj.formula_type == "percentage" else f"{obj.formula_value}"
+        return f"{scope} — {val} ({obj.formula_type})"
 
 
 class IncentiveSerializer(serializers.ModelSerializer):

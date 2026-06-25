@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -6,6 +6,7 @@ import {
   Users, UserCheck, CalendarOff, Wallet, MoreHorizontal, ArrowUpRight,
 } from "lucide-react";
 import api from "../../api/client";
+import usePolling from "../../hooks/usePolling";
 import { Spinner } from "../../components/ui";
 
 const PIE_COLORS = ["#f59e0b", "#22c55e", "#ef4444"];
@@ -41,9 +42,9 @@ function CardHead({ title }) {
 export default function HRDashboard() {
   const [d, setD] = useState(null);
 
-  useEffect(() => {
-    api.get("/reports/hr-dashboard/").then((r) => setD(r.data)).catch(() => setD(null));
-  }, []);
+  usePolling(() => {
+    api.get("/reports/hr-dashboard/").then((r) => setD(r.data)).catch(() => {});
+  });
 
   if (!d) return <Spinner label="Loading HR dashboard…" />;
 

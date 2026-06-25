@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -6,6 +6,7 @@ import {
   DollarSign, TrendingUp, Receipt, Handshake, MoreHorizontal, ArrowUpRight,
 } from "lucide-react";
 import api from "../../api/client";
+import usePolling from "../../hooks/usePolling";
 import { Spinner } from "../../components/ui";
 
 const PIE_COLORS = ["#6366f1", "#f59e0b", "#22c55e", "#fb7185", "#8b5cf6", "#06b6d4"];
@@ -34,9 +35,9 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
 export default function FinanceDashboard() {
   const [d, setD] = useState(null);
 
-  useEffect(() => {
-    api.get("/reports/finance-dashboard/").then((r) => setD(r.data)).catch(() => setD(null));
-  }, []);
+  usePolling(() => {
+    api.get("/reports/finance-dashboard/").then((r) => setD(r.data)).catch(() => {});
+  });
 
   if (!d) return <Spinner label="Loading finance dashboard…" />;
 

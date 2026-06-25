@@ -15,4 +15,5 @@ urlpatterns = [
     path("reports/opportunities-by-stage/", views.opportunities_by_stage),
     path("reports/revenue-by-business/", views.revenue_by_business),
     path("reports/revenue-trend/", views.revenue_trend),
+    path("ai/ask/", views.ai_ask),
 ]

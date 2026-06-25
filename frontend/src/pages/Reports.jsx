@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import api from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Spinner } from "../components/ui";
 
 export default function Reports() {
@@ -10,7 +11,7 @@ export default function Reports() {
   const [biz, setBiz] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  usePolling(() => {
     Promise.all([
       api.get("/reports/leads-by-status/"),
       api.get("/reports/revenue-by-business/"),
@@ -20,7 +21,7 @@ export default function Reports() {
         setBiz(b.data);
       })
       .finally(() => setLoading(false));
-  }, []);
+  });
 
   if (loading) return <Spinner />;
 

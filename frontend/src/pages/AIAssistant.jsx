@@ -3,9 +3,8 @@ import { Sparkles, Send, Gauge } from "lucide-react";
 import api, { ai } from "../api/client";
 
 export default function AIAssistant() {
-  const [ctx, setCtx] = useState({});
   const [messages, setMessages] = useState([
-    { role: "ai", text: "Hi! I'm your DAGOS assistant. Ask me about leads, revenue, pipeline or tickets." },
+    { role: "ai", text: "Hi! I'm your DAGOS assistant — ask me anything about your data: leads, revenue, pipeline, proposals, tickets, employees, expenses… Try \"summary\" for a quick snapshot." },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -15,22 +14,20 @@ export default function AIAssistant() {
   const [lead, setLead] = useState({ source: "Referral", status: "new", activity_count: 2, email: "x@y.com", phone: "123" });
   const [score, setScore] = useState(null);
 
-  useEffect(() => {
-    api.get("/reports/dashboard/").then(({ data }) => setCtx(data)).catch(() => {});
-  }, []);
   useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
-  const send = async () => {
-    if (!input.trim()) return;
-    const text = input.trim();
+  const send = async (preset) => {
+    const text = (preset ?? input).trim();
+    if (!text) return;
     setMessages((m) => [...m, { role: "me", text }]);
     setInput("");
     setSending(true);
     try {
-      const { data } = await ai.post("/assistant/chat", { message: text, context: ctx });
+      // hits the live CRM database (role-scoped) for a real, grounded answer
+      const { data } = await api.post("/ai/ask/", { message: text });
       setMessages((m) => [...m, { role: "ai", text: data.reply }]);
     } catch {
-      setMessages((m) => [...m, { role: "ai", text: "AI service unavailable. Make sure it's running on :8100." }]);
+      setMessages((m) => [...m, { role: "ai", text: "Couldn't reach the server. Please try again." }]);
     } finally {
       setSending(false);
     }
@@ -56,7 +53,7 @@ export default function AIAssistant() {
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "me" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
+                <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-line ${
                   m.role === "me" ? "bg-brand-600 text-white rounded-br-sm" : "bg-ink-100 text-ink-800 rounded-bl-sm"
                 }`}>
                   {m.text}
@@ -65,15 +62,23 @@ export default function AIAssistant() {
             ))}
             <div ref={endRef} />
           </div>
+          <div className="px-3 pt-2 flex flex-wrap gap-2">
+            {["summary", "Lead conversion rate", "Revenue by business", "Open tickets by priority", "Proposals sent vs accepted"].map((s) => (
+              <button key={s} onClick={() => send(s)} disabled={sending}
+                className="text-xs px-2.5 py-1 rounded-full bg-ink-100 text-ink-600 hover:bg-brand-50 hover:text-brand-700">
+                {s}
+              </button>
+            ))}
+          </div>
           <div className="p-3 border-t border-ink-200 flex gap-2">
             <input
               className="input"
-              placeholder="Ask anything…"
+              placeholder="Ask anything about your data…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
             />
-            <button className="btn-primary" onClick={send} disabled={sending}>
+            <button className="btn-primary" onClick={() => send()} disabled={sending}>
               <Send size={16} />
             </button>
           </div>

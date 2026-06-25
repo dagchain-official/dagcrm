@@ -27,7 +27,7 @@ def tokens_for(user):
 
 def me_payload(user):
     """User profile + effective access (role, dashboard, modules, businesses)."""
-    from .access import ROLE_DASHBOARD, allowed_business_ids, role_permissions
+    from .access import ROLE_DASHBOARD, allowed_business_ids, role_permissions, can_assign_leads
     from apps.crm.models import Business
 
     data = UserSerializer(user).data
@@ -39,6 +39,7 @@ def me_payload(user):
     data["dashboard"] = "admin" if user.is_superuser else ROLE_DASHBOARD.get(role, "sales-exec")
     data["is_superuser"] = user.is_superuser
     data["modules"] = role_permissions(user)
+    data["can_assign_leads"] = can_assign_leads(user)
     data["business_ids"] = ids  # null = all
     data["businesses"] = [{"id": b.id, "name": b.name} for b in businesses]
     return data

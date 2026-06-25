@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Package, LifeBuoy,
@@ -6,6 +6,7 @@ import {
   Plus, Upload, FileText, Download, Paperclip, FileSignature,
 } from "lucide-react";
 import api from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal } from "../components/ui";
 import DataForm from "../components/DataForm";
 import ProposalBuilder, { blankProposal } from "../components/ProposalBuilder";
@@ -85,8 +86,8 @@ export default function Customer360() {
   const [saving, setSaving] = useState(false);
   const [proposal, setProposal] = useState(null);
 
-  const load = () => api.get(`/customers/${id}/overview/`).then((r) => setD(r.data)).catch(() => setErr(true));
-  useEffect(() => { load(); }, [id]);
+  const load = () => api.get(`/customers/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
+  usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
 
   const submitQuick = async (form) => {
     setSaving(true);

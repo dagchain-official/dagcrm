@@ -111,7 +111,7 @@ export const RESOURCES = {
     columns: [
       { key: "lead_code", label: "Code" },
       { key: "name", label: "Name" },
-      { key: "phone", label: "Phone" },
+      { key: "phone", label: "Phone", adminOnly: true },
       { key: "country", label: "Country" },
       { key: "source_name", label: "Source" },
       { key: "assigned_name", label: "Owner" },
@@ -413,7 +413,7 @@ export const RESOURCES = {
     ],
     fields: [
       { key: "employee", label: "Employee", type: "ref", ref: "employees", labelKey: "user_name", required: true },
-      { key: "rule", label: "Rule", type: "ref", ref: "incentive-rules", labelKey: "formula_type" },
+      { key: "rule", label: "Rule", type: "ref", ref: "incentive-rules", labelKey: "label" },
       { key: "amount", label: "Amount", type: "number" },
       { key: "month", label: "Month (1-12)", type: "number", required: true },
       { key: "year", label: "Year", type: "number", required: true },

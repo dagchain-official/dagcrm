@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, MessageSquare, Paperclip, FileText, Download, Upload,
   Clock, Send, User, Calendar,
 } from "lucide-react";
 import api from "../api/client";
+import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
 import { useToast } from "../context/ToastContext";
@@ -44,13 +45,13 @@ export default function TicketDetail() {
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
 
-  const loadTicket = () => api.get(`/tickets/${id}/`).then((r) => setT(r.data)).catch(() => setErr(true));
+  const loadTicket = () => api.get(`/tickets/${id}/`).then((r) => setT(r.data)).catch(() => { if (!t) setErr(true); });
   const loadAtts = () =>
     api.get(`/attachments/?ticket=${id}`)
       .then((r) => setAtts(Array.isArray(r.data) ? r.data : (r.data?.results || [])))
-      .catch(() => setAtts([]));
+      .catch(() => {});
 
-  useEffect(() => { loadTicket(); loadAtts(); }, [id]);
+  usePolling(() => { loadTicket(); loadAtts(); }, 2000, [id]);   // live refresh
 
   const addComment = async () => {
     const text = comment.trim();
