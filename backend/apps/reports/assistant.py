@@ -4,13 +4,17 @@ A lightweight, deterministic intent router: it reads the question, runs real
 Django ORM queries (role-scoped) and returns a grounded, human answer — no
 external LLM needed, so it works offline and never hallucinates numbers.
 """
-from django.db.models import Count, Sum
+import re
+
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from apps.accounts.access import is_admin_view
-from apps.crm.models import Business, Customer, Lead, Opportunity, Product, Proposal
+from apps.crm.models import (
+    Business, Customer, Lead, LeadActivity, Opportunity, Product, Proposal,
+)
 from apps.finance.models import Commission, Expense
-from apps.hr.models import Employee, Incentive, Leave, Payroll
+from apps.hr.models import Attendance, Employee, EmployeeActivity, Incentive, Leave, Payroll
 from apps.sales.models import Revenue
 from apps.support.models import Ticket
 
@@ -40,6 +44,11 @@ def answer_question(user, question):
     leads = Lead.objects.all() if admin else Lead.objects.filter(assigned_to=user)
     opps = Opportunity.objects.all() if admin else Opportunity.objects.filter(assigned_to=user)
     scope_note = "" if admin else " (your assigned records)"
+
+    # ---- specific record lookup (type a name -> full profile) ---------------
+    record = _lookup_record(user, question, q, admin, role, can_hr)
+    if record:
+        return record
 
     # ---- company snapshot ---------------------------------------------------
     if has("summary", "overview", "snapshot", "how is", "how's business", "report card", "kaisa chal"):
@@ -211,5 +220,185 @@ def _help():
         "• Total revenue · Revenue by business · This month's sales\n"
         "• Proposals sent vs accepted · Open tickets by priority\n"
         "• How many employees? · Pending leaves · Total expenses\n"
+        "Or just type a name to see a full profile — e.g. \"Aarav Iyer\", "
+        "\"find LD0007\", \"employee Riya\".\n"
         "Type 'summary' for a full company snapshot."
     )
+
+
+# ----------------------------------------------------------------------------
+# Specific-record lookup: type any lead / customer / employee name (or code)
+# and get a full role-scoped profile back.
+# ----------------------------------------------------------------------------
+_AGG_WORDS = (
+    "lead", "customer", "client", "opportunit", "deal", "pipeline", "proposal",
+    "quot", "revenue", "sales", "income", "earning", "turnover", "ticket",
+    "support", "complaint", "issue", "employee", "staff", "team", "headcount",
+    "people", "leave", "payroll", "salary", "incentive", "bonus", "expense",
+    "commission", "business", "product", "service", "summary", "overview",
+    "snapshot", "how many", "total", "conversion", "by source", "kitne",
+)
+_PREFIX_VERBS = (
+    "who is", "find", "details of", "detail of", "profile of", "info about",
+    "information about", "show me", "show", "lookup", "look up", "search",
+    "tell me about", "get me", "open",
+)
+_SUFFIX_PHRASES = (
+    "ki detail", "ka detail", "ki details", "ka data", "ki jankari",
+    "ki info", "ke baare", "ka profile", "ki profile",
+)
+_TYPE_WORDS = {"employee": "employee", "staff": "employee", "lead": "lead",
+               "customer": "customer", "client": "customer"}
+
+
+def _extract_name(raw, q):
+    """Pull the searched name + optional entity-type hint out of a question."""
+    typ = None
+
+    # leading "employee/lead/customer <name>"
+    m = re.match(r"^(employee|staff|lead|customer|client)\s+(.+)$", q)
+    if m:
+        return _TYPE_WORDS[m.group(1)], m.group(2).strip(" ?.")
+
+    # "<name> ki detail" (Hinglish suffix)
+    for s in _SUFFIX_PHRASES:
+        if s in q:
+            return None, q.split(s)[0].strip(" ?.")
+
+    # "find/who is/details of <name>" (English prefix verb)
+    for v in _PREFIX_VERBS:
+        if q.startswith(v + " ") or q == v:
+            name = q[len(v):].strip(" ?.")
+            name = re.sub(r"^(the|a|lead|customer|employee|staff|client)\s+", "", name)
+            return typ, name
+
+    # bare name typed directly — only if it has no aggregate keyword
+    if not any(w in q for w in _AGG_WORDS) and 1 <= len(q.split()) <= 4:
+        return None, q.strip(" ?.")
+
+    return None, None
+
+
+def _lookup_record(user, raw, q, admin, role, can_hr):
+    typ, name = _extract_name(raw, q)
+    if not name or len(name) < 2:
+        return None
+
+    can_customers = admin or role in ("Sales Manager", "Team Leader", "Sales Executive", "Support")
+    leads_qs = Lead.objects.all() if admin else Lead.objects.filter(assigned_to=user)
+
+    matches = []  # (kind, obj, label)
+    if typ in (None, "lead"):
+        for l in leads_qs.filter(
+            Q(name__icontains=name) | Q(lead_code__iexact=name) |
+            Q(email__icontains=name) | Q(phone__icontains=name)
+        ).select_related("source", "assigned_to")[:6]:
+            matches.append(("lead", l, f"Lead · {l.lead_code} {l.name}"))
+    if typ in (None, "customer") and can_customers:
+        for c in Customer.objects.filter(
+            Q(name__icontains=name) | Q(email__icontains=name) | Q(phone__icontains=name)
+        )[:6]:
+            matches.append(("customer", c, f"Customer · {c.name}"))
+    if typ in (None, "employee") and can_hr:
+        for e in Employee.objects.filter(
+            Q(user__name__icontains=name) | Q(user__email__icontains=name) |
+            Q(user__employee_id__iexact=name)
+        ).select_related("user", "department", "manager")[:6]:
+            matches.append(("employee", e, f"Employee · {e.user.name}"))
+
+    if not matches:
+        # a name was clearly asked for but nothing matched (or no permission)
+        looked_like_request = typ or any(
+            q.startswith(v + " ") for v in _PREFIX_VERBS) or any(s in q for s in _SUFFIX_PHRASES)
+        if looked_like_request:
+            return (f"No record found for \"{name}\". Try the exact name, lead code "
+                    "(e.g. LD0007), email or phone — or check you have access to it.")
+        return None
+
+    if len(matches) > 1:
+        lines = [f"Found {len(matches)} matches for \"{name}\":"]
+        lines += [f"• {lbl}" for _, _, lbl in matches]
+        lines.append("Type the exact name (ya code) to open the full profile.")
+        return "\n".join(lines)
+
+    kind, obj, _ = matches[0]
+    if kind == "lead":
+        return _lead_profile(obj)
+    if kind == "customer":
+        return _customer_profile(obj)
+    return _employee_profile(obj, show_salary=can_hr)
+
+
+def _lead_profile(l):
+    acts = l.activities.select_related("user").all()
+    last = acts.first()
+    opps = l.opportunities.count()
+    props = l.proposals.filter(is_current=True).count()
+    interests = ", ".join(
+        i.business.name for i in l.interests.select_related("business").all() if i.business
+    ) or "—"
+    lines = [
+        f"👤 LEAD — {l.name}  ({l.lead_code})",
+        f"Status: {l.status} · Score: {l.score}/100",
+        f"📞 {l.phone or '—'}   ✉️ {l.email or '—'}",
+        f"🌍 {l.country or '—'} · Source: {l.source.name if l.source else '—'}",
+        f"Owner: {l.assigned_to.name if l.assigned_to else 'Unassigned'}",
+        f"Interested in: {interests}",
+        f"Activities: {acts.count()} · Opportunities: {opps} · Proposals: {props}",
+    ]
+    if last:
+        lines.append(f"Last activity: {last.activity_type} — "
+                     f"{(last.remarks or last.next_action or '')[:60]}")
+    return "\n".join(lines)
+
+
+def _customer_profile(c):
+    revs = Revenue.objects.filter(customer=c).select_related("business")
+    net = revs.aggregate(t=Sum("net_revenue"))["t"] or 0
+    gross = revs.aggregate(t=Sum("gross_revenue"))["t"] or 0
+    prods = c.products.select_related("business", "product").all()
+    tickets = Ticket.objects.filter(customer=c)
+    open_t = tickets.exclude(status__in=["resolved", "closed"]).count()
+    prod_list = ", ".join(
+        f"{p.product.name if p.product else (p.business.name if p.business else '')}"
+        for p in prods
+    ) or "—"
+    lines = [
+        f"🧑‍💼 CUSTOMER — {c.name}",
+        f"📞 {c.phone or '—'}   ✉️ {c.email or '—'}   🌍 {c.country or '—'}",
+        f"💰 Net revenue: {_money(net)}  (gross {_money(gross)})",
+        f"📦 Products ({prods.count()}): {prod_list}",
+        f"🎫 Tickets: {open_t} open / {tickets.count()} total",
+    ]
+    if c.lead_id:
+        lines.append(f"Originated from lead: {c.lead.lead_code}")
+    return "\n".join(lines)
+
+
+def _employee_profile(e, show_salary=True):
+    u = e.user
+    att = e.attendance.all()[:5]
+    present = sum(1 for a in att if a.status == "present")
+    leaves = e.leaves.all()
+    pend = leaves.filter(status="pending").count()
+    pay = e.payrolls.order_by("-year", "-month").first()
+    act = e.activities.all()[:30]
+    calls = sum(a.calls_completed for a in act)
+    notes = sum(a.notes_added for a in act)
+    lines = [
+        f"👔 EMPLOYEE — {u.name}  ({u.employee_id or '—'})",
+        f"Role: {getattr(u.role, 'name', '—')} · {e.designation or '—'}",
+        f"Department: {e.department.department_name if e.department else '—'}",
+        f"Manager: {e.manager.name if e.manager else '—'}",
+        f"Joined: {e.joining_date or '—'}",
+        f"✉️ {u.email}",
+    ]
+    if show_salary:
+        lines.append(f"💵 Salary: {_money(e.salary)}")
+        if pay:
+            lines.append(f"🧾 Latest payroll ({pay.month}/{pay.year}): "
+                         f"net {_money(pay.final_salary)}")
+    lines.append(f"🕒 Attendance (last {len(att)}): {present} present")
+    lines.append(f"🌴 Leaves: {pend} pending / {leaves.count()} total")
+    lines.append(f"📈 Recent activity: {calls} calls, {notes} notes")
+    return "\n".join(lines)
