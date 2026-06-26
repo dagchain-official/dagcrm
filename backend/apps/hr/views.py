@@ -14,8 +14,8 @@ User = get_user_model()
 from apps.accounts.scoping import BusinessScopedMixin
 
 from .models import (
-    Attendance, Department, Employee, EmployeeActivity, Incentive, IncentiveRule,
-    Leave, LeaveType, Payroll,
+    Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
+    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll,
 )
 from .services import today_activity, today_attendance
 
@@ -147,9 +147,10 @@ class MyLeavesView(APIView):
                    kind="info", link="/m/leaves")
         return Response(LeaveSerializer(leave).data, status=status.HTTP_201_CREATED)
 from .serializers import (
-    AttendanceSerializer, DepartmentSerializer, EmployeeActivitySerializer,
-    EmployeeSerializer, IncentiveRuleSerializer, IncentiveSerializer, LeaveSerializer,
-    LeaveTypeSerializer, PayrollSerializer,
+    AttendanceSerializer, CostCategorySerializer, DepartmentSerializer,
+    EmployeeActivitySerializer, EmployeeCostSerializer, EmployeeSerializer,
+    HierarchyLevelSerializer, IncentiveRuleSerializer, IncentiveSerializer,
+    LeaveSerializer, LeaveTypeSerializer, PayrollSerializer,
 )
 
 
@@ -159,11 +160,68 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     search_fields = ["department_name"]
 
 
+class HierarchyLevelViewSet(viewsets.ModelViewSet):
+    queryset = HierarchyLevel.objects.all()
+    serializer_class = HierarchyLevelSerializer
+    search_fields = ["level_name"]
+
+    @action(detail=False, methods=["get"])
+    def tree(self, request):
+        """Org chart — employees nested by their manager chain (top-down)."""
+        emps = (Employee.objects.select_related("user", "hierarchy_level", "manager")
+                .exclude(user__is_superuser=True))
+        children = {}
+        for e in emps:
+            children.setdefault(e.manager_id, []).append(e)
+
+        def node(e):
+            return {
+                "id": e.id, "name": e.user.name if e.user else "—",
+                "level": e.hierarchy_level.level_name if e.hierarchy_level else None,
+                "level_order": e.hierarchy_level.level_order if e.hierarchy_level else 999,
+                "reports": sorted(
+                    [node(c) for c in children.get(e.user_id, [])],
+                    key=lambda n: n["level_order"]),
+            }
+        roots = [e for e in emps if not e.manager_id or e.manager_id not in
+                 {x.user_id for x in emps}]
+        tree = sorted([node(e) for e in roots], key=lambda n: n["level_order"])
+        return Response({"tree": tree})
+
+
+class CostCategoryViewSet(viewsets.ModelViewSet):
+    queryset = CostCategory.objects.all()
+    serializer_class = CostCategorySerializer
+    search_fields = ["name"]
+
+
+class EmployeeCostViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeCost.objects.select_related("employee", "employee__user", "category")
+    serializer_class = EmployeeCostSerializer
+    filterset_fields = ["employee", "category", "month", "year"]
+
+
 class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.select_related("user", "department", "manager").exclude(user__is_superuser=True)
+    queryset = Employee.objects.select_related("user", "department", "manager", "hierarchy_level").exclude(user__is_superuser=True)
     serializer_class = EmployeeSerializer
-    filterset_fields = ["department", "manager"]
+    filterset_fields = ["department", "manager", "hierarchy_level"]
     search_fields = ["user__name", "designation"]
+
+    @action(detail=True, methods=["get"])
+    def ctc(self, request, pk=None):
+        """Cost-To-Company breakdown for a month: salary + each cost category."""
+        emp = self.get_object()
+        today = timezone.localdate()
+        month = int(request.query_params.get("month", today.month))
+        year = int(request.query_params.get("year", today.year))
+        lines = [{"label": "Salary", "amount": float(emp.salary or 0)}]
+        rows = (EmployeeCost.objects.filter(employee=emp, month=month, year=year)
+                .select_related("category"))
+        for r in rows:
+            lines.append({"label": r.category.name, "amount": float(r.amount)})
+        total = sum(l["amount"] for l in lines)
+        return Response({"employee": emp.user.name if emp.user else "—",
+                         "month": month, "year": year, "lines": lines, "total_ctc": total})
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):

@@ -33,6 +33,11 @@ export const STATUS_COLORS = {
   high: "bg-amber-50 text-amber-700",
   medium: "bg-blue-50 text-blue-700",
   low: "bg-ink-100 text-ink-600",
+  // product revenue types
+  one_time: "bg-blue-50 text-blue-700",
+  recurring: "bg-violet-50 text-violet-700",
+  per_unit: "bg-amber-50 text-amber-700",
+  token: "bg-emerald-50 text-emerald-700",
 };
 
 const sel = (...opts) => opts.map((o) => ({ value: o, label: o[0].toUpperCase() + o.slice(1).replace("_", " ") }));
@@ -63,6 +68,52 @@ export const RESOURCES = {
     columns: [{ key: "name", label: "Role" }, { key: "description", label: "Description" }],
     fields: [{ key: "name", label: "Name", required: true }, { key: "description", label: "Description", type: "textarea" }],
   },
+  "hierarchy-levels": {
+    title: "Hierarchy Levels", endpoint: "hierarchy-levels", search: true,
+    columns: [
+      { key: "level_order", label: "Order" },
+      { key: "level_name", label: "Level" },
+      { key: "employee_count", label: "Employees" },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "level_name", label: "Level name (e.g. Country Head, RM)", required: true },
+      { key: "level_order", label: "Order (1 = top of org)", type: "number", required: true },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
+  "cost-categories": {
+    title: "Cost Categories", endpoint: "cost-categories", search: true,
+    columns: [
+      { key: "name", label: "Category" },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "name", label: "Category name (e.g. Visa, Desk, Internet)", required: true },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
+  "employee-costs": {
+    title: "Employee Costs", endpoint: "employee-costs", search: false,
+    filters: [
+      { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+      { key: "category", label: "Category", ref: "cost-categories", labelKey: "name" },
+    ],
+    columns: [
+      { key: "employee_name", label: "Employee" },
+      { key: "category_name", label: "Category" },
+      { key: "amount", label: "Amount (monthly)", money: true },
+      { key: "month", label: "Month" },
+      { key: "year", label: "Year" },
+    ],
+    fields: [
+      { key: "employee", label: "Employee", type: "ref", ref: "employees", labelKey: "user_name", required: true },
+      { key: "category", label: "Cost category", type: "ref", ref: "cost-categories", labelKey: "name", required: true },
+      { key: "amount", label: "Amount (this month's figure)", type: "number", required: true },
+      { key: "month", label: "Month (1-12)", type: "number", required: true },
+      { key: "year", label: "Year", type: "number", required: true },
+    ],
+  },
   teams: {
     title: "Teams", endpoint: "teams", search: true,
     columns: [{ key: "name", label: "Team" }, { key: "leader_name", label: "Leader" }],
@@ -77,10 +128,12 @@ export const RESOURCES = {
       { key: "name", label: "Business" },
       { key: "description", label: "Description" },
       { key: "product_count", label: "Products" },
+      { key: "status", label: "Status", badge: true },
     ],
     fields: [
       { key: "name", label: "Business name", required: true },
       { key: "description", label: "Description", type: "textarea" },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
     ],
   },
   products: {
@@ -88,11 +141,23 @@ export const RESOURCES = {
     columns: [
       { key: "name", label: "Product" },
       { key: "business_name", label: "Business" },
+      { key: "product_type", label: "Type" },
+      { key: "price", label: "Price", money: true },
+      { key: "revenue_type", label: "Revenue", badge: true },
       { key: "status", label: "Status", badge: true },
     ],
     fields: [
       { key: "name", label: "Product name", required: true },
       { key: "business", label: "Business", type: "ref", ref: "businesses", labelKey: "name", required: true },
+      { key: "product_type", label: "Type (e.g. Node, Coin, Subscription, Course)" },
+      { key: "price", label: "Price", type: "number" },
+      { key: "revenue_type", label: "Revenue type", type: "select",
+        options: [
+          { value: "one_time", label: "One-Time Sale" },
+          { value: "recurring", label: "Recurring / Subscription" },
+          { value: "per_unit", label: "Per Unit (e.g. per GB)" },
+          { value: "token", label: "Token Purchase" },
+        ] },
       { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
     ],
   },
@@ -284,14 +349,19 @@ export const RESOURCES = {
     columns: [
       { key: "user_name", label: "Name" },
       { key: "role_name", label: "Role" },
+      { key: "hierarchy_level_name", label: "Level" },
+      { key: "manager_name", label: "Reports to" },
       { key: "department_name", label: "Department" },
       { key: "salary", label: "Salary", money: true },
+      { key: "monthly_ctc", label: "CTC (mo)", money: true },
       { key: "joining_date", label: "Joined" },
     ],
     fields: [
       { key: "name", label: "Name", required: true },
       { key: "email", label: "Email", type: "email" },
       { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
+      { key: "hierarchy_level", label: "Org Level", type: "ref", ref: "hierarchy-levels", labelKey: "label" },
+      { key: "manager", label: "Reports to (manager)", type: "ref", ref: "users/assignable", labelKey: "name" },
       { key: "department", label: "Department", type: "ref", ref: "departments", labelKey: "department_name" },
       { key: "salary", label: "Salary", type: "number" },
       { key: "joining_date", label: "Joining date", type: "date" },

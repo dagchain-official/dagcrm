@@ -98,7 +98,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ["id", "business", "business_name", "name", "status"]
+        fields = ["id", "business", "business_name", "name", "product_type",
+                  "price", "revenue_type", "status"]
 
 
 class BusinessSerializer(serializers.ModelSerializer):
@@ -107,7 +108,8 @@ class BusinessSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Business
-        fields = ["id", "name", "description", "products", "product_count", "created_at"]
+        fields = ["id", "name", "description", "status", "products",
+                  "product_count", "created_at"]
 
 
 class LeadSourceSerializer(serializers.ModelSerializer):

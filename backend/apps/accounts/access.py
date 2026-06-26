@@ -43,9 +43,9 @@ ROLE_DASHBOARD = {
 MODULES = [
     "leads", "lead-activities", "opportunities", "proposals", "customers", "communications",
     "targets", "revenues", "businesses", "products", "lead-sources", "tickets",
-    "employees", "departments", "attendance", "employee-activities", "leaves",
-    "leave-types", "payrolls", "incentives", "incentive-rules", "expenses",
-    "commissions", "users", "roles", "teams", "reports",
+    "employees", "departments", "hierarchy-levels", "attendance", "employee-activities", "leaves",
+    "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
+    "expenses", "commissions", "users", "roles", "teams", "reports",
 ]
 
 
@@ -87,14 +87,14 @@ ROLE_MATRIX = {
         **_view(_split("customers communications reports")),
     },
     "HR": {
-        **_full(_split("employees departments attendance employee-activities leaves "
-                       "leave-types payrolls incentives incentive-rules")),
+        **_full(_split("employees departments hierarchy-levels attendance employee-activities leaves "
+                       "leave-types payrolls incentives incentive-rules cost-categories employee-costs")),
         # businesses + products are read-only lookups the incentive-rule form needs
         **_view(_split("users reports businesses products")),
     },
     "Finance": {
-        **_full(_split("revenues expenses commissions payrolls")),
-        **_view(_split("reports businesses")),
+        **_full(_split("revenues expenses commissions payrolls cost-categories employee-costs")),
+        **_view(_split("reports businesses employees")),
     },
 }
 
@@ -118,6 +118,9 @@ VIEWSET_MODULE = {
     "TicketCommentViewSet": "tickets",
     "EmployeeViewSet": "employees",
     "DepartmentViewSet": "departments",
+    "HierarchyLevelViewSet": "hierarchy-levels",
+    "CostCategoryViewSet": "cost-categories",
+    "EmployeeCostViewSet": "employee-costs",
     "AttendanceViewSet": "attendance",
     "EmployeeActivityViewSet": "employee-activities",
     "LeaveViewSet": "leaves",

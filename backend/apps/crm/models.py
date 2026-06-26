@@ -6,8 +6,10 @@ from django.db import models
 class Business(models.Model):
     """FX Artha, DAGChain, DAGGPT, DAGDB, Energy DAO, DAG Army."""
 
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
     name = models.CharField(max_length=120, unique=True)
     description = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -19,8 +21,19 @@ class Business(models.Model):
 
 class Product(models.Model):
     STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    # How a product earns — drives the Revenue Engine (nothing hardcoded).
+    REVENUE_TYPE = [
+        ("one_time", "One-Time Sale"),       # Developer Node, course, property unit
+        ("recurring", "Recurring / Subscription"),  # DAGGPT subscription, API
+        ("per_unit", "Per Unit"),            # Storage Node ($/GB), lots
+        ("token", "Token Purchase"),         # DGCC coin — dollar value sold
+    ]
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=150)
+    # free-form category so admins can add any product family without code changes
+    product_type = models.CharField(max_length=60, blank=True)  # Node, Coin, Subscription, Course…
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    revenue_type = models.CharField(max_length=20, choices=REVENUE_TYPE, default="one_time")
     status = models.CharField(max_length=20, choices=STATUS, default="active")
 
     def __str__(self):

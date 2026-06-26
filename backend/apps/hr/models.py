@@ -10,13 +10,68 @@ class Department(models.Model):
         return self.department_name
 
 
+# ---- Dynamic org hierarchy (PART 2) ---------------------------------------
+# A SEPARATE dimension from RBAC roles. Roles = permissions (access.py).
+# Levels = reporting structure for P&L / target / performance rollups.
+# Admin can add / rename / reorder levels with no code changes.
+class HierarchyLevel(models.Model):
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    level_name = models.CharField(max_length=80)          # "Business Head", "RM", "Country Head"…
+    level_order = models.PositiveIntegerField(default=1)  # 1 = top of the org … N = bottom
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    class Meta:
+        ordering = ["level_order"]
+
+    def __str__(self):
+        return f"{self.level_order}. {self.level_name}"
+
+
 class Employee(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="employee")
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
+    hierarchy_level = models.ForeignKey(HierarchyLevel, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
     designation = models.CharField(max_length=120, blank=True)
-    salary = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    salary = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # monthly basic — single source (also drives payroll)
     joining_date = models.DateField(null=True, blank=True)
     manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_employees")
+
+    def monthly_ctc(self, month, year):
+        """Total Cost To Company = monthly salary + extra costs for that period.
+        Salary is NOT duplicated as a cost row — it stays the single source."""
+        extra = self.costs.filter(month=month, year=year).aggregate(
+            t=models.Sum("amount"))["t"] or 0
+        return (self.salary or 0) + extra
+
+
+# ---- Cost Engine (PART 3) -------------------------------------------------
+# Configurable cost categories (Visa, Laptop, Internet, Office, Other…).
+# Salary is deliberately NOT a category here — it lives on Employee.salary
+# (single source of truth, already used by payroll) to avoid double-counting.
+class CostCategory(models.Model):
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    name = models.CharField(max_length=80, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    class Meta:
+        verbose_name_plural = "Cost categories"
+
+    def __str__(self):
+        return self.name
+
+
+class EmployeeCost(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="costs")
+    category = models.ForeignKey(CostCategory, on_delete=models.PROTECT, related_name="costs")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # monthly figure
+    month = models.PositiveIntegerField()
+    year = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["-year", "-month"]
+
+    def __str__(self):
+        return f"{self.employee_id} · {self.category.name} · {self.amount}"
 
 
 # ------------------------------------------------------------------ Attendance

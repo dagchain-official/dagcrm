@@ -4,6 +4,7 @@ import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
+import PnL from "./pages/PnL";
 import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="leaves-mine" element={<MyLeaves />} />
         <Route path="ai" element={<AIAssistant />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="pnl" element={<PnL />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="proposals" element={<Proposals />} />

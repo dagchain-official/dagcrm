@@ -3,13 +3,14 @@ import {
   Radio, UserPlus, Activity, Target, Briefcase, UserCheck, MessageSquare,
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
+  TrendingUp,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (to === "/reports") return "reports";
+  if (to === "/reports" || to === "/pnl") return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
@@ -56,6 +57,9 @@ export const NAV = [
     group: "HR & People",
     items: [
       { to: "/m/employees", label: "Employees", icon: Briefcase },
+      { to: "/m/hierarchy-levels", label: "Hierarchy Levels", icon: UsersRound },
+      { to: "/m/cost-categories", label: "Cost Categories", icon: Receipt },
+      { to: "/m/employee-costs", label: "Employee Costs", icon: Wallet },
       { to: "/m/departments", label: "Departments", icon: Building2 },
       { to: "/m/attendance", label: "Attendance", icon: Clock },
       { to: "/m/employee-activities", label: "Activity Tracking", icon: Activity },
@@ -71,6 +75,7 @@ export const NAV = [
     items: [
       { to: "/m/expenses", label: "Expenses", icon: Receipt },
       { to: "/m/commissions", label: "Commissions", icon: Handshake },
+      { to: "/pnl", label: "P&L Statement", icon: TrendingUp },
     ],
   },
   {

@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .assistant import answer_question
+from .pnl import compute_pnl, scoped_for
 
 from django.contrib.auth import get_user_model
 
@@ -263,3 +264,16 @@ def ai_ask(request):
     """Natural-language Q&A over the live CRM database (role-scoped)."""
     question = (request.data or {}).get("message", "")
     return Response({"reply": answer_question(request.user, question)})
+
+
+@api_view(["GET"])
+def pnl(request):
+    """P&L per hierarchy level (Revenue − Cost), rolled up the org tree."""
+    user = request.user
+    role = getattr(getattr(user, "role", None), "name", "")
+    if role == "Sales Executive":      # cost/P&L is not exposed to RMs
+        return Response({"detail": "P&L is available to managers, Finance and admins."}, status=403)
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_for(user, compute_pnl(month, year)))

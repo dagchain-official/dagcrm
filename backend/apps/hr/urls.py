@@ -3,13 +3,16 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     ActivityHeartbeatView, ActivityTodayView, AttendanceTodayView, AttendanceViewSet,
-    CheckInView, CheckOutView, DepartmentViewSet, EmployeeActivityViewSet, EmployeeViewSet,
-    IncentiveRuleViewSet, IncentiveViewSet, LeaveTypeViewSet, LeaveViewSet, MyLeavesView,
-    PayrollViewSet,
+    CheckInView, CheckOutView, CostCategoryViewSet, DepartmentViewSet, EmployeeActivityViewSet,
+    EmployeeCostViewSet, EmployeeViewSet, HierarchyLevelViewSet, IncentiveRuleViewSet,
+    IncentiveViewSet, LeaveTypeViewSet, LeaveViewSet, MyLeavesView, PayrollViewSet,
 )
 
 router = DefaultRouter()
 router.register("departments", DepartmentViewSet)
+router.register("hierarchy-levels", HierarchyLevelViewSet)
+router.register("cost-categories", CostCategoryViewSet)
+router.register("employee-costs", EmployeeCostViewSet)
 router.register("employees", EmployeeViewSet)
 router.register("attendance", AttendanceViewSet)
 router.register("employee-activities", EmployeeActivityViewSet)

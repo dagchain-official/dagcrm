@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
 from .models import (
-    Attendance, Department, Employee, EmployeeActivity, Incentive, IncentiveRule,
-    Leave, LeaveType, Payroll,
+    Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
+    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll,
 )
 
 
@@ -14,11 +14,41 @@ class DepartmentSerializer(serializers.ModelSerializer):
         fields = ["id", "department_name", "employee_count"]
 
 
+class CostCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CostCategory
+        fields = ["id", "name", "status"]
+
+
+class EmployeeCostSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = EmployeeCost
+        fields = ["id", "employee", "employee_name", "category", "category_name",
+                  "amount", "month", "year"]
+
+
+class HierarchyLevelSerializer(serializers.ModelSerializer):
+    employee_count = serializers.IntegerField(source="employees.count", read_only=True)
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HierarchyLevel
+        fields = ["id", "level_name", "level_order", "status", "employee_count", "label"]
+
+    def get_label(self, obj):
+        return f"{obj.level_order}. {obj.level_name}"
+
+
 class EmployeeSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.name", read_only=True)
     department_name = serializers.CharField(source="department.department_name", read_only=True)
     manager_name = serializers.CharField(source="manager.name", read_only=True)
     role_name = serializers.CharField(source="user.role.name", read_only=True)
+    hierarchy_level_name = serializers.CharField(source="hierarchy_level.level_name", read_only=True)
+    monthly_ctc = serializers.SerializerMethodField()
     # type the person's name/email directly — the login account is auto-created/updated
     name = serializers.CharField(write_only=True, required=False)
     email = serializers.EmailField(write_only=True, required=False)
@@ -27,9 +57,26 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ["id", "user", "user_name", "name", "email", "role", "role_name",
-                  "department", "department_name", "designation", "salary",
-                  "joining_date", "manager", "manager_name"]
+                  "department", "department_name", "hierarchy_level", "hierarchy_level_name",
+                  "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name"]
         extra_kwargs = {"user": {"required": False}}
+
+    def get_monthly_ctc(self, obj):
+        from django.utils import timezone
+        today = timezone.localdate()
+        return obj.monthly_ctc(today.month, today.year)
+
+    def validate(self, attrs):
+        # a manager must sit ABOVE the employee in the org (smaller level_order)
+        level = attrs.get("hierarchy_level") or getattr(self.instance, "hierarchy_level", None)
+        manager = attrs.get("manager") or getattr(self.instance, "manager", None)
+        if level and manager:
+            mgr_emp = Employee.objects.filter(user=manager).select_related("hierarchy_level").first()
+            mgr_level = mgr_emp.hierarchy_level if mgr_emp else None
+            if mgr_level and mgr_level.level_order >= level.level_order:
+                raise serializers.ValidationError(
+                    {"manager": f"Manager must be at a higher level than '{level.level_name}'."})
+        return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)  # name/email/role are write_only here
