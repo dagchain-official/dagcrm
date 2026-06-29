@@ -489,6 +489,22 @@ export const RESOURCES = {
       { key: "year", label: "Year", type: "number", required: true },
     ],
   },
+  "target-multipliers": {
+    title: "Target Multipliers", endpoint: "target-multipliers",
+    columns: [
+      { key: "label", label: "Applies to" },
+      { key: "scope", label: "Scope", badge: true },
+      { key: "multiplier", label: "Multiplier (×)" },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "scope", label: "Scope", type: "select", options: sel("global", "level", "employee"), required: true },
+      { key: "hierarchy_level", label: "Hierarchy level (if scope = level)", type: "ref", ref: "hierarchy-levels", labelKey: "level_name" },
+      { key: "employee", label: "Employee (if scope = employee)", type: "ref", ref: "employees", labelKey: "user_name" },
+      { key: "multiplier", label: "Multiplier (Target = CTC × this)", type: "number", required: true },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
   expenses: {
     title: "Expenses", endpoint: "expenses",
     columns: [

@@ -15,7 +15,7 @@ from apps.accounts.scoping import BusinessScopedMixin
 
 from .models import (
     Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
-    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll,
+    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll, TargetMultiplier,
 )
 from .services import today_activity, today_attendance
 
@@ -150,7 +150,7 @@ from .serializers import (
     AttendanceSerializer, CostCategorySerializer, DepartmentSerializer,
     EmployeeActivitySerializer, EmployeeCostSerializer, EmployeeSerializer,
     HierarchyLevelSerializer, IncentiveRuleSerializer, IncentiveSerializer,
-    LeaveSerializer, LeaveTypeSerializer, PayrollSerializer,
+    LeaveSerializer, LeaveTypeSerializer, PayrollSerializer, TargetMultiplierSerializer,
 )
 
 
@@ -383,6 +383,13 @@ class IncentiveRuleViewSet(BusinessScopedMixin, viewsets.ModelViewSet):
     queryset = IncentiveRule.objects.select_related("business", "product").all()
     serializer_class = IncentiveRuleSerializer
     filterset_fields = ["business", "product", "formula_type"]
+
+
+class TargetMultiplierViewSet(viewsets.ModelViewSet):
+    queryset = TargetMultiplier.objects.select_related(
+        "hierarchy_level", "employee", "employee__user").all()
+    serializer_class = TargetMultiplierSerializer
+    filterset_fields = ["scope", "hierarchy_level", "employee", "status"]
 
 
 class IncentiveViewSet(viewsets.ModelViewSet):

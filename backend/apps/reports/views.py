@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .assistant import answer_question
 from .pnl import compute_pnl, scoped_for
+from .targets import compute_targets, scoped_targets
 
 from django.contrib.auth import get_user_model
 
@@ -277,3 +278,14 @@ def pnl(request):
     month = int(request.query_params.get("month", today.month))
     year = int(request.query_params.get("year", today.year))
     return Response(scoped_for(user, compute_pnl(month, year)))
+
+
+@api_view(["GET"])
+def target_board(request):
+    """CTC-based targets (Target = CTC × multiplier), rolled up the org tree.
+    A manager sees their team's rolled-up target; an RM sees their own."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_targets(user, compute_targets(month, year)))

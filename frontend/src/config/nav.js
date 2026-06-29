@@ -3,14 +3,14 @@ import {
   Radio, UserPlus, Activity, Target, Briefcase, UserCheck, MessageSquare,
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
-  TrendingUp,
+  TrendingUp, Gauge,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (to === "/reports" || to === "/pnl") return "reports";
+  if (to === "/reports" || to === "/pnl" || to === "/target-board") return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
@@ -38,6 +38,7 @@ export const NAV = [
       { to: "/m/customers", label: "Customers", icon: UserCheck },
       { to: "/m/communications", label: "Communications", icon: MessageSquare },
       { to: "/m/targets", label: "Targets", icon: Crosshair },
+      { to: "/target-board", label: "Target Board", icon: Gauge },
       { to: "/m/revenues", label: "Revenue", icon: DollarSign },
     ],
   },
@@ -68,6 +69,7 @@ export const NAV = [
       { to: "/m/payrolls", label: "Payroll", icon: Wallet },
       { to: "/m/incentives", label: "Incentives", icon: Award },
       { to: "/m/incentive-rules", label: "Incentive Rules", icon: Settings2 },
+      { to: "/m/target-multipliers", label: "Target Multipliers", icon: Gauge },
     ],
   },
   {

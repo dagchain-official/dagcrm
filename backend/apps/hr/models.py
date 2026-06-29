@@ -43,6 +43,11 @@ class Employee(models.Model):
             t=models.Sum("amount"))["t"] or 0
         return (self.salary or 0) + extra
 
+    def revenue_target(self, month, year):
+        """Revenue target = monthly CTC × configured multiplier (PART 5).
+        Multiplier resolves employee > hierarchy-level > global (default 1.0)."""
+        return self.monthly_ctc(month, year) * TargetMultiplier.resolve(self)
+
 
 # ---- Cost Engine (PART 3) -------------------------------------------------
 # Configurable cost categories (Visa, Laptop, Internet, Office, Other…).
@@ -159,3 +164,49 @@ class Incentive(models.Model):
 
     class Meta:
         unique_together = ("employee", "rule", "month", "year")
+
+
+# ---- Target Engine (PART 5) -----------------------------------------------
+# Target = CTC (PART 3) × Multiplier. The multiplier is admin-configurable at
+# three scopes; resolution priority is employee override > hierarchy-level
+# default > global default (falls back to 1.0 if nothing is configured).
+# A manager's headline target rolls up the SUM of their whole team's individual
+# targets — their own personal target is not folded in (see reports/targets.py).
+class TargetMultiplier(models.Model):
+    SCOPE = [("global", "Global"), ("level", "Hierarchy Level"), ("employee", "Employee")]
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    scope = models.CharField(max_length=20, choices=SCOPE, default="global")
+    hierarchy_level = models.ForeignKey(
+        HierarchyLevel, on_delete=models.CASCADE, null=True, blank=True, related_name="multipliers")
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, null=True, blank=True, related_name="multipliers")
+    multiplier = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    def __str__(self):
+        target = (self.employee.user.name if self.scope == "employee" and self.employee_id and self.employee.user
+                  else self.hierarchy_level.level_name if self.scope == "level" and self.hierarchy_level_id
+                  else "All employees")
+        return f"{target} × {self.multiplier}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.scope == "level" and not self.hierarchy_level_id:
+            raise ValidationError({"hierarchy_level": "Required when scope is 'Hierarchy Level'."})
+        if self.scope == "employee" and not self.employee_id:
+            raise ValidationError({"employee": "Required when scope is 'Employee'."})
+        if self.scope == "global":          # keep global rows clean
+            self.hierarchy_level = None
+            self.employee = None
+
+    @staticmethod
+    def resolve(employee):
+        """Multiplier for one employee: employee > level > global > 1.0."""
+        from decimal import Decimal
+        q = TargetMultiplier.objects.filter(status="active")
+        m = q.filter(scope="employee", employee=employee).first()
+        if not m and employee.hierarchy_level_id:
+            m = q.filter(scope="level", hierarchy_level_id=employee.hierarchy_level_id).first()
+        if not m:
+            m = q.filter(scope="global").first()
+        return m.multiplier if m else Decimal("1")

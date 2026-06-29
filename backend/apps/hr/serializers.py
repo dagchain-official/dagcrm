@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from .models import (
     Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
-    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll,
+    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll, TargetMultiplier,
 )
 
 
@@ -197,3 +197,36 @@ class IncentiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incentive
         fields = ["id", "employee", "employee_name", "rule", "amount", "month", "year"]
+
+
+class TargetMultiplierSerializer(serializers.ModelSerializer):
+    level_name = serializers.CharField(source="hierarchy_level.level_name", read_only=True)
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TargetMultiplier
+        fields = ["id", "scope", "hierarchy_level", "level_name", "employee",
+                  "employee_name", "multiplier", "status", "label"]
+
+    def get_label(self, obj):
+        if obj.scope == "employee" and obj.employee_id:
+            who = obj.employee.user.name if obj.employee.user else "Employee"
+        elif obj.scope == "level" and obj.hierarchy_level_id:
+            who = obj.hierarchy_level.level_name
+        else:
+            who = "All employees"
+        return f"{who} — ×{obj.multiplier}"
+
+    def validate(self, attrs):
+        scope = attrs.get("scope") or getattr(self.instance, "scope", "global")
+        level = attrs.get("hierarchy_level") or getattr(self.instance, "hierarchy_level", None)
+        emp = attrs.get("employee") or getattr(self.instance, "employee", None)
+        if scope == "level" and not level:
+            raise serializers.ValidationError({"hierarchy_level": "Required when scope is 'Hierarchy Level'."})
+        if scope == "employee" and not emp:
+            raise serializers.ValidationError({"employee": "Required when scope is 'Employee'."})
+        if scope == "global":               # keep global rows clean
+            attrs["hierarchy_level"] = None
+            attrs["employee"] = None
+        return attrs
