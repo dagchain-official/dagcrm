@@ -5,7 +5,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .assistant import answer_question
+from .incentives import compute_incentives, run_incentives, scoped_incentives
 from .metrics import compute_kpis, scoped_kpis
+from .performance import compute_performance, scoped_performance
 from .pnl import compute_pnl, scoped_for
 from .targets import compute_targets, scoped_targets
 
@@ -303,3 +305,37 @@ def kpi_board(request):
     business = request.query_params.get("business")
     business_id = int(business) if business else None
     return Response(scoped_kpis(user, compute_kpis(month, year, business_id)))
+
+
+@api_view(["GET"])
+def performance(request):
+    """3-scorecard performance (Revenue / Growth / Activity) with admin weightage."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_performance(user, compute_performance(month, year)))
+
+
+@api_view(["GET"])
+def incentive_board(request):
+    """Preview computed incentives (slab + activity) per employee — no writes."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_incentives(user, compute_incentives(month, year)))
+
+
+@api_view(["POST"])
+def incentive_run(request):
+    """Persist incentives into Incentive + Payroll (admins / Finance / HR only)."""
+    from apps.accounts.access import is_admin_view
+    user = request.user
+    role = getattr(getattr(user, "role", None), "name", "")
+    if not (is_admin_view(user) or role in ("Finance", "HR")):
+        return Response({"detail": "Only admins, Finance or HR can run incentives."}, status=403)
+    today = timezone.localdate()
+    month = int((request.data or {}).get("month") or today.month)
+    year = int((request.data or {}).get("year") or today.year)
+    return Response(run_incentives(month, year))

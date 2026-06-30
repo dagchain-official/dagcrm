@@ -46,7 +46,8 @@ MODULES = [
     "revenues", "businesses", "products", "lead-sources", "tickets",
     "employees", "departments", "hierarchy-levels", "attendance", "employee-activities", "leaves",
     "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
-    "target-multipliers", "expenses", "commissions", "users", "roles", "teams", "reports",
+    "target-multipliers", "performance-weights", "incentive-slabs", "activity-incentives",
+    "expenses", "commissions", "users", "roles", "teams", "reports",
 ]
 
 
@@ -90,7 +91,7 @@ ROLE_MATRIX = {
     "HR": {
         **_full(_split("employees departments hierarchy-levels attendance employee-activities leaves "
                        "leave-types payrolls incentives incentive-rules cost-categories employee-costs "
-                       "target-multipliers")),
+                       "target-multipliers performance-weights incentive-slabs activity-incentives")),
         # businesses + products are read-only lookups the incentive-rule form needs
         **_view(_split("users reports businesses products")),
     },
@@ -134,6 +135,9 @@ VIEWSET_MODULE = {
     "IncentiveViewSet": "incentives",
     "IncentiveRuleViewSet": "incentive-rules",
     "TargetMultiplierViewSet": "target-multipliers",
+    "PerformanceWeightViewSet": "performance-weights",
+    "IncentiveSlabViewSet": "incentive-slabs",
+    "ActivityIncentiveViewSet": "activity-incentives",
     "ExpenseViewSet": "expenses",
     "CommissionViewSet": "commissions",
     "UserViewSet": "users",

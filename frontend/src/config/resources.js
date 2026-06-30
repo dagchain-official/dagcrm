@@ -565,6 +565,62 @@ export const RESOURCES = {
       { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
     ],
   },
+  "incentive-slabs": {
+    title: "Incentive Slabs", endpoint: "incentive-slabs",
+    columns: [
+      { key: "min_pct", label: "From %" },
+      { key: "max_pct", label: "To % (blank = ∞)" },
+      { key: "incentive_pct", label: "Incentive %" },
+      { key: "basis", label: "Basis", badge: true },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "name", label: "Tier name (optional)" },
+      { key: "min_pct", label: "Attainment from % (>=)", type: "number", required: true },
+      { key: "max_pct", label: "Attainment to % (<) — blank = unlimited", type: "number" },
+      { key: "incentive_pct", label: "Incentive %", type: "number", required: true },
+      { key: "basis", label: "Percent of", type: "select", options: [
+        { value: "revenue", label: "Revenue generated" },
+        { value: "target", label: "Target value" },
+      ] },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
+  "activity-incentives": {
+    title: "Activity Incentives", endpoint: "activity-incentives",
+    columns: [
+      { key: "name", label: "Reward" },
+      { key: "metric_name", label: "KPI" },
+      { key: "rate", label: "Rate (per unit)", money: true },
+      { key: "min_count", label: "Min count" },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "name", label: "Reward name (e.g. Lots reward, Meeting bonus)", required: true },
+      { key: "metric", label: "KPI metric", type: "ref", ref: "metric-definitions", labelKey: "name", required: true },
+      { key: "rate", label: "Amount per unit", type: "number", required: true },
+      { key: "min_count", label: "Only pay if value reaches (min count)", type: "number" },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
+  "performance-weights": {
+    title: "Performance Weights", endpoint: "performance-weights",
+    columns: [
+      { key: "label", label: "Applies to" },
+      { key: "revenue_weight", label: "Revenue %" },
+      { key: "growth_weight", label: "Growth %" },
+      { key: "activity_weight", label: "Activity %" },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "scope", label: "Scope", type: "select", options: sel("global", "level"), required: true },
+      { key: "hierarchy_level", label: "Hierarchy level (if scope = level)", type: "ref", ref: "hierarchy-levels", labelKey: "level_name" },
+      { key: "revenue_weight", label: "Revenue weight", type: "number", required: true },
+      { key: "growth_weight", label: "Growth weight", type: "number", required: true },
+      { key: "activity_weight", label: "Activity weight", type: "number", required: true },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
   expenses: {
     title: "Expenses", endpoint: "expenses",
     columns: [

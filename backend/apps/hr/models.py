@@ -210,3 +210,90 @@ class TargetMultiplier(models.Model):
         if not m:
             m = q.filter(scope="global").first()
         return m.multiplier if m else Decimal("1")
+
+
+# ---- Performance Model (PART 13) ------------------------------------------
+# Every employee is scored on 3 independent scorecards — Revenue, Growth,
+# Activity — combined into one overall score using admin-configurable weightage
+# (e.g. 60 / 25 / 15). Weights resolve per hierarchy-level, else a global row.
+# The scoring itself lives in reports/performance.py (peer-normalised, 0-100).
+class PerformanceWeight(models.Model):
+    SCOPE = [("global", "Global"), ("level", "Hierarchy Level")]
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    scope = models.CharField(max_length=20, choices=SCOPE, default="global")
+    hierarchy_level = models.ForeignKey(
+        HierarchyLevel, on_delete=models.CASCADE, null=True, blank=True, related_name="perf_weights")
+    revenue_weight = models.DecimalField(max_digits=5, decimal_places=2, default=60)
+    growth_weight = models.DecimalField(max_digits=5, decimal_places=2, default=25)
+    activity_weight = models.DecimalField(max_digits=5, decimal_places=2, default=15)
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    def __str__(self):
+        who = self.hierarchy_level.level_name if self.scope == "level" and self.hierarchy_level_id else "All"
+        return f"{who}: {self.revenue_weight}/{self.growth_weight}/{self.activity_weight}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.scope == "level" and not self.hierarchy_level_id:
+            raise ValidationError({"hierarchy_level": "Required when scope is 'Hierarchy Level'."})
+        if self.scope == "global":
+            self.hierarchy_level = None
+
+    def as_fractions(self):
+        """Normalise the 3 weights so they sum to 1.0 (handles any input total)."""
+        total = float(self.revenue_weight + self.growth_weight + self.activity_weight) or 1.0
+        return (float(self.revenue_weight) / total,
+                float(self.growth_weight) / total,
+                float(self.activity_weight) / total)
+
+    @staticmethod
+    def resolve(employee):
+        """Weights for one employee: level override > global > default 60/25/15."""
+        q = PerformanceWeight.objects.filter(status="active")
+        w = None
+        if employee.hierarchy_level_id:
+            w = q.filter(scope="level", hierarchy_level_id=employee.hierarchy_level_id).first()
+        if not w:
+            w = q.filter(scope="global").first()
+        if w:
+            return w.as_fractions()
+        return (0.6, 0.25, 0.15)
+
+
+# ---- Incentive Engine (PART 14) -------------------------------------------
+# Two independent, admin-configurable models that combine into one payout:
+#   Model 1  IncentiveSlab    — target-attainment tiers (100-200% -> 10% …)
+#   Model 2  ActivityIncentive — per-KPI reward (lots × $2, meetings × $200 …)
+# Computation + payout live in reports/incentives.py.
+class IncentiveSlab(models.Model):
+    """One tier of the target-achievement schedule (Model 1). Attainment in
+    [min_pct, max_pct) earns incentive_pct of `basis`."""
+    BASIS = [("revenue", "% of revenue generated"), ("target", "% of target value")]
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    name = models.CharField(max_length=80, blank=True)
+    min_pct = models.DecimalField(max_digits=7, decimal_places=2, default=0)        # attainment >= this
+    max_pct = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)  # < this; blank = ∞
+    incentive_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    basis = models.CharField(max_length=10, choices=BASIS, default="revenue")
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    class Meta:
+        ordering = ["min_pct"]
+
+    def __str__(self):
+        hi = f"{self.max_pct}%" if self.max_pct is not None else "∞"
+        return f"{self.min_pct}%–{hi} → {self.incentive_pct}%"
+
+
+class ActivityIncentive(models.Model):
+    """Per-unit reward on any configured KPI (Model 2). Pays rate × metric value
+    for the period, once the value reaches min_count."""
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    name = models.CharField(max_length=80)
+    metric = models.ForeignKey("crm.MetricDefinition", on_delete=models.CASCADE, related_name="incentives")
+    rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)          # amount per unit
+    min_count = models.DecimalField(max_digits=12, decimal_places=2, default=0)     # pay only if value >= this
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    def __str__(self):
+        return f"{self.name}: {self.rate} per {self.metric.unit or 'unit'}"

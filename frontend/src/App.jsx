@@ -7,6 +7,8 @@ import Reports from "./pages/Reports";
 import PnL from "./pages/PnL";
 import TargetBoard from "./pages/TargetBoard";
 import KpiBoard from "./pages/KpiBoard";
+import Performance from "./pages/Performance";
+import IncentiveBoard from "./pages/IncentiveBoard";
 import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
@@ -52,6 +54,8 @@ export default function App() {
         <Route path="pnl" element={<PnL />} />
         <Route path="target-board" element={<TargetBoard />} />
         <Route path="kpi-board" element={<KpiBoard />} />
+        <Route path="performance" element={<Performance />} />
+        <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="proposals" element={<Proposals />} />

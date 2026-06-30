@@ -15,7 +15,8 @@ from apps.accounts.scoping import BusinessScopedMixin
 
 from .models import (
     Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
-    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll, TargetMultiplier,
+    ActivityIncentive, HierarchyLevel, Incentive, IncentiveRule, IncentiveSlab, Leave, LeaveType,
+    Payroll, PerformanceWeight, TargetMultiplier,
 )
 from .services import today_activity, today_attendance
 
@@ -150,7 +151,8 @@ from .serializers import (
     AttendanceSerializer, CostCategorySerializer, DepartmentSerializer,
     EmployeeActivitySerializer, EmployeeCostSerializer, EmployeeSerializer,
     HierarchyLevelSerializer, IncentiveRuleSerializer, IncentiveSerializer,
-    LeaveSerializer, LeaveTypeSerializer, PayrollSerializer, TargetMultiplierSerializer,
+    ActivityIncentiveSerializer, IncentiveSlabSerializer, LeaveSerializer, LeaveTypeSerializer,
+    PayrollSerializer, PerformanceWeightSerializer, TargetMultiplierSerializer,
 )
 
 
@@ -390,6 +392,24 @@ class TargetMultiplierViewSet(viewsets.ModelViewSet):
         "hierarchy_level", "employee", "employee__user").all()
     serializer_class = TargetMultiplierSerializer
     filterset_fields = ["scope", "hierarchy_level", "employee", "status"]
+
+
+class PerformanceWeightViewSet(viewsets.ModelViewSet):
+    queryset = PerformanceWeight.objects.select_related("hierarchy_level").all()
+    serializer_class = PerformanceWeightSerializer
+    filterset_fields = ["scope", "hierarchy_level", "status"]
+
+
+class IncentiveSlabViewSet(viewsets.ModelViewSet):
+    queryset = IncentiveSlab.objects.all()
+    serializer_class = IncentiveSlabSerializer
+    filterset_fields = ["basis", "status"]
+
+
+class ActivityIncentiveViewSet(viewsets.ModelViewSet):
+    queryset = ActivityIncentive.objects.select_related("metric").all()
+    serializer_class = ActivityIncentiveSerializer
+    filterset_fields = ["metric", "status"]
 
 
 class IncentiveViewSet(viewsets.ModelViewSet):

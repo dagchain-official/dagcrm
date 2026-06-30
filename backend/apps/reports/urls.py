@@ -18,5 +18,8 @@ urlpatterns = [
     path("reports/pnl/", views.pnl),
     path("reports/target-board/", views.target_board),
     path("reports/kpi-board/", views.kpi_board),
+    path("reports/performance/", views.performance),
+    path("reports/incentive-board/", views.incentive_board),
+    path("reports/incentive-run/", views.incentive_run),
     path("ai/ask/", views.ai_ask),
 ]

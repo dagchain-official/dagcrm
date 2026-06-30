@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
-    HierarchyLevel, Incentive, IncentiveRule, Leave, LeaveType, Payroll, TargetMultiplier,
+    ActivityIncentive, HierarchyLevel, Incentive, IncentiveRule, IncentiveSlab, Leave, LeaveType,
+    Payroll, PerformanceWeight, TargetMultiplier,
 )
 
 
@@ -229,4 +230,52 @@ class TargetMultiplierSerializer(serializers.ModelSerializer):
         if scope == "global":               # keep global rows clean
             attrs["hierarchy_level"] = None
             attrs["employee"] = None
+        return attrs
+
+
+class IncentiveSlabSerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IncentiveSlab
+        fields = ["id", "name", "min_pct", "max_pct", "incentive_pct", "basis", "status", "label"]
+
+    def get_label(self, obj):
+        hi = f"{obj.max_pct}%" if obj.max_pct is not None else "∞"
+        return f"{obj.min_pct}%–{hi} → {obj.incentive_pct}% of {obj.basis}"
+
+
+class ActivityIncentiveSerializer(serializers.ModelSerializer):
+    metric_name = serializers.CharField(source="metric.name", read_only=True)
+    unit = serializers.CharField(source="metric.unit", read_only=True)
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ActivityIncentive
+        fields = ["id", "name", "metric", "metric_name", "unit", "rate", "min_count", "status", "label"]
+
+    def get_label(self, obj):
+        return f"{obj.name} — {obj.rate} per {obj.metric.unit or 'unit'}"
+
+
+class PerformanceWeightSerializer(serializers.ModelSerializer):
+    level_name = serializers.CharField(source="hierarchy_level.level_name", read_only=True)
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PerformanceWeight
+        fields = ["id", "scope", "hierarchy_level", "level_name", "revenue_weight",
+                  "growth_weight", "activity_weight", "status", "label"]
+
+    def get_label(self, obj):
+        who = obj.hierarchy_level.level_name if obj.scope == "level" and obj.hierarchy_level_id else "All employees"
+        return f"{who} — R{obj.revenue_weight}/G{obj.growth_weight}/A{obj.activity_weight}"
+
+    def validate(self, attrs):
+        scope = attrs.get("scope") or getattr(self.instance, "scope", "global")
+        level = attrs.get("hierarchy_level") or getattr(self.instance, "hierarchy_level", None)
+        if scope == "level" and not level:
+            raise serializers.ValidationError({"hierarchy_level": "Required when scope is 'Hierarchy Level'."})
+        if scope == "global":
+            attrs["hierarchy_level"] = None
         return attrs

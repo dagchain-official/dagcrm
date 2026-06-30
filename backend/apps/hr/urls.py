@@ -5,8 +5,8 @@ from .views import (
     ActivityHeartbeatView, ActivityTodayView, AttendanceTodayView, AttendanceViewSet,
     CheckInView, CheckOutView, CostCategoryViewSet, DepartmentViewSet, EmployeeActivityViewSet,
     EmployeeCostViewSet, EmployeeViewSet, HierarchyLevelViewSet, IncentiveRuleViewSet,
-    IncentiveViewSet, LeaveTypeViewSet, LeaveViewSet, MyLeavesView, PayrollViewSet,
-    TargetMultiplierViewSet,
+    ActivityIncentiveViewSet, IncentiveSlabViewSet, IncentiveViewSet, LeaveTypeViewSet,
+    LeaveViewSet, MyLeavesView, PayrollViewSet, PerformanceWeightViewSet, TargetMultiplierViewSet,
 )
 
 router = DefaultRouter()
@@ -23,6 +23,9 @@ router.register("payrolls", PayrollViewSet)
 router.register("incentive-rules", IncentiveRuleViewSet)
 router.register("incentives", IncentiveViewSet)
 router.register("target-multipliers", TargetMultiplierViewSet)
+router.register("performance-weights", PerformanceWeightViewSet)
+router.register("incentive-slabs", IncentiveSlabViewSet)
+router.register("activity-incentives", ActivityIncentiveViewSet)
 
 # Explicit self-service paths MUST come before router (so "check-in" isn't
 # parsed as an attendance pk by the detail route).
