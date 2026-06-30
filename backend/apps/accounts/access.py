@@ -42,7 +42,8 @@ ROLE_DASHBOARD = {
 # ---- Every CRUD module key (matches frontend resource + viewset map) ----
 MODULES = [
     "leads", "lead-activities", "opportunities", "proposals", "customers", "communications",
-    "targets", "revenues", "businesses", "products", "lead-sources", "tickets",
+    "targets", "metric-definitions", "metric-entries",
+    "revenues", "businesses", "products", "lead-sources", "tickets",
     "employees", "departments", "hierarchy-levels", "attendance", "employee-activities", "leaves",
     "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
     "target-multipliers", "expenses", "commissions", "users", "roles", "teams", "reports",
@@ -67,20 +68,20 @@ ROLE_MATRIX = {
     "Super Admin": _full(MODULES),
     "Business Head": _full(MODULES),
     "Sales Manager": {
-        **_full(_split("leads lead-activities opportunities proposals customers communications targets")),
-        **_view(_split("revenues products businesses lead-sources tickets reports teams users")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications targets metric-entries")),
+        **_view(_split("revenues products businesses lead-sources tickets reports teams users metric-definitions")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Team Leader": {
-        **_full(_split("leads lead-activities opportunities proposals customers communications")),
-        **_view(_split("targets tickets reports")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications metric-entries")),
+        **_view(_split("targets tickets reports metric-definitions")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Sales Executive": {
-        **_full(_split("leads lead-activities opportunities proposals customers communications")),
-        **_view(_split("tickets businesses products")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications metric-entries")),
+        **_view(_split("tickets businesses products metric-definitions")),
     },
     "Support": {
         **_full(_split("tickets")),
@@ -112,6 +113,8 @@ VIEWSET_MODULE = {
     "CommunicationViewSet": "communications",
     "TargetViewSet": "targets",
     "TargetAssignmentViewSet": "targets",
+    "MetricDefinitionViewSet": "metric-definitions",
+    "MetricEntryViewSet": "metric-entries",
     "RevenueViewSet": "revenues",
     "BusinessViewSet": "businesses",
     "ProductViewSet": "products",

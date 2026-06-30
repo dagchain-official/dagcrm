@@ -8,14 +8,15 @@ from apps.accounts.utils import is_admin_view
 
 from .models import (
     Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, Opportunity, Product, Proposal, ProposalItem, Target,
-    TargetAssignment,
+    LeadInterest, LeadSource, MetricDefinition, MetricEntry, Opportunity, Product, Proposal,
+    ProposalItem, Target, TargetAssignment,
 )
 from .serializers import (
     AttachmentSerializer, BusinessSerializer, CommunicationSerializer,
     CustomerProductSerializer, CustomerSerializer, LeadActivitySerializer,
-    LeadInterestSerializer, LeadSerializer, LeadSourceSerializer, OpportunitySerializer,
-    ProductSerializer, ProposalSerializer, TargetAssignmentSerializer, TargetSerializer,
+    LeadInterestSerializer, LeadSerializer, LeadSourceSerializer, MetricDefinitionSerializer,
+    MetricEntrySerializer, OpportunitySerializer, ProductSerializer, ProposalSerializer,
+    TargetAssignmentSerializer, TargetSerializer,
 )
 
 
@@ -31,6 +32,21 @@ class ProductViewSet(BusinessScopedMixin, viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     filterset_fields = ["business", "status"]
     search_fields = ["name"]
+
+
+class MetricDefinitionViewSet(BusinessScopedMixin, viewsets.ModelViewSet):
+    queryset = MetricDefinition.objects.select_related("business", "product").all()
+    serializer_class = MetricDefinitionSerializer
+    filterset_fields = ["business", "product", "category", "source", "status"]
+    search_fields = ["name"]
+
+
+class MetricEntryViewSet(viewsets.ModelViewSet):
+    queryset = (MetricEntry.objects
+                .select_related("metric", "employee", "employee__user", "customer", "lead")
+                .all())
+    serializer_class = MetricEntrySerializer
+    filterset_fields = ["metric", "employee", "date"]
 
 
 class LeadSourceViewSet(viewsets.ModelViewSet):

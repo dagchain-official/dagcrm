@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
 import PnL from "./pages/PnL";
 import TargetBoard from "./pages/TargetBoard";
+import KpiBoard from "./pages/KpiBoard";
 import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="pnl" element={<PnL />} />
         <Route path="target-board" element={<TargetBoard />} />
+        <Route path="kpi-board" element={<KpiBoard />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="proposals" element={<Proposals />} />

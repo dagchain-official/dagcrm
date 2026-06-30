@@ -269,3 +269,63 @@ class Attachment(models.Model):
         if not self.name and self.file:
             self.name = self.file.name.rsplit("/", 1)[-1]
         super().save(*args, **kwargs)
+
+
+# ---- KPI / Metric Engine (PART 6) -----------------------------------------
+# Generic, admin-configurable KPIs so product-specific metrics (nodes sold,
+# lots traded, meetings, students, units sold, deposits…) need NO code per
+# business — the spec's "nothing hardcoded" principle. Revenue is intentionally
+# OUT of scope: it stays in sales.Revenue (single source of truth). Rollup is
+# aggregation-aware (see reports/metrics.py): sum/count add up the org tree,
+# average is count-weighted, latest is a snapshot (not summed).
+class MetricDefinition(models.Model):
+    AGG = [("sum", "Sum"), ("count", "Count"), ("average", "Average"), ("latest", "Latest")]
+    CATEGORY = [("growth", "Growth"), ("activity", "Activity"), ("other", "Other")]
+    SOURCE = [("manual", "Manual entry"), ("derived", "Derived from CRM data")]
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    # derived metrics read existing CRM signals instead of manual entries
+    DERIVED = [
+        ("", "—"),
+        ("lead_activity:meeting", "Meetings logged (Lead Activity)"),
+        ("lead_activity:call", "Calls logged (Lead Activity)"),
+        ("lead:converted", "Leads converted"),
+    ]
+    name = models.CharField(max_length=120)
+    key = models.SlugField(max_length=140, unique=True, blank=True)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True, related_name="metrics")
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
+    unit = models.CharField(max_length=20, blank=True)                 # "$", "GB", "count", "lots"
+    aggregation = models.CharField(max_length=20, choices=AGG, default="sum")
+    category = models.CharField(max_length=20, choices=CATEGORY, default="activity")
+    source = models.CharField(max_length=20, choices=SOURCE, default="manual")
+    derived_key = models.CharField(max_length=40, choices=DERIVED, blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            from django.utils.text import slugify
+            base = slugify(self.name) or "metric"
+            k, i = base, 1
+            while MetricDefinition.objects.exclude(pk=self.pk).filter(key=k).exists():
+                i += 1
+                k = f"{base}-{i}"
+            self.key = k
+        super().save(*args, **kwargs)
+
+
+class MetricEntry(models.Model):
+    """One recorded value for a manual metric, attributed to an employee."""
+    metric = models.ForeignKey(MetricDefinition, on_delete=models.CASCADE, related_name="entries")
+    employee = models.ForeignKey("hr.Employee", on_delete=models.CASCADE, related_name="metric_entries")
+    value = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    lead = models.ForeignKey(Lead, on_delete=models.SET_NULL, null=True, blank=True)
+    note = models.CharField(max_length=200, blank=True)
+    date = models.DateField()
+
+    class Meta:
+        verbose_name_plural = "Metric entries"
+        ordering = ["-date"]

@@ -38,6 +38,16 @@ export const STATUS_COLORS = {
   recurring: "bg-violet-50 text-violet-700",
   per_unit: "bg-amber-50 text-amber-700",
   token: "bg-emerald-50 text-emerald-700",
+  // KPI metric (PART 6) — category / aggregation / source
+  growth: "bg-emerald-50 text-emerald-700",
+  activity: "bg-blue-50 text-blue-700",
+  other: "bg-ink-100 text-ink-600",
+  sum: "bg-violet-50 text-violet-700",
+  count: "bg-blue-50 text-blue-700",
+  average: "bg-amber-50 text-amber-700",
+  latest: "bg-cyan-50 text-cyan-700",
+  manual: "bg-ink-100 text-ink-600",
+  derived: "bg-violet-50 text-violet-700",
 };
 
 const sel = (...opts) => opts.map((o) => ({ value: o, label: o[0].toUpperCase() + o.slice(1).replace("_", " ") }));
@@ -487,6 +497,56 @@ export const RESOURCES = {
       { key: "amount", label: "Amount", type: "number" },
       { key: "month", label: "Month (1-12)", type: "number", required: true },
       { key: "year", label: "Year", type: "number", required: true },
+    ],
+  },
+  "metric-definitions": {
+    title: "KPI Definitions", endpoint: "metric-definitions", search: true,
+    columns: [
+      { key: "name", label: "Metric" },
+      { key: "business_name", label: "Business" },
+      { key: "aggregation", label: "Aggregation", badge: true },
+      { key: "category", label: "Category", badge: true },
+      { key: "source", label: "Source", badge: true },
+      { key: "unit", label: "Unit" },
+      { key: "status", label: "Status", badge: true },
+    ],
+    fields: [
+      { key: "name", label: "Metric name (e.g. Lots Traded, Nodes Sold, Meetings)", required: true },
+      { key: "business", label: "Business (blank = all)", type: "ref", ref: "businesses", labelKey: "name" },
+      { key: "product", label: "Product (optional)", type: "ref", ref: "products", labelKey: "name", dependsOn: "business" },
+      { key: "unit", label: "Unit ($, GB, count, lots)" },
+      { key: "aggregation", label: "How to aggregate over a period", type: "select", options: sel("sum", "count", "average", "latest") },
+      { key: "category", label: "Scorecard category", type: "select", options: sel("growth", "activity", "other") },
+      { key: "source", label: "Source", type: "select", options: sel("manual", "derived") },
+      { key: "derived_key", label: "Derived from (only if source = derived)", type: "select", options: [
+        { value: "", label: "—" },
+        { value: "lead_activity:meeting", label: "Meetings logged (Lead Activity)" },
+        { value: "lead_activity:call", label: "Calls logged (Lead Activity)" },
+        { value: "lead:converted", label: "Leads converted" },
+      ] },
+      { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
+  "metric-entries": {
+    title: "KPI Entries", endpoint: "metric-entries",
+    filters: [
+      { key: "metric", label: "Metric", ref: "metric-definitions", labelKey: "name" },
+      { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+    ],
+    columns: [
+      { key: "metric_name", label: "Metric" },
+      { key: "employee_name", label: "Employee" },
+      { key: "value", label: "Value" },
+      { key: "unit", label: "Unit" },
+      { key: "date", label: "Date" },
+      { key: "note", label: "Note" },
+    ],
+    fields: [
+      { key: "metric", label: "Metric", type: "ref", ref: "metric-definitions", labelKey: "name", required: true },
+      { key: "employee", label: "Employee", type: "ref", ref: "employees", labelKey: "user_name", required: true },
+      { key: "value", label: "Value", type: "number", required: true },
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "note", label: "Note (optional)" },
     ],
   },
   "target-multipliers": {

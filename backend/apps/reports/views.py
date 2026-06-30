@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .assistant import answer_question
+from .metrics import compute_kpis, scoped_kpis
 from .pnl import compute_pnl, scoped_for
 from .targets import compute_targets, scoped_targets
 
@@ -289,3 +290,16 @@ def target_board(request):
     month = int(request.query_params.get("month", today.month))
     year = int(request.query_params.get("year", today.year))
     return Response(scoped_targets(user, compute_targets(month, year)))
+
+
+@api_view(["GET"])
+def kpi_board(request):
+    """Configurable KPIs (PART 6) per employee, rolled up the org tree.
+    Optional ?business= filter. Aggregation-aware (sum/count/avg/latest)."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    business = request.query_params.get("business")
+    business_id = int(business) if business else None
+    return Response(scoped_kpis(user, compute_kpis(month, year, business_id)))

@@ -2,8 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, Opportunity, Product, Proposal, ProposalItem, Target,
-    TargetAssignment,
+    LeadInterest, LeadSource, MetricDefinition, MetricEntry, Opportunity, Product, Proposal,
+    ProposalItem, Target, TargetAssignment,
 )
 
 
@@ -266,3 +266,47 @@ class TargetSerializer(serializers.ModelSerializer):
         if target <= 0:
             return 0
         return round(min(100, self.get_achieved(obj) / target * 100), 1)
+
+
+# ---- KPI / Metric Engine (PART 6) ----------------------------------------
+class MetricDefinitionSerializer(serializers.ModelSerializer):
+    business_name = serializers.CharField(source="business.name", read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MetricDefinition
+        fields = ["id", "name", "key", "business", "business_name", "product", "product_name",
+                  "unit", "aggregation", "category", "source", "derived_key", "status", "label"]
+        read_only_fields = ["key"]
+
+    def get_label(self, obj):
+        scope = obj.business.name if obj.business_id else "All businesses"
+        return f"{obj.name} · {scope}"
+
+    def validate(self, attrs):
+        source = attrs.get("source") or getattr(self.instance, "source", "manual")
+        derived = attrs.get("derived_key") or getattr(self.instance, "derived_key", "")
+        if source == "derived" and not derived:
+            raise serializers.ValidationError(
+                {"derived_key": "Pick a CRM signal when source is 'Derived'."})
+        if source == "manual":
+            attrs["derived_key"] = ""
+        return attrs
+
+
+class MetricEntrySerializer(serializers.ModelSerializer):
+    metric_name = serializers.CharField(source="metric.name", read_only=True)
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    unit = serializers.CharField(source="metric.unit", read_only=True)
+
+    class Meta:
+        model = MetricEntry
+        fields = ["id", "metric", "metric_name", "unit", "employee", "employee_name",
+                  "value", "customer", "lead", "note", "date"]
+
+    def validate_metric(self, metric):
+        if metric.source == "derived":
+            raise serializers.ValidationError(
+                "This is a derived metric — its values come from CRM data, not manual entry.")
+        return metric
