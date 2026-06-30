@@ -2,8 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
-    ActivityIncentive, HierarchyLevel, Incentive, IncentiveRule, IncentiveSlab, Leave, LeaveType,
-    Payroll, PerformanceWeight, TargetMultiplier,
+    ActivityIncentive, FormulaCondition, FormulaRule, HierarchyLevel, Incentive, IncentiveRule,
+    IncentiveSlab, Leave, LeaveType, Payroll, PerformanceWeight, TargetMultiplier,
 )
 
 
@@ -256,6 +256,45 @@ class ActivityIncentiveSerializer(serializers.ModelSerializer):
 
     def get_label(self, obj):
         return f"{obj.name} — {obj.rate} per {obj.metric.unit or 'unit'}"
+
+
+class FormulaConditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormulaCondition
+        fields = ["id", "left", "operator", "right_type", "right_value",
+                  "right_value2", "right_variable", "right_factor"]
+
+
+class FormulaRuleSerializer(serializers.ModelSerializer):
+    conditions = FormulaConditionSerializer(many=True)
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FormulaRule
+        fields = ["id", "name", "match", "payout_type", "payout_on", "payout_value",
+                  "priority", "status", "conditions", "label"]
+
+    def get_label(self, obj):
+        from apps.reports.formulas import rule_label
+        return rule_label(obj)
+
+    def create(self, validated_data):
+        conds = validated_data.pop("conditions", [])
+        rule = FormulaRule.objects.create(**validated_data)
+        for c in conds:
+            FormulaCondition.objects.create(rule=rule, **c)
+        return rule
+
+    def update(self, instance, validated_data):
+        conds = validated_data.pop("conditions", None)
+        for k, v in validated_data.items():
+            setattr(instance, k, v)
+        instance.save()
+        if conds is not None:                 # replace the whole condition set
+            instance.conditions.all().delete()
+            for c in conds:
+                FormulaCondition.objects.create(rule=instance, **c)
+        return instance
 
 
 class PerformanceWeightSerializer(serializers.ModelSerializer):

@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .assistant import answer_question
+from .formulas import compute_formulas, run_formulas, scoped_formulas, variable_options
 from .incentives import compute_incentives, run_incentives, scoped_incentives
 from .metrics import compute_kpis, scoped_kpis
 from .performance import compute_performance, scoped_performance
@@ -339,3 +340,33 @@ def incentive_run(request):
     month = int((request.data or {}).get("month") or today.month)
     year = int((request.data or {}).get("year") or today.year)
     return Response(run_incentives(month, year))
+
+
+@api_view(["GET"])
+def formula_variables(request):
+    """Variables an admin can reference in formula conditions/payouts."""
+    return Response({"variables": variable_options()})
+
+
+@api_view(["GET"])
+def formula_board(request):
+    """Preview formula-rule payouts per employee (which rules fired) — no writes."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_formulas(user, compute_formulas(month, year)))
+
+
+@api_view(["POST"])
+def formula_run(request):
+    """Persist formula payouts into Incentive + Payroll (admins / Finance / HR)."""
+    from apps.accounts.access import is_admin_view
+    user = request.user
+    role = getattr(getattr(user, "role", None), "name", "")
+    if not (is_admin_view(user) or role in ("Finance", "HR")):
+        return Response({"detail": "Only admins, Finance or HR can run payouts."}, status=403)
+    today = timezone.localdate()
+    month = int((request.data or {}).get("month") or today.month)
+    year = int((request.data or {}).get("year") or today.year)
+    return Response(run_formulas(month, year))

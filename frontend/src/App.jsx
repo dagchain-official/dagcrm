@@ -9,6 +9,8 @@ import TargetBoard from "./pages/TargetBoard";
 import KpiBoard from "./pages/KpiBoard";
 import Performance from "./pages/Performance";
 import IncentiveBoard from "./pages/IncentiveBoard";
+import FormulaBuilder from "./pages/FormulaBuilder";
+import FormulaBoard from "./pages/FormulaBoard";
 import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
@@ -56,6 +58,8 @@ export default function App() {
         <Route path="kpi-board" element={<KpiBoard />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
+        <Route path="formula-builder" element={<FormulaBuilder />} />
+        <Route path="formula-board" element={<FormulaBoard />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="proposals" element={<Proposals />} />

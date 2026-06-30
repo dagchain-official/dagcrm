@@ -21,5 +21,8 @@ urlpatterns = [
     path("reports/performance/", views.performance),
     path("reports/incentive-board/", views.incentive_board),
     path("reports/incentive-run/", views.incentive_run),
+    path("reports/formula-variables/", views.formula_variables),
+    path("reports/formula-board/", views.formula_board),
+    path("reports/formula-run/", views.formula_run),
     path("ai/ask/", views.ai_ask),
 ]

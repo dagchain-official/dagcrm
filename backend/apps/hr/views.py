@@ -15,8 +15,8 @@ from apps.accounts.scoping import BusinessScopedMixin
 
 from .models import (
     Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
-    ActivityIncentive, HierarchyLevel, Incentive, IncentiveRule, IncentiveSlab, Leave, LeaveType,
-    Payroll, PerformanceWeight, TargetMultiplier,
+    ActivityIncentive, FormulaRule, HierarchyLevel, Incentive, IncentiveRule, IncentiveSlab,
+    Leave, LeaveType, Payroll, PerformanceWeight, TargetMultiplier,
 )
 from .services import today_activity, today_attendance
 
@@ -151,8 +151,8 @@ from .serializers import (
     AttendanceSerializer, CostCategorySerializer, DepartmentSerializer,
     EmployeeActivitySerializer, EmployeeCostSerializer, EmployeeSerializer,
     HierarchyLevelSerializer, IncentiveRuleSerializer, IncentiveSerializer,
-    ActivityIncentiveSerializer, IncentiveSlabSerializer, LeaveSerializer, LeaveTypeSerializer,
-    PayrollSerializer, PerformanceWeightSerializer, TargetMultiplierSerializer,
+    ActivityIncentiveSerializer, FormulaRuleSerializer, IncentiveSlabSerializer, LeaveSerializer,
+    LeaveTypeSerializer, PayrollSerializer, PerformanceWeightSerializer, TargetMultiplierSerializer,
 )
 
 
@@ -410,6 +410,12 @@ class ActivityIncentiveViewSet(viewsets.ModelViewSet):
     queryset = ActivityIncentive.objects.select_related("metric").all()
     serializer_class = ActivityIncentiveSerializer
     filterset_fields = ["metric", "status"]
+
+
+class FormulaRuleViewSet(viewsets.ModelViewSet):
+    queryset = FormulaRule.objects.prefetch_related("conditions").all()
+    serializer_class = FormulaRuleSerializer
+    filterset_fields = ["status", "payout_type"]
 
 
 class IncentiveViewSet(viewsets.ModelViewSet):

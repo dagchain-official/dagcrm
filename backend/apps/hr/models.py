@@ -297,3 +297,41 @@ class ActivityIncentive(models.Model):
 
     def __str__(self):
         return f"{self.name}: {self.rate} per {self.metric.unit or 'unit'}"
+
+
+# ---- Formula Builder (PART 16) --------------------------------------------
+# Admin-defined incentive rules WITHOUT code, e.g. "Revenue > Cost × 2 → 10%",
+# "New Users > 50 → $500", "Lots > 100 → $2 per lot". Structured (NOT eval) for
+# safety: conditions reference named variables exposed by the other engines
+# (revenue, cost, target, attainment, profit, kpi:<key>). Evaluation lives in
+# reports/formulas.py. Subsumes multi-condition incentives (PART 15) via AND/OR.
+class FormulaRule(models.Model):
+    MATCH = [("all", "Match ALL (AND)"), ("any", "Match ANY (OR)")]
+    PAYOUT = [("percent", "Percent of"), ("flat", "Flat amount"), ("per_unit", "Per unit of")]
+    STATUS = [("active", "Active"), ("inactive", "Inactive")]
+    name = models.CharField(max_length=120)
+    match = models.CharField(max_length=4, choices=MATCH, default="all")
+    payout_type = models.CharField(max_length=10, choices=PAYOUT, default="percent")
+    payout_on = models.CharField(max_length=40, blank=True)   # variable key (percent/per_unit basis)
+    payout_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    priority = models.PositiveIntegerField(default=100)
+    status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+    class Meta:
+        ordering = ["priority", "id"]
+
+    def __str__(self):
+        return self.name
+
+
+class FormulaCondition(models.Model):
+    OPS = [("gt", ">"), ("gte", "≥"), ("lt", "<"), ("lte", "≤"), ("eq", "="), ("between", "between")]
+    RT = [("constant", "Constant"), ("variable", "Variable")]
+    rule = models.ForeignKey(FormulaRule, on_delete=models.CASCADE, related_name="conditions")
+    left = models.CharField(max_length=40)                    # variable key
+    operator = models.CharField(max_length=10, choices=OPS, default="gt")
+    right_type = models.CharField(max_length=10, choices=RT, default="constant")
+    right_value = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    right_value2 = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)  # for 'between'
+    right_variable = models.CharField(max_length=40, blank=True)
+    right_factor = models.DecimalField(max_digits=10, decimal_places=2, default=1)  # variable × factor

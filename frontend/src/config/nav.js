@@ -3,7 +3,7 @@ import {
   Radio, UserPlus, Activity, Target, Briefcase, UserCheck, MessageSquare,
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
-  TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers,
+  TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
@@ -12,6 +12,8 @@ export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
   if (["/reports", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
+  if (to === "/formula-builder") return "formula-rules";
+  if (to === "/formula-board") return "reports";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
@@ -75,6 +77,8 @@ export const NAV = [
       { to: "/incentive-board", label: "Incentive Board", icon: Coins },
       { to: "/m/incentive-slabs", label: "Incentive Slabs", icon: Layers },
       { to: "/m/activity-incentives", label: "Activity Incentives", icon: Coins },
+      { to: "/formula-builder", label: "Formula Builder", icon: Wand2 },
+      { to: "/formula-board", label: "Formula Payouts", icon: Calculator },
       { to: "/m/incentive-rules", label: "Incentive Rules", icon: Settings2 },
       { to: "/m/target-multipliers", label: "Target Multipliers", icon: Gauge },
       { to: "/m/performance-weights", label: "Performance Weights", icon: Trophy },
