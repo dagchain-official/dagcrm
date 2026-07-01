@@ -1,5 +1,12 @@
+import {
+  Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer,
+  Tooltip, XAxis, YAxis,
+} from "recharts";
+import {
+  Building2, TrendingUp, Users, Landmark, DollarSign, Wallet,
+  ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
+} from "lucide-react";
 import { useState } from "react";
-import { Building2, TrendingUp, Users, Landmark } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Spinner, EmptyState } from "../components/ui";
@@ -9,7 +16,38 @@ const num = (v, unit) => {
   const n = Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
   return unit === "$" ? `$${n}` : unit && unit !== "count" ? `${n} ${unit}` : n;
 };
-const catColor = { growth: "text-emerald-600", activity: "text-blue-600", other: "text-violet-600" };
+const catTint = {
+  growth: "bg-emerald-100 text-emerald-600",
+  activity: "bg-blue-100 text-blue-600",
+  other: "bg-violet-100 text-violet-600",
+};
+
+function Stat({ icon: Icon, label, value, sub, color, positive = true }) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-start justify-between">
+        <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}><Icon size={20} /></div>
+        <MoreHorizontal size={18} className="text-ink-300" />
+      </div>
+      <p className="text-3xl font-extrabold text-ink-900 mt-4 tabular-nums">{value}</p>
+      <p className="text-sm text-ink-400 mt-0.5">{label}</p>
+      {sub && (
+        <p className={`flex items-center gap-1 text-xs font-semibold mt-3 ${positive ? "text-emerald-600" : "text-rose-500"}`}>
+          {positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} {sub}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CardHead({ title, action }) {
+  return (
+    <div className="flex items-center justify-between mb-5">
+      <h3 className="font-bold text-ink-900">{title}</h3>
+      {action || <MoreHorizontal size={18} className="text-ink-300" />}
+    </div>
+  );
+}
 
 export default function BusinessDashboard({ businessId }) {
   const [d, setD] = useState(null);
@@ -19,12 +57,15 @@ export default function BusinessDashboard({ businessId }) {
     api.get("/reports/business-dashboard/", { params: { business: businessId } })
       .then((r) => { setD(r.data); setErr(""); })
       .catch(() => setErr("Failed to load business dashboard."));
-  }, 4000, [businessId]);
+  }, 5000, [businessId]);
 
   if (err) return <EmptyState title="Error" hint={err} />;
   if (!d) return <Spinner label="Loading business…" />;
 
-  const maxTrend = Math.max(...(d.revenue_trend || []).map((t) => t.net), 1);
+  const aum = d.aum;
+  const kpis = d.kpis || [];
+  // KPIs that share a unit make a meaningful mini bar chart (else just cards)
+  const chartable = kpis.filter((k) => Number(k.value) > 0);
 
   return (
     <div className="space-y-5">
@@ -35,81 +76,135 @@ export default function BusinessDashboard({ businessId }) {
         <p className="text-sm text-ink-400">Business unit overview · live data</p>
       </div>
 
-      {/* headline cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-5"><p className="text-2xl font-extrabold text-emerald-600 tabular-nums">{money(d.net_revenue)}</p><p className="text-sm text-ink-400 mt-0.5">Net revenue</p></div>
-        <div className="card p-5"><p className="text-2xl font-extrabold text-ink-800 tabular-nums">{money(d.gross_revenue)}</p><p className="text-sm text-ink-400 mt-0.5">Gross revenue</p></div>
-        <div className="card p-5"><p className="text-2xl font-extrabold text-brand-600 tabular-nums">{money(d.month_net_revenue)}</p><p className="text-sm text-ink-400 mt-0.5">This month</p></div>
-        <div className="card p-5"><p className="text-2xl font-extrabold text-ink-800 tabular-nums flex items-center gap-1"><Users size={18} className="text-ink-400" />{d.customers}</p><p className="text-sm text-ink-400 mt-0.5">Customers</p></div>
+      {/* headline stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <Stat icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} sub={`Gross ${money(d.gross_revenue)}`} color="bg-emerald-100 text-emerald-600" />
+        <Stat icon={TrendingUp} label="This Month" value={money(d.month_net_revenue)} sub="net revenue" color="bg-indigo-100 text-indigo-600" />
+        <Stat icon={Users} label="Customers" value={d.customers} sub="active accounts" color="bg-rose-100 text-rose-500" />
+        {aum
+          ? <Stat icon={Landmark} label="Net New AUM" value={money(aum.net_new)} sub={`Closing ${money(aum.closing)}`} color="bg-amber-100 text-amber-600" positive={(aum.net_new || 0) >= 0} />
+          : <Stat icon={Activity} label="Key Metrics" value={kpis.length} sub="tracked KPIs" color="bg-violet-100 text-violet-600" />}
       </div>
 
-      {/* configurable KPI cards for this business */}
-      {d.kpis?.length > 0 ? (
+      {/* charts row */}
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* revenue trend area */}
+        <div className="card p-5 lg:col-span-2">
+          <CardHead title="Revenue Trend" action={<span className="text-xs font-semibold text-emerald-600 flex items-center gap-1"><TrendingUp size={14} /> {money(d.net_revenue)} total</span>} />
+          {d.revenue_trend?.length ? (
+            <ResponsiveContainer width="100%" height={230}>
+              <AreaChart data={d.revenue_trend} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="bizg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v) => money(v)} />
+                <Area type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2.5} fill="url(#bizg)" name="Net revenue" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[230px] grid place-items-center text-sm text-ink-400">No revenue recorded yet.</div>
+          )}
+        </div>
+
+        {/* AUM panel or KPI mini-bar */}
+        <div className="card p-5">
+          {aum ? (
+            <>
+              <CardHead title="AUM" action={<Landmark size={18} className="text-ink-300" />} />
+              <div className="space-y-3">
+                {[
+                  ["New Deposits", aum.new_deposits, "text-emerald-600"],
+                  ["Withdrawals", aum.withdrawals, "text-rose-500"],
+                  ["Net New AUM", aum.net_new, (aum.net_new || 0) < 0 ? "text-rose-600" : "text-emerald-700"],
+                  ["Existing AUM", aum.existing, "text-ink-500"],
+                ].map(([l, v, c]) => (
+                  <div key={l} className="flex items-center justify-between">
+                    <span className="text-sm text-ink-500">{l}</span>
+                    <span className={`text-sm font-bold tabular-nums ${c}`}>{money(v)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-3 border-t border-ink-100">
+                  <span className="text-sm font-semibold text-ink-700">Closing AUM</span>
+                  <span className="text-lg font-extrabold text-ink-900 tabular-nums">{money(aum.closing)}</span>
+                </div>
+              </div>
+            </>
+          ) : chartable.length ? (
+            <>
+              <CardHead title="Top KPIs" />
+              <ResponsiveContainer width="100%" height={230}>
+                <BarChart data={chartable.slice(0, 6)} layout="vertical" margin={{ left: 10, right: 10 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={80} />
+                  <Tooltip />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} fill="#8b5cf6" barSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+            </>
+          ) : (
+            <>
+              <CardHead title="KPIs" />
+              <div className="h-[210px] grid place-items-center text-center px-3">
+                <div>
+                  <p className="text-sm text-ink-600">No KPI data yet</p>
+                  <p className="text-xs text-ink-400 mt-1">Define metrics for <b>{d.business.name}</b> in Setup → KPI Definitions, or connect its API.</p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* configurable KPI cards */}
+      {kpis.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase text-ink-400 mb-2">Key metrics</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {d.kpis.map((k) => (
-              <div key={k.name} className="card p-4">
-                <p className={`text-2xl font-extrabold tabular-nums ${catColor[k.category] || "text-ink-800"}`}>{num(k.value, k.unit)}</p>
-                <p className="text-sm text-ink-500 mt-0.5">{k.name}</p>
-                <p className="text-[10px] uppercase text-ink-300">{k.category}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-3">Key metrics — {d.business.name}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {kpis.map((k) => (
+              <div key={k.name} className="card p-5">
+                <div className="flex items-start justify-between">
+                  <div className={`grid place-items-center w-10 h-10 rounded-xl ${catTint[k.category] || "bg-ink-100 text-ink-500"}`}><Activity size={18} /></div>
+                  <span className="text-[10px] uppercase font-semibold text-ink-300">{k.category}</span>
+                </div>
+                <p className="text-2xl font-extrabold text-ink-900 mt-3 tabular-nums">{num(k.value, k.unit)}</p>
+                <p className="text-sm text-ink-400 mt-0.5">{k.name}</p>
               </div>
             ))}
           </div>
         </div>
-      ) : (
-        <div className="card p-5 bg-amber-50/50 border-amber-100">
-          <p className="text-sm text-ink-600">No KPIs defined for <b>{d.business.name}</b> yet.</p>
-          <p className="text-xs text-ink-400 mt-1">Add metrics under <b>Setup → KPI Definitions</b> (pick this business), or connect its API in the Integration Hub. Cards appear here automatically.</p>
-        </div>
       )}
 
-      {/* AUM (only for businesses that track it, e.g. FX Artha) */}
-      {d.aum && (
-        <div>
-          <p className="text-xs font-semibold uppercase text-ink-400 mb-2 flex items-center gap-1"><Landmark size={13} /> AUM</p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="card p-4"><p className="text-xl font-extrabold text-emerald-600 tabular-nums">{money(d.aum.new_deposits)}</p><p className="text-xs text-ink-400">New deposits</p></div>
-            <div className="card p-4"><p className="text-xl font-extrabold text-rose-500 tabular-nums">{money(d.aum.withdrawals)}</p><p className="text-xs text-ink-400">Withdrawals</p></div>
-            <div className="card p-4"><p className={`text-xl font-extrabold tabular-nums ${(d.aum.net_new || 0) < 0 ? "text-rose-600" : "text-emerald-700"}`}>{money(d.aum.net_new)}</p><p className="text-xs text-ink-400">Net New AUM</p></div>
-            <div className="card p-4"><p className="text-xl font-extrabold text-ink-800 tabular-nums">{money(d.aum.closing)}</p><p className="text-xs text-ink-400">Closing AUM</p></div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid lg:grid-cols-2 gap-4">
-        {/* revenue trend */}
-        <div className="card p-5">
-          <p className="text-sm font-bold text-ink-800 flex items-center gap-2 mb-3"><TrendingUp size={16} className="text-brand-600" /> Revenue trend</p>
-          {d.revenue_trend?.length ? (
-            <div className="space-y-2">
-              {d.revenue_trend.map((t) => (
-                <div key={t.month} className="flex items-center gap-2">
-                  <span className="w-16 text-xs text-ink-400">{t.month}</span>
-                  <div className="flex-1 h-4 rounded bg-ink-50 overflow-hidden">
-                    <div className="h-full bg-brand-500/70" style={{ width: `${(t.net / maxTrend) * 100}%` }} />
-                  </div>
-                  <span className="w-20 text-right text-xs font-semibold text-ink-600 tabular-nums">{money(t.net)}</span>
-                </div>
+      {/* top RMs table */}
+      <div className="card p-5">
+        <CardHead title="Top Relationship Managers" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
+                <th className="pb-3 pr-4 font-semibold">S/N</th>
+                <th className="pb-3 px-4 font-semibold">Name</th>
+                <th className="pb-3 px-4 font-semibold text-right">Revenue ({d.business.name})</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(d.top_reps || []).map((r, i) => (
+                <tr key={i} className="border-t border-ink-100 hover:bg-ink-50/70">
+                  <td className="py-3 pr-4 text-ink-400">{String(i + 1).padStart(2, "0")}</td>
+                  <td className="py-3 px-4 font-medium text-ink-800">{r.name}</td>
+                  <td className="py-3 px-4 text-right tabular-nums font-semibold text-emerald-600">{money(r.revenue)}</td>
+                </tr>
               ))}
-            </div>
-          ) : <p className="text-sm text-ink-400">No revenue yet.</p>}
-        </div>
-
-        {/* top RMs */}
-        <div className="card p-5">
-          <p className="text-sm font-bold text-ink-800 mb-3">Top relationship managers</p>
-          {d.top_reps?.length ? (
-            <div className="space-y-2">
-              {d.top_reps.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm">
-                  <span className="w-5 h-5 grid place-items-center rounded-full bg-ink-100 text-ink-500 text-xs font-bold">{i + 1}</span>
-                  <span className="flex-1 text-ink-700 truncate">{r.name}</span>
-                  <span className="font-semibold text-emerald-600 tabular-nums">{money(r.revenue)}</span>
-                </div>
-              ))}
-            </div>
-          ) : <p className="text-sm text-ink-400">No revenue attributed yet.</p>}
+              {(!d.top_reps || d.top_reps.length === 0) && (
+                <tr><td colSpan={3} className="py-6 text-center text-ink-400">No revenue attributed yet</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
