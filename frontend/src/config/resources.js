@@ -576,6 +576,7 @@ export const RESOURCES = {
     ],
     columns: [
       { key: "employee_name", label: "Employee" },
+      { key: "business_name", label: "Business" },
       { key: "customer_name", label: "Customer" },
       { key: "entry_type", label: "Type", badge: true },
       { key: "amount", label: "Amount", money: true },
@@ -583,6 +584,7 @@ export const RESOURCES = {
     ],
     fields: [
       { key: "employee", label: "Employee (RM)", type: "ref", ref: "employees", labelKey: "user_name", required: true },
+      { key: "business", label: "Business", type: "ref", ref: "businesses", labelKey: "name" },
       { key: "customer", label: "Customer (optional)", type: "ref", ref: "customers", labelKey: "name" },
       { key: "entry_type", label: "Type", type: "select", options: sel("deposit", "withdrawal") },
       { key: "amount", label: "Amount", type: "number", required: true },

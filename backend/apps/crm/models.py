@@ -350,6 +350,7 @@ class AumEntry(models.Model):
     TYPES = [("deposit", "Deposit"), ("withdrawal", "Withdrawal")]
     employee = models.ForeignKey("hr.Employee", on_delete=models.CASCADE, related_name="aum_entries")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    business = models.ForeignKey(Business, on_delete=models.SET_NULL, null=True, blank=True)  # per-business AUM
     entry_type = models.CharField(max_length=12, choices=TYPES, default="deposit")
     amount = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     external_id = models.CharField(max_length=80, blank=True, db_index=True)  # idempotent external sync key

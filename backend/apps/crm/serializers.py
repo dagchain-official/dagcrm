@@ -315,11 +315,12 @@ class MetricEntrySerializer(serializers.ModelSerializer):
 class AumEntrySerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source="employee.user.name", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
+    business_name = serializers.CharField(source="business.name", read_only=True)
 
     class Meta:
         model = AumEntry
         fields = ["id", "employee", "employee_name", "customer", "customer_name",
-                  "entry_type", "amount", "note", "date"]
+                  "business", "business_name", "entry_type", "amount", "note", "date"]
 
 
 class ContributionEntrySerializer(serializers.ModelSerializer):

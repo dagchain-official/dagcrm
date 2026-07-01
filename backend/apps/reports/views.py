@@ -311,6 +311,56 @@ def kpi_board(request):
 
 
 @api_view(["GET"])
+def business_dashboard(request):
+    """Per-business dashboard — revenue + configurable KPIs (PART 6) + AUM +
+    top RMs for one business. Cards are driven by that business's metrics, so
+    nothing is hardcoded per business."""
+    biz = Business.objects.filter(id=request.query_params.get("business")).first()
+    if not biz:
+        return Response({"detail": "Business not found."}, status=404)
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+
+    rev = Revenue.objects.filter(business=biz)
+    month_rev = rev.filter(created_at__year=year, created_at__month=month)
+
+    trend = list(rev.annotate(m=TruncMonth("created_at")).values("m")
+                 .annotate(net=Sum("net_revenue")).order_by("m"))
+    trend = [{"month": t["m"].strftime("%b %Y") if t["m"] else "", "net": float(t["net"] or 0)}
+             for t in trend][-6:]
+
+    # KPI cards = this business's OWN metrics (drop cross-business globals)
+    kpi = compute_kpis(month, year, business_id=biz.id)
+    kpi_cards = [{"name": m["name"], "unit": m["unit"], "category": m["category"],
+                  "value": kpi["company"].get(m["id"], 0)}
+                 for m in kpi["metrics"] if m["business"] == biz.name]
+
+    aum = compute_aum(month, year, business_id=biz.id)["company"]
+    has_aum = any(aum.get(k) for k in ("existing", "new_deposits", "withdrawals", "closing"))
+
+    rows = (rev.values("customer__lead__assigned_to")
+            .annotate(net=Sum("net_revenue")).order_by("-net"))
+    names = dict(User.objects.values_list("id", "name"))
+    top_reps = [{"name": names.get(r["customer__lead__assigned_to"], "—"),
+                 "revenue": float(r["net"] or 0)}
+                for r in rows if r["customer__lead__assigned_to"]][:6]
+
+    return Response({
+        "business": {"id": biz.id, "name": biz.name},
+        "month": month, "year": year,
+        "gross_revenue": _money(rev, "gross_revenue"),
+        "net_revenue": _money(rev, "net_revenue"),
+        "month_net_revenue": _money(month_rev, "net_revenue"),
+        "customers": Customer.objects.filter(revenues__business=biz).distinct().count(),
+        "revenue_trend": trend,
+        "kpis": kpi_cards,
+        "aum": aum if has_aum else None,
+        "top_reps": top_reps,
+    })
+
+
+@api_view(["GET"])
 def performance(request):
     """3-scorecard performance (Revenue / Growth / Activity) with admin weightage."""
     user = request.user

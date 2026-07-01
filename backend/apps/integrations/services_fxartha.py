@@ -127,13 +127,13 @@ def _sync_customer(conn, item, business):
         if dep:
             AumEntry.objects.update_or_create(
                 external_id=f"fxa-dep:{acct}",
-                defaults={"employee": emp, "customer": cust, "entry_type": "deposit",
-                          "amount": dep, "date": when, "note": "FXArtha sync"})
+                defaults={"employee": emp, "customer": cust, "business": business,
+                          "entry_type": "deposit", "amount": dep, "date": when, "note": "FXArtha sync"})
         if wd:
             AumEntry.objects.update_or_create(
                 external_id=f"fxa-wd:{acct}",
-                defaults={"employee": emp, "customer": cust, "entry_type": "withdrawal",
-                          "amount": wd, "date": when, "note": "FXArtha sync"})
+                defaults={"employee": emp, "customer": cust, "business": business,
+                          "entry_type": "withdrawal", "amount": wd, "date": when, "note": "FXArtha sync"})
     return cust
 
 

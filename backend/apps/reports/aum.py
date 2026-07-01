@@ -25,10 +25,13 @@ def _sums(qs):
     return out
 
 
-def compute_aum(month, year):
+def compute_aum(month, year, business_id=None):
     start = datetime.date(year, month, 1)
-    before = _sums(AumEntry.objects.filter(date__lt=start))
-    inmonth = _sums(AumEntry.objects.filter(date__year=year, date__month=month))
+    qs = AumEntry.objects.all()
+    if business_id:
+        qs = qs.filter(business_id=business_id)
+    before = _sums(qs.filter(date__lt=start))
+    inmonth = _sums(qs.filter(date__year=year, date__month=month))
 
     emps = list(Employee.objects.select_related("user", "hierarchy_level")
                 .exclude(user__is_superuser=True))
