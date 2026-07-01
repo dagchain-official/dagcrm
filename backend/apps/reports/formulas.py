@@ -192,7 +192,7 @@ def run_formulas(month, year):
     for r in data["rows"]:
         amount = Decimal(str(r["total"]))
         Incentive.objects.update_or_create(
-            employee_id=r["id"], rule=None, month=month, year=year,
+            employee_id=r["id"], rule=None, source="formula", month=month, year=year,
             defaults={"amount": amount})
         if amount:
             credited += 1

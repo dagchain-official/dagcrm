@@ -4,6 +4,7 @@ import {
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
   TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
+  Landmark, PiggyBank, Scale,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
@@ -13,7 +14,7 @@ export const moduleOf = (to) => {
   if (["/reports", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
-  if (to === "/formula-board") return "reports";
+  if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
@@ -90,6 +91,11 @@ export const NAV = [
       { to: "/m/expenses", label: "Expenses", icon: Receipt },
       { to: "/m/commissions", label: "Commissions", icon: Handshake },
       { to: "/pnl", label: "P&L Statement", icon: TrendingUp },
+      { to: "/aum-board", label: "AUM Board", icon: Landmark },
+      { to: "/m/aum-entries", label: "AUM Entries", icon: PiggyBank },
+      { to: "/contribution-board", label: "Contribution", icon: Scale },
+      { to: "/m/contribution-entries", label: "Contribution Entries", icon: Coins },
+      { to: "/m/contribution-weights", label: "Contribution Formula", icon: Settings2 },
     ],
   },
   {

@@ -11,6 +11,8 @@ import Performance from "./pages/Performance";
 import IncentiveBoard from "./pages/IncentiveBoard";
 import FormulaBuilder from "./pages/FormulaBuilder";
 import FormulaBoard from "./pages/FormulaBoard";
+import AumBoard from "./pages/AumBoard";
+import ContributionBoard from "./pages/ContributionBoard";
 import AIAssistant from "./pages/AIAssistant";
 import ResourceTable from "./pages/ResourceTable";
 import Permissions from "./pages/Permissions";
@@ -60,6 +62,8 @@ export default function App() {
         <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="formula-builder" element={<FormulaBuilder />} />
         <Route path="formula-board" element={<FormulaBoard />} />
+        <Route path="aum-board" element={<AumBoard />} />
+        <Route path="contribution-board" element={<ContributionBoard />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="proposals" element={<Proposals />} />

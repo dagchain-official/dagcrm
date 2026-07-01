@@ -484,7 +484,7 @@ class IncentiveViewSet(viewsets.ModelViewSet):
         for (emp_id, rule_id), amount in acc.items():
             amount = amount.quantize(Decimal("0.01"))
             _, was_created = Incentive.objects.update_or_create(
-                employee_id=emp_id, rule_id=rule_id, month=month, year=year,
+                employee_id=emp_id, rule_id=rule_id, source="manual", month=month, year=year,
                 defaults={"amount": amount},
             )
             created += was_created

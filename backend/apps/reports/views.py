@@ -5,6 +5,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .assistant import answer_question
+from .aum import compute_aum, scoped_aum
+from .contribution import compute_contribution, scoped_contribution
 from .formulas import compute_formulas, run_formulas, scoped_formulas, variable_options
 from .incentives import compute_incentives, run_incentives, scoped_incentives
 from .metrics import compute_kpis, scoped_kpis
@@ -340,6 +342,26 @@ def incentive_run(request):
     month = int((request.data or {}).get("month") or today.month)
     year = int((request.data or {}).get("year") or today.year)
     return Response(run_incentives(month, year))
+
+
+@api_view(["GET"])
+def aum_board(request):
+    """New AUM (Existing / New Deposits / Withdrawals / Net New) rolled up the tree."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_aum(user, compute_aum(month, year)))
+
+
+@api_view(["GET"])
+def contribution_board(request):
+    """Net Business Contribution (admin-weighted components) rolled up the tree."""
+    user = request.user
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    return Response(scoped_contribution(user, compute_contribution(month, year)))
 
 
 @api_view(["GET"])

@@ -7,16 +7,16 @@ from apps.accounts.scoping import BusinessScopedMixin
 from apps.accounts.utils import is_admin_view
 
 from .models import (
-    Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, MetricDefinition, MetricEntry, Opportunity, Product, Proposal,
-    ProposalItem, Target, TargetAssignment,
+    Attachment, AumEntry, Business, Communication, ContributionEntry, ContributionWeight,
+    Customer, CustomerProduct, Lead, LeadActivity, LeadInterest, LeadSource, MetricDefinition,
+    MetricEntry, Opportunity, Product, Proposal, ProposalItem, Target, TargetAssignment,
 )
 from .serializers import (
-    AttachmentSerializer, BusinessSerializer, CommunicationSerializer,
-    CustomerProductSerializer, CustomerSerializer, LeadActivitySerializer,
-    LeadInterestSerializer, LeadSerializer, LeadSourceSerializer, MetricDefinitionSerializer,
-    MetricEntrySerializer, OpportunitySerializer, ProductSerializer, ProposalSerializer,
-    TargetAssignmentSerializer, TargetSerializer,
+    AttachmentSerializer, AumEntrySerializer, BusinessSerializer, CommunicationSerializer,
+    ContributionEntrySerializer, ContributionWeightSerializer, CustomerProductSerializer,
+    CustomerSerializer, LeadActivitySerializer, LeadInterestSerializer, LeadSerializer,
+    LeadSourceSerializer, MetricDefinitionSerializer, MetricEntrySerializer, OpportunitySerializer,
+    ProductSerializer, ProposalSerializer, TargetAssignmentSerializer, TargetSerializer,
 )
 
 
@@ -47,6 +47,24 @@ class MetricEntryViewSet(viewsets.ModelViewSet):
                 .all())
     serializer_class = MetricEntrySerializer
     filterset_fields = ["metric", "employee", "date"]
+
+
+class AumEntryViewSet(viewsets.ModelViewSet):
+    queryset = AumEntry.objects.select_related("employee", "employee__user", "customer").all()
+    serializer_class = AumEntrySerializer
+    filterset_fields = ["employee", "customer", "entry_type", "date"]
+
+
+class ContributionEntryViewSet(viewsets.ModelViewSet):
+    queryset = (ContributionEntry.objects
+                .select_related("employee", "employee__user", "customer", "business").all())
+    serializer_class = ContributionEntrySerializer
+    filterset_fields = ["employee", "customer", "business", "date"]
+
+
+class ContributionWeightViewSet(viewsets.ModelViewSet):
+    queryset = ContributionWeight.objects.all()
+    serializer_class = ContributionWeightSerializer
 
 
 class LeadSourceViewSet(viewsets.ModelViewSet):

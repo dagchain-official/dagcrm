@@ -85,6 +85,24 @@ class IntegrationConnectionViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(conn).data)
 
     @action(detail=True, methods=["post"])
+    def sync(self, request, pk=None):
+        """Pull data from a poll connector (FXArtha) into the CRM. Optionally
+        accepts {config: {base_url, api_key}} to save before syncing."""
+        conn = self.get_object()
+        if not PLATFORMS.get(conn.platform, {}).get("poll"):
+            return Response({"detail": "This connection is not a poll connector."}, status=400)
+        if "config" in request.data:
+            conn.config = {**(conn.config or {}), **request.data["config"]}
+            conn.save(update_fields=["config"])
+        if "auto_assign" in request.data:
+            conn.auto_assign = bool(request.data["auto_assign"])
+            conn.save(update_fields=["auto_assign"])
+        from .services_fxartha import sync_fxartha
+        result = sync_fxartha(conn)
+        status_code = 400 if result.get("error") else 200
+        return Response({**result, **self.get_serializer(conn).data}, status=status_code)
+
+    @action(detail=True, methods=["post"])
     def send_test(self, request, pk=None):
         """Simulate an incoming lead so the pipeline can be tested without the platform."""
         conn = self.get_object()

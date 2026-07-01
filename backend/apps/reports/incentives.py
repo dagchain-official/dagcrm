@@ -132,7 +132,7 @@ def run_incentives(month, year):
     for r in data["rows"]:
         amount = Decimal(str(r["total"]))
         Incentive.objects.update_or_create(
-            employee_id=r["id"], rule=None, month=month, year=year,
+            employee_id=r["id"], rule=None, source="slab", month=month, year=year,
             defaults={"amount": amount})
         if amount:
             credited += 1

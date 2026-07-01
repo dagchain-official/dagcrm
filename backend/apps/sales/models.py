@@ -9,6 +9,7 @@ class Revenue(models.Model):
     gross_revenue = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     commission = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     net_revenue = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    external_id = models.CharField(max_length=80, blank=True, db_index=True)  # idempotent external sync key
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

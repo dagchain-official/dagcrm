@@ -16,6 +16,10 @@ PLATFORMS = {
                 "fields": []},
     "telegram": {"label": "Telegram Bot", "source": "Telegram",
                  "fields": ["bot_token"]},
+    # Poll connector (not a webhook): pulls leads/customers/revenue/AUM from an
+    # external trading platform's read-only CRM API. Config = base_url + api_key.
+    "fxartha": {"label": "FXArtha Platform", "source": "FXArtha",
+                "fields": ["base_url", "api_key"], "poll": True},
 }
 
 

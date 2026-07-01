@@ -56,6 +56,7 @@ class Lead(models.Model):
         ("converted", "Converted"), ("lost", "Lost"),
     ]
     lead_code = models.CharField(max_length=40, unique=True)
+    external_id = models.CharField(max_length=64, blank=True, db_index=True)  # id in an external system (e.g. FXArtha)
     name = models.CharField(max_length=150)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=30, blank=True)
@@ -65,7 +66,15 @@ class Lead(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_leads")
     status = models.CharField(max_length=20, choices=STATUS, default="new")
     score = models.PositiveIntegerField(default=0)  # AI lead score (0-100)
+    converted_at = models.DateTimeField(null=True, blank=True)  # set when status -> converted
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # stamp the moment of conversion so KPIs credit the right month
+        if self.status == "converted" and not self.converted_at:
+            from django.utils import timezone
+            self.converted_at = timezone.now()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.lead_code} - {self.name}"
@@ -117,6 +126,7 @@ class Opportunity(models.Model):
 # ------------------------------------------------------------------ Customers
 class Customer(models.Model):
     name = models.CharField(max_length=150)
+    external_id = models.CharField(max_length=64, blank=True, db_index=True)  # external system id (e.g. FXArtha user)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=30, blank=True)
     country = models.CharField(max_length=80, blank=True)
@@ -329,3 +339,61 @@ class MetricEntry(models.Model):
     class Meta:
         verbose_name_plural = "Metric entries"
         ordering = ["-date"]
+
+
+# ---- New AUM Engine (PART 11) ---------------------------------------------
+# Tracks deposits & withdrawals per RM's client so the system can separate
+# Existing AUM, New Deposits, Withdrawals and Net New AUM (= deposits −
+# withdrawals). Rolled up the org tree in reports/aum.py — visible to RM/TL/
+# Sales Manager/Business Head.
+class AumEntry(models.Model):
+    TYPES = [("deposit", "Deposit"), ("withdrawal", "Withdrawal")]
+    employee = models.ForeignKey("hr.Employee", on_delete=models.CASCADE, related_name="aum_entries")
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    entry_type = models.CharField(max_length=12, choices=TYPES, default="deposit")
+    amount = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    external_id = models.CharField(max_length=80, blank=True, db_index=True)  # idempotent external sync key
+    note = models.CharField(max_length=200, blank=True)
+    date = models.DateField()
+
+    class Meta:
+        verbose_name_plural = "AUM entries"
+        ordering = ["-date"]
+
+
+# ---- Business Contribution Engine (PART 12) -------------------------------
+# Captures the revenue/loss components of a client so Net Business Contribution
+# can be derived. The formula is admin-configurable (ContributionWeight) — the
+# CRM does not hardcode it. Computation/rollup live in reports/contribution.py.
+class ContributionEntry(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    employee = models.ForeignKey("hr.Employee", on_delete=models.CASCADE, related_name="contributions")
+    business = models.ForeignKey(Business, on_delete=models.SET_NULL, null=True, blank=True)
+    deposit = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    trading_loss = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    brokerage = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    insurance = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    staking = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    other = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    date = models.DateField()
+
+    class Meta:
+        verbose_name_plural = "Contribution entries"
+        ordering = ["-date"]
+
+
+class ContributionWeight(models.Model):
+    """Single global config: the multiplier applied to each component when
+    computing Net Business Contribution (admin-defined, not hardcoded).
+    Default: revenue parts +1, trading loss −1, deposit excluded (0)."""
+    deposit = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    trading_loss = models.DecimalField(max_digits=6, decimal_places=2, default=-1)
+    brokerage = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+    insurance = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+    staking = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+    other = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+
+    COMPONENTS = ["deposit", "trading_loss", "brokerage", "insurance", "staking", "other"]
+
+    def __str__(self):
+        return "Contribution formula"

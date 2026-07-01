@@ -156,14 +156,18 @@ class IncentiveRule(models.Model):
 
 
 class Incentive(models.Model):
+    # which engine produced this row — keeps slab/formula/rule payouts from
+    # overwriting each other in the same (employee, month) slot.
+    SOURCE = [("manual", "Manual / Rule"), ("slab", "Incentive slab"), ("formula", "Formula")]
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="incentives")
     rule = models.ForeignKey(IncentiveRule, on_delete=models.SET_NULL, null=True, blank=True)
+    source = models.CharField(max_length=20, choices=SOURCE, default="manual")
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     month = models.PositiveSmallIntegerField()
     year = models.PositiveIntegerField()
 
     class Meta:
-        unique_together = ("employee", "rule", "month", "year")
+        unique_together = ("employee", "rule", "source", "month", "year")
 
 
 # ---- Target Engine (PART 5) -----------------------------------------------

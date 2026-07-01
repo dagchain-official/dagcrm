@@ -82,8 +82,9 @@ def _leaf_stats(mdefs, month, year):
                     if eid:
                         stats[(eid, m.id)] = (float(r["c"]), r["c"])
             elif m.derived_key == "lead:converted":
+                # credit the month the lead was CONVERTED (not created)
                 rows = (Lead.objects
-                        .filter(status="converted", created_at__year=year, created_at__month=month)
+                        .filter(status="converted", converted_at__year=year, converted_at__month=month)
                         .values("assigned_to").annotate(c=Count("id")))
                 for r in rows:
                     eid = u2e.get(r["assigned_to"])

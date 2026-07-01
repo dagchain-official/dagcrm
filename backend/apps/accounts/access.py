@@ -42,7 +42,8 @@ ROLE_DASHBOARD = {
 # ---- Every CRUD module key (matches frontend resource + viewset map) ----
 MODULES = [
     "leads", "lead-activities", "opportunities", "proposals", "customers", "communications",
-    "targets", "metric-definitions", "metric-entries",
+    "targets", "metric-definitions", "metric-entries", "aum-entries",
+    "contribution-entries", "contribution-weights",
     "revenues", "businesses", "products", "lead-sources", "tickets",
     "employees", "departments", "hierarchy-levels", "attendance", "employee-activities", "leaves",
     "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
@@ -69,19 +70,22 @@ ROLE_MATRIX = {
     "Super Admin": _full(MODULES),
     "Business Head": _full(MODULES),
     "Sales Manager": {
-        **_full(_split("leads lead-activities opportunities proposals customers communications targets metric-entries")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications targets "
+                       "metric-entries aum-entries contribution-entries")),
         **_view(_split("revenues products businesses lead-sources tickets reports teams users metric-definitions")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Team Leader": {
-        **_full(_split("leads lead-activities opportunities proposals customers communications metric-entries")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications "
+                       "metric-entries aum-entries contribution-entries")),
         **_view(_split("targets tickets reports metric-definitions")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Sales Executive": {
-        **_full(_split("leads lead-activities opportunities proposals customers communications metric-entries")),
+        **_full(_split("leads lead-activities opportunities proposals customers communications "
+                       "metric-entries aum-entries contribution-entries")),
         **_view(_split("tickets businesses products metric-definitions")),
     },
     "Support": {
@@ -98,7 +102,7 @@ ROLE_MATRIX = {
     },
     "Finance": {
         **_full(_split("revenues expenses commissions payrolls cost-categories employee-costs "
-                       "target-multipliers")),
+                       "target-multipliers aum-entries contribution-entries contribution-weights")),
         **_view(_split("reports businesses employees")),
     },
 }
@@ -117,6 +121,9 @@ VIEWSET_MODULE = {
     "TargetAssignmentViewSet": "targets",
     "MetricDefinitionViewSet": "metric-definitions",
     "MetricEntryViewSet": "metric-entries",
+    "AumEntryViewSet": "aum-entries",
+    "ContributionEntryViewSet": "contribution-entries",
+    "ContributionWeightViewSet": "contribution-weights",
     "RevenueViewSet": "revenues",
     "BusinessViewSet": "businesses",
     "ProductViewSet": "products",

@@ -48,6 +48,9 @@ export const STATUS_COLORS = {
   latest: "bg-cyan-50 text-cyan-700",
   manual: "bg-ink-100 text-ink-600",
   derived: "bg-violet-50 text-violet-700",
+  // AUM (PART 11)
+  deposit: "bg-emerald-50 text-emerald-700",
+  withdrawal: "bg-rose-50 text-rose-700",
 };
 
 const sel = (...opts) => opts.map((o) => ({ value: o, label: o[0].toUpperCase() + o.slice(1).replace("_", " ") }));
@@ -563,6 +566,74 @@ export const RESOURCES = {
       { key: "employee", label: "Employee (if scope = employee)", type: "ref", ref: "employees", labelKey: "user_name" },
       { key: "multiplier", label: "Multiplier (Target = CTC × this)", type: "number", required: true },
       { key: "status", label: "Status", type: "select", options: sel("active", "inactive") },
+    ],
+  },
+  "aum-entries": {
+    title: "AUM Entries", endpoint: "aum-entries",
+    filters: [
+      { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+      { key: "entry_type", label: "Type", options: sel("deposit", "withdrawal") },
+    ],
+    columns: [
+      { key: "employee_name", label: "Employee" },
+      { key: "customer_name", label: "Customer" },
+      { key: "entry_type", label: "Type", badge: true },
+      { key: "amount", label: "Amount", money: true },
+      { key: "date", label: "Date" },
+    ],
+    fields: [
+      { key: "employee", label: "Employee (RM)", type: "ref", ref: "employees", labelKey: "user_name", required: true },
+      { key: "customer", label: "Customer (optional)", type: "ref", ref: "customers", labelKey: "name" },
+      { key: "entry_type", label: "Type", type: "select", options: sel("deposit", "withdrawal") },
+      { key: "amount", label: "Amount", type: "number", required: true },
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "note", label: "Note (optional)" },
+    ],
+  },
+  "contribution-entries": {
+    title: "Contribution Entries", endpoint: "contribution-entries",
+    filters: [
+      { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+      { key: "business", label: "Business", ref: "businesses", labelKey: "name" },
+    ],
+    columns: [
+      { key: "employee_name", label: "Employee" },
+      { key: "customer_name", label: "Customer" },
+      { key: "brokerage", label: "Brokerage", money: true },
+      { key: "insurance", label: "Insurance", money: true },
+      { key: "trading_loss", label: "Trading loss", money: true },
+      { key: "date", label: "Date" },
+    ],
+    fields: [
+      { key: "employee", label: "Employee (RM)", type: "ref", ref: "employees", labelKey: "user_name", required: true },
+      { key: "customer", label: "Customer (optional)", type: "ref", ref: "customers", labelKey: "name" },
+      { key: "business", label: "Business (optional)", type: "ref", ref: "businesses", labelKey: "name" },
+      { key: "deposit", label: "Deposit", type: "number" },
+      { key: "trading_loss", label: "Trading loss", type: "number" },
+      { key: "brokerage", label: "Brokerage revenue", type: "number" },
+      { key: "insurance", label: "Insurance revenue", type: "number" },
+      { key: "staking", label: "Staking revenue", type: "number" },
+      { key: "other", label: "Other revenue", type: "number" },
+      { key: "date", label: "Date", type: "date", required: true },
+    ],
+  },
+  "contribution-weights": {
+    title: "Contribution Formula", endpoint: "contribution-weights", single: true,
+    columns: [
+      { key: "brokerage", label: "Brokerage ×" },
+      { key: "insurance", label: "Insurance ×" },
+      { key: "staking", label: "Staking ×" },
+      { key: "other", label: "Other ×" },
+      { key: "trading_loss", label: "Trading loss ×" },
+      { key: "deposit", label: "Deposit ×" },
+    ],
+    fields: [
+      { key: "brokerage", label: "Brokerage weight", type: "number", required: true },
+      { key: "insurance", label: "Insurance weight", type: "number", required: true },
+      { key: "staking", label: "Staking weight", type: "number", required: true },
+      { key: "other", label: "Other revenue weight", type: "number", required: true },
+      { key: "trading_loss", label: "Trading loss weight (usually −1)", type: "number", required: true },
+      { key: "deposit", label: "Deposit weight (usually 0)", type: "number", required: true },
     ],
   },
   "incentive-slabs": {

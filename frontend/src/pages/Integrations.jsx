@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Facebook, Chrome, MessageCircle, Linkedin, Music2, Globe, Send,
-  Plug, Copy, RefreshCw, Zap, CheckCircle2, Circle, X,
+  Plug, Copy, RefreshCw, Zap, CheckCircle2, Circle, X, LineChart, RefreshCcw,
 } from "lucide-react";
 import api from "../api/client";
 import { Spinner, Modal } from "../components/ui";
@@ -15,6 +15,7 @@ const ICONS = {
   tiktok: { Icon: Music2, color: "bg-ink-200 text-ink-700" },
   website: { Icon: Globe, color: "bg-violet-100 text-violet-600" },
   telegram: { Icon: Send, color: "bg-cyan-100 text-cyan-600" },
+  fxartha: { Icon: LineChart, color: "bg-indigo-100 text-indigo-600" },
 };
 const ago = (v) => {
   if (!v) return "never";
@@ -31,6 +32,7 @@ export default function Integrations() {
   const [active, setActive] = useState(null);   // connection being managed
   const [cfg, setCfg] = useState({});
   const [auto, setAuto] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   const load = () => api.get("/integrations/connections/").then((r) => setList(r.data)).catch(() => setList([]));
   useEffect(() => { load(); }, []);
@@ -55,6 +57,16 @@ export default function Integrations() {
     toast.success(data.created ? "Test lead ingested! Check Leads page" : "Test ran (duplicate skipped)");
   };
   const copy = (t) => { navigator.clipboard?.writeText(t); toast.info("Copied"); };
+  const sync = async () => {
+    setSyncing(true);
+    try {
+      const { data } = await api.post(`/integrations/connections/${active.id}/sync/`, { config: cfg, auto_assign: auto });
+      setActive(data); load();
+      toast.success(`Synced: ${data.leads_created} new + ${data.leads_updated} updated leads, ${data.customers_synced} customers`);
+    } catch (e) {
+      toast.error(e.response?.data?.error || e.response?.data?.detail || "Sync failed");
+    } finally { setSyncing(false); }
+  };
 
   if (!list) return <Spinner label="Loading integrations…" />;
 
@@ -109,15 +121,40 @@ export default function Integrations() {
               <span className="text-xs text-ink-400">{active.total_leads} leads ingested</span>
             </div>
 
-            {/* webhook URL */}
-            <div>
-              <label className="label">Webhook URL (ye platform ke settings me daalo)</label>
-              <div className="flex gap-2">
-                <input readOnly value={active.webhook_url} className="input font-mono text-xs" onFocus={(e) => e.target.select()} />
-                <button className="chip !py-2" onClick={() => copy(active.webhook_url)}><Copy size={14} /></button>
+            {/* webhook URL (webhook connectors only) */}
+            {active.platform !== "fxartha" && (
+              <div>
+                <label className="label">Webhook URL (ye platform ke settings me daalo)</label>
+                <div className="flex gap-2">
+                  <input readOnly value={active.webhook_url} className="input font-mono text-xs" onFocus={(e) => e.target.select()} />
+                  <button className="chip !py-2" onClick={() => copy(active.webhook_url)}><Copy size={14} /></button>
+                </div>
+                <button onClick={regen} className="text-xs text-brand-600 font-semibold mt-1 inline-flex items-center gap-1"><RefreshCw size={12} /> Regenerate secret</button>
               </div>
-              <button onClick={regen} className="text-xs text-brand-600 font-semibold mt-1 inline-flex items-center gap-1"><RefreshCw size={12} /> Regenerate secret</button>
-            </div>
+            )}
+
+            {/* FXArtha poll connector — dashboard snapshot from last sync */}
+            {active.platform === "fxartha" && active.config?.dashboard && (
+              <div>
+                <label className="label">Platform snapshot (last sync)</label>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {[
+                    ["Traders", active.config.dashboard.total_traders],
+                    ["Active accounts", active.config.dashboard.active_accounts],
+                    ["Lots traded", active.config.dashboard.lots_traded],
+                    ["Monthly revenue", `$${active.config.dashboard.monthly_revenue}`],
+                    ["Deposits", `$${active.config.dashboard.total_deposits}`],
+                    ["Withdrawals", `$${active.config.dashboard.total_withdrawals}`],
+                  ].map(([k, v]) => (
+                    <div key={k} className="rounded-lg bg-ink-50 border border-ink-100 px-3 py-2">
+                      <p className="text-xs text-ink-400">{k}</p>
+                      <p className="font-bold text-ink-800 tabular-nums">{v}</p>
+                    </div>
+                  ))}
+                </div>
+                {active.config.last_sync && <p className="text-xs text-ink-400 mt-1">Last sync: {ago(active.config.last_sync)}</p>}
+              </div>
+            )}
 
             {/* config fields */}
             {(active.config_fields || []).length > 0 && (
@@ -155,7 +192,14 @@ export default function Integrations() {
             )}
 
             <div className="flex gap-2 pt-2">
-              {active.status === "connected" ? (
+              {active.platform === "fxartha" ? (
+                <>
+                  <button className="btn-primary flex-1 disabled:opacity-50" onClick={sync} disabled={syncing}>
+                    <RefreshCcw size={15} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync now"}
+                  </button>
+                  {active.status === "connected" && <button className="btn-danger" onClick={disconnect}>Disconnect</button>}
+                </>
+              ) : active.status === "connected" ? (
                 <>
                   <button className="btn-primary flex-1" onClick={connect}>Save</button>
                   <button className="btn bg-amber-50 text-amber-700 hover:bg-amber-100" onClick={sendTest}><Zap size={15} /> Send Test Lead</button>

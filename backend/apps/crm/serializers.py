@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
 from .models import (
-    Attachment, Business, Communication, Customer, CustomerProduct, Lead, LeadActivity,
-    LeadInterest, LeadSource, MetricDefinition, MetricEntry, Opportunity, Product, Proposal,
-    ProposalItem, Target, TargetAssignment,
+    Attachment, AumEntry, Business, Communication, ContributionEntry, ContributionWeight,
+    Customer, CustomerProduct, Lead, LeadActivity, LeadInterest, LeadSource, MetricDefinition,
+    MetricEntry, Opportunity, Product, Proposal, ProposalItem, Target, TargetAssignment,
 )
 
 
@@ -310,3 +310,31 @@ class MetricEntrySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "This is a derived metric — its values come from CRM data, not manual entry.")
         return metric
+
+
+class AumEntrySerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+
+    class Meta:
+        model = AumEntry
+        fields = ["id", "employee", "employee_name", "customer", "customer_name",
+                  "entry_type", "amount", "note", "date"]
+
+
+class ContributionEntrySerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    business_name = serializers.CharField(source="business.name", read_only=True)
+
+    class Meta:
+        model = ContributionEntry
+        fields = ["id", "customer", "customer_name", "employee", "employee_name",
+                  "business", "business_name", "deposit", "trading_loss", "brokerage",
+                  "insurance", "staking", "other", "date"]
+
+
+class ContributionWeightSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContributionWeight
+        fields = ["id", "deposit", "trading_loss", "brokerage", "insurance", "staking", "other"]
