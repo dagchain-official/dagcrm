@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import api from "../api/client";
 import AdminDashboard from "./AdminDashboard";
 import UserDashboard from "./UserDashboard";
 import HRDashboard from "./dashboards/HRDashboard";
@@ -27,10 +28,19 @@ const SWITCHER_ROLES = ["admin", "sales-manager", "team-leader", "finance"];
 export default function Dashboard() {
   const { user } = useAuth();
   const RoleDash = MAP[user?.dashboard] || UserDashboard;
-  const businesses = user?.businesses || [];
+  const [businesses, setBusinesses] = useState([]);
   const [biz, setBiz] = useState("");
 
-  const showSwitcher = SWITCHER_ROLES.includes(user?.dashboard) && businesses.length > 0;
+  const canSwitch = SWITCHER_ROLES.includes(user?.dashboard);
+  useEffect(() => {
+    if (!canSwitch) return;
+    // fetch live so the list always reflects current businesses (no stale cache)
+    api.get("/businesses/")
+      .then(({ data }) => setBusinesses(data.results || data))
+      .catch(() => setBusinesses([]));
+  }, [canSwitch]);
+
+  const showSwitcher = canSwitch && businesses.length > 0;
   if (!showSwitcher) return <RoleDash />;
 
   return (
