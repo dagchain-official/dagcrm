@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAG CRM — Complete Flow &amp; Functionality Guide</title>
+<style>
+  :root{
+    --brand:#6366f1; --brand2:#8b5cf6; --ink:#0f172a; --ink2:#334155; --muted:#64748b;
+    --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff; --green:#059669; --amber:#d97706; --rose:#e11d48;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink2);line-height:1.6;font-size:15px}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px 80px}
+  header.hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:54px 20px 46px;text-align:center}
+  header.hero h1{margin:0;font-size:38px;font-weight:800;letter-spacing:-.5px}
+  header.hero p{margin:10px 0 0;opacity:.92;font-size:17px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.18);
+    padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+  h2{font-size:26px;color:var(--ink);margin:48px 0 6px;font-weight:800;letter-spacing:-.3px}
+  h2 .n{display:inline-grid;place-items:center;width:34px;height:34px;background:var(--brand);color:#fff;
+    border-radius:10px;font-size:16px;margin-right:10px;vertical-align:middle}
+  h3{font-size:19px;color:var(--ink);margin:26px 0 8px;font-weight:700}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:15px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin:16px 0;
+    box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:18px 0}
+  .step{flex:1;min-width:150px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;margin:6px 18px 6px 0}
+  .step:after{content:"→";position:absolute;right:-18px;top:50%;transform:translateY(-50%);color:var(--brand);font-weight:800;font-size:20px}
+  .step:last-child{margin-right:0}
+  .step:last-child:after{display:none}
+  .step b{display:block;color:var(--ink);font-size:14px}
+  .step span{font-size:12.5px;color:var(--muted)}
+  .step .k{font-size:11px;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:.4px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f1f5f9;color:var(--ink);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px}
+  td code,p code,li code{background:#eef2ff;color:#4338ca;padding:1px 6px;border-radius:6px;font-size:12.5px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .t-green{background:#dcfce7;color:#166534}.t-blue{background:#dbeafe;color:#1e40af}
+  .t-amber{background:#fef3c7;color:#92400e}.t-violet{background:#ede9fe;color:#6d28d9}.t-rose{background:#ffe4e6;color:#9f1239}
+  .note{border-left:4px solid var(--brand);background:#eef2ff;padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+  .warn{border-left:4px solid var(--amber);background:#fffbeb}
+  .ok{border-left:4px solid var(--green);background:#ecfdf5}
+  ul{margin:8px 0 8px 2px;padding-left:20px}li{margin:5px 0}
+  .kpi{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0}
+  .kpi div{flex:1;min-width:130px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .kpi b{display:block;font-size:22px;color:var(--ink);font-weight:800}
+  .kpi span{font-size:12.5px;color:var(--muted)}
+  .toc{columns:2;column-gap:30px}
+  .toc a{display:block;color:var(--ink2);text-decoration:none;padding:5px 0;border-bottom:1px solid #eef2f7;font-size:14px}
+  .toc a:hover{color:var(--brand)}
+  .toc a b{color:var(--brand);margin-right:8px}
+  .formula{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:16px 18px;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:13.5px;margin:14px 0;overflow-x:auto;line-height:1.7}
+  .formula .c{color:#94a3b8}.formula .g{color:#4ade80}.formula .y{color:#fbbf24}.formula .v{color:#a78bfa}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:50px;padding-top:24px;border-top:1px solid var(--line)}
+  @media(max-width:640px){.toc{columns:1}.step:after{display:none}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>DAG CRM</h1>
+  <p>Complete Flow &amp; Functionality Guide — start se end tak</p>
+  <div class="pill">Sales Flow · Incentive Flow · Configurable Engines · Multi-business</div>
+</header>
+
+<div class="wrap">
+
+<div class="card">
+  <h3 style="margin-top:6px">Is document mein kya hai</h3>
+  <div class="toc">
+    <a href="#arch"><b>1</b> System kaise bana hai (Architecture)</a>
+    <a href="#roles"><b>2</b> Roles &amp; Hierarchy</a>
+    <a href="#bigflow"><b>3</b> Poora flow — ek nazar mein</a>
+    <a href="#setup"><b>4</b> Setup — admin config (nothing hardcoded)</a>
+    <a href="#sales"><b>5</b> SALES FLOW (detailed)</a>
+    <a href="#money"><b>6</b> Money engines — CTC → Target → P&amp;L</a>
+    <a href="#kpi"><b>7</b> KPI &amp; Performance</a>
+    <a href="#incentive"><b>8</b> INCENTIVE FLOW (detailed)</a>
+    <a href="#formula"><b>9</b> Formula Builder (no-code rules)</a>
+    <a href="#aum"><b>10</b> AUM &amp; Business Contribution</a>
+    <a href="#fx"><b>11</b> FXArtha API Integration</a>
+    <a href="#dash"><b>12</b> Dashboards &amp; business switcher</a>
+    <a href="#modules"><b>13</b> Har module ki functionality</a>
+  </div>
+</div>
+
+<!-- 1 ARCH -->
+<h2 id="arch"><span class="n">1</span>System kaise bana hai</h2>
+<p class="sub">DAG CRM 3 services + ek database pe chalta hai. Sab alag, par ek saath kaam karte hain.</p>
+<div class="grid g2">
+  <div class="card">
+    <span class="tag t-blue">Frontend</span>
+    <h3 style="margin-top:8px">React + Vite + Tailwind</h3>
+    <p>Poora UI — dashboards, forms, boards. <code>http://localhost:5173</code>. Data backend se API ke through aata hai, har 1–15 sec live refresh.</p>
+  </div>
+  <div class="card">
+    <span class="tag t-green">Main API</span>
+    <h3 style="margin-top:8px">Django + DRF</h3>
+    <p>Saara business logic, permissions, engines. <code>http://localhost:8000/api/</code>. JWT auth (login token).</p>
+  </div>
+  <div class="card">
+    <span class="tag t-violet">AI Service</span>
+    <h3 style="margin-top:8px">FastAPI</h3>
+    <p>Lead scoring, dashboard insights, "AI over your database" assistant. <code>http://localhost:8100</code>.</p>
+  </div>
+  <div class="card">
+    <span class="tag t-amber">Database</span>
+    <h3 style="margin-top:8px">PostgreSQL / SQLite</h3>
+    <p>Saara data. Local dev mein SQLite (<code>db.sqlite3</code>), production mein Postgres.</p>
+  </div>
+</div>
+<div class="note"><b>Core principle:</b> "Nothing hardcoded." Admin har cheez — businesses, products, hierarchy, targets, KPIs, incentive rules, formulas — <b>bina developer ke</b> configure kar sakta hai.</div>
+
+<!-- 2 ROLES -->
+<h2 id="roles"><span class="n">2</span>Roles &amp; Hierarchy</h2>
+<p class="sub">Do alag cheezein: <b>Role</b> = kya permissions hain. <b>Hierarchy Level</b> = org chart mein kahan ho (P&amp;L / target rollup ke liye).</p>
+<div class="grid g2">
+  <div class="card">
+    <h3 style="margin-top:6px">8 Roles (permissions)</h3>
+    <p>Super Admin · Business Head · Sales Manager · Team Leader · Sales Executive (RM) · Support · HR · Finance.</p>
+    <p>Har role ka apna dashboard aur module-wise access (view/create/edit/delete) — <b>Permission Matrix</b> se control hota hai.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:6px">Dynamic Hierarchy (unlimited levels)</h3>
+    <p>Admin levels add/rename/reorder kar sakta hai — bina code. Example chain:</p>
+    <div class="flow">
+      <div class="step"><b>Business Head</b><span>Level 1</span></div>
+      <div class="step"><b>Sales Manager</b><span>Level 2</span></div>
+      <div class="step"><b>Team Leader</b><span>Level 3</span></div>
+      <div class="step"><b>RM</b><span>Level 4</span></div>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">Har employee ka ek <code>manager</code> hota hai → isse P&amp;L, Target, KPI, Incentive sab <b>upar tak roll up</b> hote hain.</p>
+  </div>
+</div>
+
+<!-- 3 BIG FLOW -->
+<h2 id="bigflow"><span class="n">3</span>Poora flow — ek nazar mein</h2>
+<p class="sub">Ek lead aane se lekar employee ko incentive milne tak — poori journey.</p>
+<div class="card">
+  <div class="flow">
+    <div class="step"><span class="k">Setup</span><b>Admin config</b><span>Business, products, hierarchy, targets, KPIs, rules</span></div>
+    <div class="step"><span class="k">Capture</span><b>Lead aata hai</b><span>Manual / webhook / FXArtha API</span></div>
+    <div class="step"><span class="k">Work</span><b>Sales flow</b><span>Activity → Opportunity → Proposal</span></div>
+    <div class="step"><span class="k">Close</span><b>Customer + Revenue</b><span>Proposal accept → sab auto ban jaata</span></div>
+  </div>
+  <div class="flow" style="margin-top:4px">
+    <div class="step"><span class="k">Measure</span><b>Target / KPI / P&amp;L</b><span>CTC×mult target, KPIs, profit rollup</span></div>
+    <div class="step"><span class="k">Score</span><b>Performance</b><span>3 scorecards, weighted rank</span></div>
+    <div class="step"><span class="k">Reward</span><b>Incentive engine</b><span>Slab + activity + formula</span></div>
+    <div class="step"><span class="k">Pay</span><b>Payroll</b><span>Incentive → final salary</span></div>
+  </div>
+</div>
+
+<!-- 4 SETUP -->
+<h2 id="setup"><span class="n">4</span>Setup — admin config karta hai (once)</h2>
+<p class="sub">Sabse pehle admin ye set karta hai. Baad mein sab isi ke around chalta hai.</p>
+<table>
+  <tr><th>Kya set karo</th><th>Kahan</th><th>Kyun</th></tr>
+  <tr><td><b>Businesses</b></td><td>Setup → Businesses</td><td>FX Artha, DAGChain, DAGGPT... har business unit</td></tr>
+  <tr><td><b>Products</b></td><td>Setup → Products</td><td>Har business ke products — price + revenue type (one-time/recurring/per-unit/token)</td></tr>
+  <tr><td><b>Hierarchy Levels</b></td><td>HR → Hierarchy Levels</td><td>Org chart ke levels (RM, TL, Manager...)</td></tr>
+  <tr><td><b>Employees</b></td><td>HR → Employees</td><td>Salary, level, manager set karo</td></tr>
+  <tr><td><b>Cost Categories</b></td><td>HR → Cost Categories</td><td>Visa, Desk, Internet... → CTC banata hai</td></tr>
+  <tr><td><b>Target Multiplier</b></td><td>HR → Target Multipliers</td><td>Target = CTC × multiplier (e.g. 2×)</td></tr>
+  <tr><td><b>KPI Definitions</b></td><td>Setup → KPI Definitions</td><td>Nodes Sold, Lots Traded, Meetings... (per business)</td></tr>
+  <tr><td><b>Incentive Slabs / Activity / Formulas</b></td><td>HR section</td><td>Kaise incentive milega</td></tr>
+</table>
+
+<!-- 5 SALES FLOW -->
+<h2 id="sales"><span class="n">5</span>SALES FLOW — poora detail</h2>
+<p class="sub">Ek lead se paisa (revenue) tak. Yahi CRM ka dil hai.</p>
+
+<div class="card">
+  <div class="flow">
+    <div class="step"><span class="k">1</span><b>Lead</b><span>Naya potential customer</span></div>
+    <div class="step"><span class="k">2</span><b>Lead Activity</b><span>Call/meeting/follow-up log</span></div>
+    <div class="step"><span class="k">3</span><b>Opportunity</b><span>Deal ka chance</span></div>
+    <div class="step"><span class="k">4</span><b>Proposal</b><span>Quote bhejo</span></div>
+    <div class="step"><span class="k">5</span><b>Customer</b><span>Accept → convert</span></div>
+    <div class="step"><span class="k">6</span><b>Revenue</b><span>Paisa record</span></div>
+  </div>
+</div>
+
+<h3>Step-by-step kya hota hai</h3>
+<table>
+  <tr><th>#</th><th>Step</th><th>Functionality</th></tr>
+  <tr><td>1</td><td><b>Lead capture</b></td><td>Lead 3 tareeke se aata hai: <span class="tag t-blue">manual entry</span>, <span class="tag t-violet">webhook</span> (Meta/Google ads), ya <span class="tag t-green">FXArtha API sync</span>. Har lead ko ek RM auto-assign hota hai (load-balanced) + notify.</td></tr>
+  <tr><td>2</td><td><b>Lead Activity</b></td><td>RM call/WhatsApp/email/meeting log karta hai, follow-up date set karta hai. AI lead ko 0–100 score deta hai. Status auto badalta hai (new → contacted → qualified).</td></tr>
+  <tr><td>3</td><td><b>Opportunity</b></td><td>Jab lead serious ho → Opportunity banti hai (product + expected revenue + stage: proposal/negotiation/won/lost).</td></tr>
+  <tr><td>4</td><td><b>Proposal</b></td><td>Professional quote — line items, discount, tax → auto total. Har edit ek <b>naya version</b> banata hai (audit trail). Send karo.</td></tr>
+  <tr><td>5</td><td><b>Accept → auto-magic</b></td><td class="ok" style="border-radius:8px"><b>Proposal Accept</b> pe teen cheezein <b>automatically</b> ban jaati hain: (a) Lead → <b>Customer</b> convert, (b) <b>Revenue</b> row, (c) Opportunity → <b>Won</b>. Poora CRM flow ek click mein.</td></tr>
+  <tr><td>6</td><td><b>Revenue</b></td><td>Gross − Commission = <b>Net revenue</b> (auto). Ye net revenue aage <b>P&amp;L, Target, Performance, Incentive</b> sab mein feed hota hai.</td></tr>
+</table>
+<div class="note">Attribution: Revenue → Customer → originating Lead → <b>assigned RM</b>. Isi chain se har RM ka revenue pata chalta hai, aur manager tak roll up hota hai.</div>
+
+<!-- 6 MONEY -->
+<h2 id="money"><span class="n">6</span>Money engines — CTC → Target → P&amp;L</h2>
+<p class="sub">Har employee ki cost, uska target, aur profit — sab derived, admin-configurable.</p>
+
+<div class="grid g3">
+  <div class="card">
+    <h3 style="margin-top:6px">CTC Engine</h3>
+    <div class="formula"><span class="c"># Cost To Company</span><br>CTC = salary<br>&nbsp;&nbsp;+ Σ cost categories<br><span class="c"># (visa, desk, internet…)</span></div>
+    <p style="font-size:13.5px">Admin cost categories add karta hai. Har employee ki monthly CTC nikalti hai.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:6px">Target Engine</h3>
+    <div class="formula"><span class="g">Target</span> = CTC × <span class="y">Multiplier</span><br><br><span class="c"># e.g. $2000 × 2 = $4000</span></div>
+    <p style="font-size:13.5px">Multiplier admin set karta hai (global / per-level / per-employee). Manager ka target = <b>team ka sum</b>.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:6px">P&amp;L Engine</h3>
+    <div class="formula"><span class="g">Profit</span> = Revenue − Cost<br><br><span class="c"># har level ka apna P&amp;L</span><br><span class="c"># RM → TL → Manager → Head</span></div>
+    <p style="font-size:13.5px">Revenue (net) minus CTC. Poore org tree mein roll up — har level ka profit + margin%.</p>
+  </div>
+</div>
+<div class="kpi">
+  <div><b>Target Board</b><span>CTC · multiplier · target · achieved · progress% — hierarchy rollup</span></div>
+  <div><b>P&amp;L Statement</b><span>Revenue − Cost = Profit, har level pe</span></div>
+</div>
+
+<!-- 7 KPI -->
+<h2 id="kpi"><span class="n">7</span>KPI &amp; Performance</h2>
+<p class="sub">Product-specific numbers track karo, aur employees ko score karo.</p>
+
+<h3>KPI Engine (configurable)</h3>
+<p>Admin har business ke apne KPIs define karta hai — <b>bina code</b>. Do type:</p>
+<table>
+  <tr><th>Source</th><th>Matlab</th><th>Example</th></tr>
+  <tr><td><span class="tag t-blue">Manual</span></td><td>Value khud enter karni hoti hai (KPI Entries)</td><td>Lots Traded, Nodes Sold, New Deposits</td></tr>
+  <tr><td><span class="tag t-green">Derived</span></td><td>CRM data se <b>auto</b> — koi entry nahi</td><td>Meetings/Calls (Lead Activity se), Leads Converted</td></tr>
+</table>
+<p><b>Aggregation-aware rollup:</b> sum/count jud jaate hain, average count-weighted, latest = snapshot. Manager ke row pe team ka rolled-up number.</p>
+<div class="kpi">
+  <div><b>KPI Definitions</b><span>Admin metric banata hai (business, unit, aggregation, category)</span></div>
+  <div><b>KPI Entries</b><span>Manual values record</span></div>
+  <div><b>KPI Board</b><span>Sab KPIs, per business, hierarchy rollup</span></div>
+</div>
+
+<h3>Performance — 3 Scorecards</h3>
+<p>Har employee 3 independent scorecards pe measure hota hai, phir admin-weight se ek overall score (0–100, peer-normalised — top performer = 100):</p>
+<div class="grid g3">
+  <div class="card"><span class="tag t-rose">Revenue</span><p style="margin-top:8px">Revenue generated + target attainment. <b>Default weight 60%</b></p></div>
+  <div class="card"><span class="tag t-green">Growth</span><p style="margin-top:8px">New users, deposits, AUM, retention (growth-category KPIs). <b>25%</b></p></div>
+  <div class="card"><span class="tag t-blue">Activity</span><p style="margin-top:8px">Meetings, calls, demos (activity-category KPIs). <b>15%</b></p></div>
+</div>
+<div class="formula"><span class="g">Overall</span> = Revenue×<span class="y">0.60</span> + Growth×<span class="y">0.25</span> + Activity×<span class="y">0.15</span> <span class="c"># weights admin-configurable</span></div>
+
+<!-- 8 INCENTIVE -->
+<h2 id="incentive"><span class="n">8</span>INCENTIVE FLOW — poora detail</h2>
+<p class="sub">Employee ne kitna kamaaya, uske hisaab se bonus. <b>Teen independent engines</b> — admin jo chahe use kare.</p>
+
+<div class="card">
+  <div class="flow">
+    <div class="step"><span class="k">Input</span><b>Revenue + KPIs + Target</b><span>Employee ki performance data</span></div>
+    <div class="step"><span class="k">Engine</span><b>Slab / Activity / Formula</b><span>Admin rules apply</span></div>
+    <div class="step"><span class="k">Preview</span><b>Incentive Board</b><span>Kisko kitna milega — dekho</span></div>
+    <div class="step"><span class="k">Run</span><b>Payout</b><span>Incentive row + Payroll update</span></div>
+  </div>
+</div>
+
+<h3>Model 1 — Target Achievement Slabs</h3>
+<p>Attainment% (achieved ÷ target) jis slab mein giro, utna % incentive:</p>
+<table>
+  <tr><th>Attainment</th><th>Incentive</th><th>Example (revenue $10,000)</th></tr>
+  <tr><td>0% – 100%</td><td><span class="tag t-rose">0%</span></td><td>$0</td></tr>
+  <tr><td>100% – 200%</td><td><span class="tag t-amber">10%</span></td><td>$1,000</td></tr>
+  <tr><td>200% – 400%</td><td><span class="tag t-blue">20%</span></td><td>$2,000</td></tr>
+  <tr><td>400%+</td><td><span class="tag t-green">30%</span></td><td>$3,000</td></tr>
+</table>
+
+<h3>Model 2 — Activity Incentives (per-KPI reward)</h3>
+<p>Kisi bhi KPI pe per-unit reward. Ye Part 6 KPIs ko directly use karta hai:</p>
+<table>
+  <tr><th>KPI</th><th>Rate</th><th>Example</th></tr>
+  <tr><td>Lots Traded</td><td>$2 / lot</td><td>200 lots → <b>$400</b></td></tr>
+  <tr><td>Meetings</td><td>$20 / meeting</td><td>10 meetings → <b>$200</b></td></tr>
+  <tr><td>New Users</td><td>$5 / user</td><td>100 users → <b>$500</b></td></tr>
+</table>
+<div class="formula"><span class="g">Total incentive</span> = slab amount + Σ activity rewards</div>
+
+<div class="note ok"><b>Run payout kya karta hai:</b> har employee ka total nikaal ke <code>Incentive</code> table mein likhta hai (source-tagged: slab/formula) + us mahine ki <code>Payroll</code> mein incentive field update → <b>final salary auto recompute</b>. Preview pehle, run baad mein.</div>
+
+<!-- 9 FORMULA -->
+<h2 id="formula"><span class="n">9</span>Formula Builder — no-code rules (spec: MANDATORY)</h2>
+<p class="sub">Admin apne khud ke rules banata hai — bina developer. Ye slab+activity ka <b>general version</b> hai + multi-condition (AND/OR).</p>
+<p>Rule = <b>conditions</b> (named variables pe) → <b>payout</b>. Variables sab engines se aate hain:</p>
+<p style="font-size:13.5px"><code>revenue</code> · <code>cost</code> · <code>target</code> · <code>attainment</code> · <code>profit</code> · <code>kpi:&lt;any-metric&gt;</code></p>
+<div class="formula">
+<span class="c"># Examples admin structured builder se banata hai:</span><br>
+IF <span class="v">revenue</span> &gt; <span class="v">cost</span> × <span class="y">2</span> &nbsp;&nbsp;&nbsp;&nbsp;→ <span class="g">10% of revenue</span><br>
+IF <span class="v">kpi:new-users</span> &gt; <span class="y">50</span> &nbsp;→ <span class="g">$500 flat</span><br>
+IF <span class="v">kpi:lots-traded</span> &gt; <span class="y">100</span> → <span class="g">$2 per lot</span><br>
+IF <span class="v">kpi:meetings</span> &gt; <span class="y">10</span> &nbsp;&nbsp;&nbsp;→ <span class="g">$200 flat</span>
+</div>
+<div class="warn note"><b>Safe by design:</b> koi <code>eval()</code> nahi (RCE risk). Rules <b>structured</b> hote hain — variable + operator + value. UI pe human-readable preview dikhta hai.</div>
+
+<!-- 10 AUM -->
+<h2 id="aum"><span class="n">10</span>AUM &amp; Business Contribution</h2>
+<div class="grid g2">
+  <div class="card">
+    <h3 style="margin-top:6px">New AUM (Assets Under Management)</h3>
+    <p>Client ka paisa jo manage ho raha hai. Track hota hai:</p>
+    <div class="formula"><span class="g">Net New AUM</span> = New Deposits − Withdrawals<br>Closing AUM = Existing + Net New</div>
+    <p style="font-size:13.5px">Per business, org tree mein rollup (RM → Head). FX Artha ke liye FXArtha sync auto bharता hai.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:6px">Business Contribution</h3>
+    <p>Client se kitna net faayda — deposit, trading loss, brokerage, insurance, staking.</p>
+    <div class="formula"><span class="g">Net</span> = Σ (component × <span class="y">weight</span>)<br><span class="c"># brokerage+1, loss−1, deposit 0…</span></div>
+    <p style="font-size:13.5px"><b>Weights admin-configurable</b> — CRM formula hardcode nahi karta.</p>
+  </div>
+</div>
+
+<!-- 11 FX -->
+<h2 id="fx"><span class="n">11</span>FXArtha API Integration</h2>
+<p class="sub">External trading platform ka data <b>automatically</b> CRM mein. Framework aisा hai ki har business ka API isi tarah judega.</p>
+<div class="card">
+  <div class="flow">
+    <div class="step"><span class="k">1</span><b>Configure</b><span>Integration Hub → FXArtha → base_url + api_key</span></div>
+    <div class="step"><span class="k">2</span><b>Sync</b><span>3 endpoints fetch: /dashboard /leads /customers</span></div>
+    <div class="step"><span class="k">3</span><b>Map</b><span>Lead, Customer, Revenue, AUM ban jaate</span></div>
+    <div class="step"><span class="k">4</span><b>Flow</b><span>P&amp;L / Target / Performance / Incentive mein auto</span></div>
+  </div>
+</div>
+<table>
+  <tr><th>FXArtha data</th><th>CRM mein kahan</th></tr>
+  <tr><td>/leads (users)</td><td>Leads page (code <code>FXA…</code>, RM auto-assigned)</td></tr>
+  <tr><td>/customers</td><td>Customers + Revenue (brokerage→net) + AUM (deposit/withdrawal)</td></tr>
+  <tr><td>/dashboard</td><td>Integration Hub snapshot (traders, lots, revenue)</td></tr>
+</table>
+<div class="note"><b>Idempotent:</b> <code>external_id</code> ke through har record match hota hai — dobara sync karne pe <b>koi duplicate nahi</b> banta, sirf update hota hai. Poll cadence: 5–15 min.</div>
+
+<!-- 12 DASH -->
+<h2 id="dash"><span class="n">12</span>Dashboards &amp; Business Switcher</h2>
+<p class="sub">Har role apna dashboard dekhta hai. Upar ek dropdown se business-wise view bhi.</p>
+<ul>
+  <li><b>Role dashboards:</b> Admin, Sales Manager, Team Leader, RM, HR, Finance, Support — har ek ke apne charts &amp; cards.</li>
+  <li><b>Business switcher (dropdown):</b> "All Businesses" = normal CRM view. Koi business select karo → us business ka dashboard — revenue trend, uske KPI cards, AUM, top RMs. Cards <b>dynamically</b> us business ki KPIs se — hardcoded nahi.</li>
+  <li><b>AI Insights:</b> dashboard pe AI automatically 2–3 insights deta hai (data ke basis pe).</li>
+</ul>
+
+<!-- 13 MODULES -->
+<h2 id="modules"><span class="n">13</span>Har module ki functionality (quick reference)</h2>
+<table>
+  <tr><th>Module</th><th>Kya karta hai</th></tr>
+  <tr><td><b>Leads</b></td><td>Potential customers — capture, assign, track, score, distribute</td></tr>
+  <tr><td><b>Lead Activities</b></td><td>Call/meeting/follow-up log per lead</td></tr>
+  <tr><td><b>Opportunities</b></td><td>Deals — stage, expected revenue</td></tr>
+  <tr><td><b>Proposals</b></td><td>Versioned quotes; accept → customer+revenue+won auto</td></tr>
+  <tr><td><b>Customers</b></td><td>Converted clients — Customer 360 view</td></tr>
+  <tr><td><b>Communications</b></td><td>Inbound/outbound message log</td></tr>
+  <tr><td><b>Targets / Target Board</b></td><td>CTC × multiplier target, achieved, progress, rollup</td></tr>
+  <tr><td><b>Revenue</b></td><td>Gross − commission = net; per business/product</td></tr>
+  <tr><td><b>KPI Definitions / Entries / Board</b></td><td>Configurable metrics, values, business rollup</td></tr>
+  <tr><td><b>Performance</b></td><td>3-scorecard ranked leaderboard, weighted</td></tr>
+  <tr><td><b>Incentive Slabs / Activity / Board</b></td><td>Attainment tiers + per-KPI rewards + payout</td></tr>
+  <tr><td><b>Formula Builder</b></td><td>No-code condition→payout rules</td></tr>
+  <tr><td><b>AUM Board / Entries</b></td><td>Existing/New/Withdrawal/Net-New AUM</td></tr>
+  <tr><td><b>Contribution</b></td><td>Net business contribution (admin formula)</td></tr>
+  <tr><td><b>Support Desk</b></td><td>Tickets — priority, status, assignment</td></tr>
+  <tr><td><b>HR</b></td><td>Employees, hierarchy, attendance, activity, leaves</td></tr>
+  <tr><td><b>Payroll</b></td><td>Basic + incentive + bonus − deduction = final salary; PDF payslip</td></tr>
+  <tr><td><b>Finance</b></td><td>Expenses, commissions, P&amp;L statement</td></tr>
+  <tr><td><b>Integration Hub</b></td><td>Webhook connectors (Meta/Google…) + FXArtha poll sync</td></tr>
+  <tr><td><b>Permission Matrix</b></td><td>Role × module CRUD control</td></tr>
+  <tr><td><b>AI Assistant</b></td><td>Natural-language Q&amp;A over live CRM data (role-scoped)</td></tr>
+</table>
+
+<div class="note ok" style="margin-top:30px"><b>Summary:</b> Lead aata hai → RM kaam karta hai → deal close (customer + revenue auto) → revenue se target/KPI/P&amp;L/performance measure → incentive engine bonus deta hai → payroll mein add. Aur ye sab — businesses, products, targets, KPIs, incentive rules, formulas — <b>admin bina code configure karta hai</b>. Naya business/API bas plug-in hota hai.</div>
+
+<footer>
+  DAG CRM — Complete Flow &amp; Functionality Guide · DAGOS<br>
+  Sales · Incentive · Configurable engines · Multi-business · AI
+</footer>
+
+</div>
+</body>
+</html>

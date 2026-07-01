@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAG CRM — Client Demo Script</title>
+<style>
+  :root{
+    --brand:#6366f1;--ink:#0f172a;--ink2:#334155;--muted:#64748b;--line:#e2e8f0;--bg:#f8fafc;
+    --green:#059669;--amber:#d97706;--rose:#e11d48;--violet:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink2);line-height:1.65;font-size:15px}
+  .wrap{max-width:940px;margin:0 auto;padding:0 20px 80px}
+  header.hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:50px 20px 42px;text-align:center}
+  header.hero h1{margin:0;font-size:36px;font-weight:800;letter-spacing:-.5px}
+  header.hero p{margin:10px 0 0;opacity:.92;font-size:16px}
+  header.hero .pill{display:inline-block;margin-top:14px;background:rgba(255,255,255,.18);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+  .users{display:flex;gap:16px;flex-wrap:wrap;margin:24px 0}
+  .user{flex:1;min-width:260px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;gap:14px;align-items:center}
+  .user .av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:20px;color:#fff;flex:none}
+  .user .p{background:linear-gradient(135deg,#6366f1,#8b5cf6)}
+  .user .r{background:linear-gradient(135deg,#059669,#10b981)}
+  .user b{color:var(--ink);font-size:16px;display:block}
+  .user span{font-size:13px;color:var(--muted)}
+  .scene{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;margin:22px 0;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+  .scene h2{margin:0 0 4px;font-size:22px;color:var(--ink);font-weight:800;display:flex;align-items:center;gap:12px}
+  .scene h2 .n{width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:15px;flex:none}
+  .scene .who{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:999px;margin-left:auto}
+  .who.pri{background:#ede9fe;color:#6d28d9}.who.rm{background:#dcfce7;color:#166534}
+  .scene>.lead{color:var(--muted);margin:2px 0 16px}
+  .row{border-top:1px solid #eef2f7;padding:14px 0}
+  .row:first-of-type{border-top:none}
+  .row h3{margin:0 0 8px;font-size:16px;color:var(--ink);font-weight:700}
+  .show{display:inline-block;font-size:12px;font-weight:700;color:#1e40af;background:#dbeafe;padding:2px 9px;border-radius:6px;margin-bottom:6px}
+  .say{border-left:4px solid var(--brand);background:#eef2ff;padding:11px 16px;border-radius:0 10px 10px 0;margin:8px 0;font-size:14.5px;color:var(--ink2)}
+  .say:before{content:"🗣️ ";}
+  .say b{color:var(--ink)}
+  .point{font-size:13px;color:var(--violet);font-style:italic;margin-top:6px}
+  .point:before{content:"👉 "}
+  .magic{border-left-color:var(--green);background:#ecfdf5}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f1f5f9;color:var(--ink);font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  code{background:#eef2ff;color:#4338ca;padding:1px 6px;border-radius:6px;font-size:12.5px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .tip{background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:18px 20px;margin:22px 0}
+  .tip h3{margin:0 0 8px;color:#92400e}
+  .close{background:linear-gradient(135deg,#0f172a,#1e293b);color:#e2e8f0;border-radius:18px;padding:26px;margin:24px 0}
+  .close h2{color:#fff;margin:0 0 10px;font-size:22px}
+  .close .say{background:rgba(255,255,255,.08);border-left-color:#818cf8;color:#e2e8f0}
+  .close .say b{color:#fff}
+  ol{margin:6px 0 0 4px;padding-left:22px}li{margin:6px 0}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:40px;padding-top:22px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>DAG CRM — Client Demo Script</h1>
+  <p>Do users ke through poora walkthrough · kya dikhao + kya bolo</p>
+  <div class="pill">Leads → Sale → Target → Incentive → Payroll</div>
+</header>
+
+<div class="wrap">
+
+  <div class="users">
+    <div class="user"><div class="av p">P</div><div><b>Priya</b><span>Admin / Business Head — sab dekhti hai, config &amp; incentive/payroll chalati hai</span></div></div>
+    <div class="user"><div class="av r">R</div><div><b>Rahul</b><span>Relationship Manager — leads pe kaam, apna target/incentive dekhta hai</span></div></div>
+  </div>
+  <div class="tip" style="background:#eef2ff;border-color:#c7d2fe">
+    <h3 style="color:#4338ca">Demo se pehle</h3>
+    <ol>
+      <li><b>Do browser windows</b> khol lo (ek normal, ek incognito) — ek Priya, ek Rahul. Live switch dikhega.</li>
+      <li>Login: <code>admin@dagos.com</code> / <code>admin123</code></li>
+      <li>Sabse zyada time <b>Leads → Accept magic</b> aur <b>Incentive</b> pe do — yahi impress karega.</li>
+    </ol>
+  </div>
+
+  <!-- SCENE 0 -->
+  <div class="scene">
+    <h2><span class="n">0</span> Opening <span class="who pri">Priya</span></h2>
+    <p class="lead">Pehle 30 second — set the stage.</p>
+    <div class="say">"Sir, DAG CRM ek <b>complete sales + finance platform</b> hai. Lead aane se lekar employee ko incentive milne tak — <b>poori journey ek jagah</b>. Aur sabse khaas: <b>kuch bhi hardcoded nahi</b> — aap khud businesses, products, targets, incentive rules bina developer ke set kar sakte ho. Main do users se dikhata hu — ek manager, ek sales person."</div>
+  </div>
+
+  <!-- PART 1 -->
+  <div class="scene">
+    <h2><span class="n">1</span> Manager ka nazariya <span class="who pri">Priya</span></h2>
+    <p class="lead">Bada picture — dashboard, multi-business, setup.</p>
+
+    <div class="row">
+      <h3>Dashboard</h3>
+      <span class="show">DIKHAO: Admin dashboard (charts, KPIs, AI insights)</span>
+      <div class="say">"Ye Priya ka dashboard — total leads, customers, revenue, pipeline, sab live. Upar ye <b>dropdown</b> dekho — 'All Businesses'. Isse kisi bhi business ka alag dashboard. FX Artha chuno → sirf uska revenue, AUM, top performers."</div>
+      <p class="point">Ek platform, multiple business — alag bhi, ek saath bhi.</p>
+    </div>
+
+    <div class="row">
+      <h3>Setup — Businesses &amp; Products</h3>
+      <span class="show">DIKHAO: Setup → Businesses, Products</span>
+      <div class="say">"Yahan Priya businesses aur products define karti hai — price, revenue type. Naya business? Bas add karo — developer ki zaroorat nahi."</div>
+    </div>
+
+    <div class="row">
+      <h3>Hierarchy &amp; Employees</h3>
+      <span class="show">DIKHAO: HR → Hierarchy Levels, Employees</span>
+      <div class="say">"Ye org chart — Business Head → Manager → Team Leader → RM. Unlimited levels, aap khud banao. Har employee ka ek manager — isse saara data <b>upar tak roll up</b> hota hai."</div>
+    </div>
+  </div>
+
+  <!-- PART 2 -->
+  <div class="scene">
+    <h2><span class="n">2</span> LEADS FLOW — dil hai CRM ka <span class="who rm">Rahul</span></h2>
+    <p class="lead">Sabse important part. Dhyaan se, dheere dikhao.</p>
+
+    <div class="row">
+      <h3>Lead capture</h3>
+      <span class="show">DIKHAO: Leads page (FXArtha se aaye <code>FXA…</code> leads)</span>
+      <div class="say">"Lead 3 tareeke se aata hai — <b>manual</b>, <b>social media</b> (Meta/Google ads webhook), ya <b>external API</b> (FXArtha se automatically). Har lead <b>apne aap ek RM ko assign</b> ho jaata hai — load-balanced, aur usko notification bhi."</div>
+    </div>
+
+    <div class="row">
+      <h3>Ab Rahul (RM) login — 2nd user</h3>
+      <div class="say">"Ab main Rahul — sales person — ke account se dikhata hu. Dekho — Rahul ko <b>sirf apne assigned leads</b> dikhte hain, poori company ke nahi."</div>
+      <span class="show">DIKHAO: ek lead kholo (Lead Detail)</span>
+    </div>
+
+    <div class="row">
+      <h3>① Lead Activity</h3>
+      <div class="say">"Rahul call/meeting/WhatsApp log karta hai, follow-up date set karta hai. Dekho — <b>AI ne is lead ko 0–100 score diya</b>, taaki pata chale kaunsa lead hot hai."</div>
+    </div>
+    <div class="row">
+      <h3>② Opportunity</h3>
+      <div class="say">"Lead serious ho, to Rahul <b>Opportunity</b> banata hai — kaunsa product, expected revenue, stage (proposal/negotiation)."</div>
+    </div>
+    <div class="row">
+      <h3>③ Proposal</h3>
+      <div class="say">"Ab professional <b>quote/proposal</b> — items, discount, tax → total auto. Har edit ka <b>naya version</b>, audit-safe. Send karo."</div>
+    </div>
+    <div class="row">
+      <h3>④ ⭐ Accept — magic moment</h3>
+      <span class="show">DIKHAO: Proposal → Accept</span>
+      <div class="say magic">"Client proposal <b>Accept</b> karta hai — aur dekho: <b>ek click mein teen cheezein automatically</b> — (1) Lead → <b>Customer</b> ban gaya, (2) <b>Revenue</b> record, (3) Opportunity <b>Won</b>. Yahi complete CRM flow hai."</div>
+      <p class="point">RM ko sirf Accept dabana hai — baaki sab system khud karta hai.</p>
+    </div>
+    <div class="row">
+      <h3>Customer 360</h3>
+      <span class="show">DIKHAO: Customers → ek customer</span>
+      <div class="say">"Har customer ka <b>360° view</b> — history, revenue, communications — sab ek jagah."</div>
+    </div>
+  </div>
+
+  <!-- PART 3 -->
+  <div class="scene">
+    <h2><span class="n">3</span> Measurement <span class="who pri">Priya</span></h2>
+    <p class="lead">"Rahul ne revenue laaya — ab company usse kaise measure karti hai."</p>
+    <table>
+      <tr><th>Module</th><th>Bolne ke liye</th></tr>
+      <tr><td><b>Target Board</b></td><td>"Har target = <b>CTC × multiplier</b> (auto). Rahul ka target, achieved, progress%. Manager ka target = <b>poori team ka sum</b>."</td></tr>
+      <tr><td><b>KPI Board</b></td><td>"Business-specific numbers — lots, nodes, meetings. Kuch manual, kuch <b>auto</b> CRM se (meetings khud count)."</td></tr>
+      <tr><td><b>P&amp;L Statement</b></td><td>"Har level ka <b>profit</b> — RM se Head tak. Revenue minus CTC."</td></tr>
+      <tr><td><b>Performance</b></td><td>"Har employee <b>3 scorecards</b> — Revenue, Growth, Activity — weighted score (60/25/15)."</td></tr>
+    </table>
+  </div>
+
+  <!-- PART 4 -->
+  <div class="scene">
+    <h2><span class="n">4</span> INCENTIVE FLOW <span class="who pri">Priya</span></h2>
+    <p class="lead">2nd sabse important. "Rahul ne mehnat ki — bonus kaise banta hai."</p>
+
+    <div class="row">
+      <h3>Incentive rules — Slab + Activity</h3>
+      <span class="show">DIKHAO: Incentive Slabs, Activity Incentives</span>
+      <div class="say">"Priya rules banati hai. <b>Slab:</b> target ka 100–200% → 10% bonus, 200–400% → 20%, upar → 30%. <b>Activity:</b> har lot pe $2, meeting pe $20, naye user pe $5."</div>
+    </div>
+    <div class="row">
+      <h3>Formula Builder — killer feature</h3>
+      <span class="show">DIKHAO: Formula Builder</span>
+      <div class="say">"Custom rule chahiye? <b>Formula Builder</b> se Priya khud banaye: <i>'Revenue &gt; Cost × 2 → 10% incentive'</i> ya <i>'Naye users &gt; 50 → $500'</i> — <b>bina developer, bina code</b>."</div>
+    </div>
+    <div class="row">
+      <h3>Incentive Board + Run</h3>
+      <span class="show">DIKHAO: Incentive Board → Run payout</span>
+      <div class="say">"Yahan <b>preview</b> — kisko kitna, breakdown ke saath. Sahi lage to <b>'Run payout'</b> — har employee ka incentive calculate ho ke seedha <b>Payroll mein</b>."</div>
+    </div>
+  </div>
+
+  <!-- PART 5 -->
+  <div class="scene">
+    <h2><span class="n">5</span> PAYROLL <span class="who pri">Priya</span></h2>
+    <p class="lead">Sales se salary tak — sab connected.</p>
+    <span class="show">DIKHAO: HR → Payroll → ek payslip</span>
+    <div class="say">"Rahul ki payroll dekho — Basic salary + <b>jo incentive abhi run kiya wo apne aap yahan aa gaya</b> + bonus − deductions = <b>final salary auto</b>. Aur <b>PDF payslip</b> ek click mein."</div>
+    <p class="point">Manager ne incentive run kiya → RM ki salary turant update. Sab jud'a hua.</p>
+  </div>
+
+  <!-- PART 6 -->
+  <div class="scene">
+    <h2><span class="n">6</span> Baaki modules — jaldi cover</h2>
+    <p class="lead">Ye tez-tez dikhao, ek-ek line.</p>
+    <table>
+      <tr><th>Module</th><th>Bolne ke liye</th></tr>
+      <tr><td><b>Support Desk</b></td><td>"Customer tickets — priority, status, assign. Support team manage karti hai."</td></tr>
+      <tr><td><b>HR</b></td><td>"Attendance, activity tracking, leaves — poora HR yahin."</td></tr>
+      <tr><td><b>Finance</b></td><td>"Expenses, commissions, P&amp;L — finance ka pura hisaab."</td></tr>
+      <tr><td><b>AUM Board</b></td><td>"FX jaise businesses ke liye — New Deposits − Withdrawals = <b>Net New AUM</b>. Growth ka asli measure."</td></tr>
+      <tr><td><b>Business Contribution</b></td><td>"Har client se net faayda — brokerage, insurance minus loss. Formula <b>aap set karo</b>."</td></tr>
+      <tr><td><b>Integration Hub</b></td><td>"External platforms connect — FXArtha data <b>automatically</b> sync, koi manual entry nahi."</td></tr>
+      <tr><td><b>Permission Matrix</b></td><td>"Har role kya dekh/kar sakta — aap control karo. Rahul ko sirf apne leads, Priya ko sab."</td></tr>
+      <tr><td><b>AI Assistant</b></td><td>"Apne CRM se <b>English mein sawaal</b> poocho — 'is mahine top RM kaun?' — AI live data se jawab."</td></tr>
+    </table>
+  </div>
+
+  <!-- CLOSE -->
+  <div class="close">
+    <h2>🎯 Closing Pitch (30 sec)</h2>
+    <div class="say">"Toh sir, ek line mein — <b>Lead aaya → RM ne kaam kiya → deal close (customer + revenue apne aap) → target/KPI/performance measure → incentive engine ne bonus diya → payroll mein add.</b> Aur ye <b>poora system aapke control mein</b> — naya business, product, target, incentive rule, ya external API, sab <b>aap khud bina developer</b> add karo. Ye ek CRM nahi — aapka <b>poora sales + finance operating system</b> hai."</div>
+  </div>
+
+  <div class="tip">
+    <h3>🎤 Demo tips</h3>
+    <ol>
+      <li>Do windows (Priya + Rahul) — live switch se "role-based access" khud dikh jaata hai.</li>
+      <li><b>Leads → Accept magic</b> pe rukho — 3 cheezein auto banti dekhkar client impress hota hai.</li>
+      <li><b>FXArtha "data automatically aata hai"</b> zaroor dikhao — ye unique selling point hai.</li>
+      <li>Formula Builder = "bina developer rules" — decision-makers ko yahi bechta hai.</li>
+    </ol>
+  </div>
+
+  <footer>
+    DAG CRM — Client Demo Script · DAGOS<br>
+    Leads · Sales · Target · KPI · Performance · Incentive · Payroll · AI
+  </footer>
+
+</div>
+</body>
+</html>
