@@ -1,11 +1,35 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RefSelect from "./RefSelect";
+import CreatableSelect from "./CreatableSelect";
+import api from "../api/client";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function DataForm({ fields, initial, onSubmit, onCancel, submitting }) {
+export default function DataForm({ fields, initial, onSubmit, onCancel, submitting, autofill }) {
   const [form, setForm] = useState(() => ({ ...initial }));
   const [errors, setErrors] = useState({});
+
+  // Optional auto-calculate: when the trigger fields change (e.g. Payroll's
+  // employee/month/year), fetch a computed draft and fill the target fields.
+  const firstRun = useRef(true);
+  const triggerKey = autofill ? autofill.trigger.map((k) => form[k]).join("|") : "";
+  useEffect(() => {
+    if (!autofill) return;
+    const primary = autofill.trigger[0];
+    if (!form[primary]) return;                       // need at least the primary (e.g. employee)
+    if (firstRun.current && initial?.id) { firstRun.current = false; return; } // don't clobber an existing record on open
+    firstRun.current = false;
+    const params = {};
+    autofill.trigger.forEach((k) => { if (form[k]) params[k] = form[k]; });
+    api.get(`/${autofill.endpoint}/`, { params })
+      .then(({ data }) => setForm((f) => {
+        const next = { ...f };
+        autofill.fills.forEach((k) => { if (data[k] !== undefined && data[k] !== null) next[k] = data[k]; });
+        return next;
+      }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerKey]);
   const set = (k, v) => {
     setForm((f) => {
       const next = { ...f, [k]: v };
@@ -50,6 +74,8 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
                 onChange={(v) => set(f.key, v)}
                 filterParam={f.dependsOn && form[f.dependsOn] ? { [f.dependsParam || f.dependsOn]: form[f.dependsOn] } : undefined}
               />
+            ) : f.type === "creatable" ? (
+              <CreatableSelect field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} />
             ) : f.type === "select" ? (
               <select className={inputCls(f)} value={form[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)}>
                 <option value="">Select {f.label}</option>

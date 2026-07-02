@@ -294,6 +294,40 @@ class PayrollViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollSerializer
     filterset_fields = ["employee", "month", "year"]
 
+    @action(detail=False, methods=["get"])
+    def suggest(self, request):
+        """Auto-calculate a payroll draft for an employee/month/year.
+        Basic = employee salary, Incentive = that month's computed incentives,
+        Deduction = unpaid-leave days pro-rated, Final = basic + incentive + bonus − deduction.
+        The Payroll form pre-fills from this when an employee is selected."""
+        from django.db.models import Sum
+        emp_id = request.query_params.get("employee")
+        today = timezone.localdate()
+        month = int(request.query_params.get("month") or today.month)
+        year = int(request.query_params.get("year") or today.year)
+        emp = Employee.objects.select_related("user").filter(id=emp_id).first()
+        if not emp:
+            return Response({"detail": "employee is required"}, status=400)
+
+        basic = float(emp.salary or 0)
+        incentive = float(Incentive.objects.filter(employee=emp, month=month, year=year)
+                          .aggregate(t=Sum("amount"))["t"] or 0)
+        # Unpaid leave deduction: approved "Unpaid" leave days × per-day salary (30-day month).
+        deduction = 0.0
+        unpaid_days = 0
+        for lv in Leave.objects.filter(employee=emp, status="approved",
+                                       leave_type__leave_name__icontains="unpaid"):
+            if lv.start_date and lv.end_date and lv.start_date.month == month and lv.start_date.year == year:
+                unpaid_days += (lv.end_date - lv.start_date).days + 1
+        if unpaid_days:
+            deduction = round(basic / 30.0 * unpaid_days, 2)
+        bonus = 0.0
+        return Response({
+            "basic_salary": basic, "incentive": incentive, "bonus": bonus,
+            "deduction": deduction, "unpaid_days": unpaid_days,
+            "final_salary": round(basic + incentive + bonus - deduction, 2),
+        })
+
     @action(detail=True, methods=["get"])
     def payslip(self, request, pk=None):
         """Generate a downloadable PDF payslip."""

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Send, X } from "lucide-react";
+import { Plus, Send, X, MessageCircle, Mail } from "lucide-react";
 import api from "../api/client";
 import { Modal } from "./ui";
 import RefSelect from "./RefSelect";
@@ -47,33 +47,52 @@ export default function ProposalBuilder({ initial, onClose, onSaved }) {
   const taxAmount = taxable * (Number(f.tax_percent) || 0) / 100;
   const total = taxable + taxAmount;
 
-  const save = async (alsoSend) => {
-    if (!f.title.trim()) return toast.error("Title required");
-    if (f.contactType === "lead" && !f.lead) return toast.error("Select a lead");
-    if (f.contactType === "customer" && !f.customer) return toast.error("Select a customer");
+  const validateForm = () => {
+    if (!f.title.trim()) { toast.error("Title required"); return false; }
+    if (f.contactType === "lead" && !f.lead) { toast.error("Select a lead"); return false; }
+    if (f.contactType === "customer" && !f.customer) { toast.error("Select a customer"); return false; }
+    return true;
+  };
+
+  const persist = async () => {
+    const payload = {
+      title: f.title,
+      lead: f.contactType === "lead" ? f.lead : null,
+      customer: f.contactType === "customer" ? f.customer : null,
+      business: f.business || null,
+      valid_until: f.valid_until || null,
+      notes: f.notes,
+      tax_percent: Number(f.tax_percent) || 0,
+      items: f.items.filter((it) => it.description.trim()).map((it) => ({
+        description: it.description, quantity: Number(it.quantity) || 0,
+        unit_price: Number(it.unit_price) || 0, discount: Number(it.discount) || 0,
+      })),
+    };
+    const { data } = f.id
+      ? await api.patch(`/proposals/${f.id}/`, payload)
+      : await api.post("/proposals/", payload);
+    return data;
+  };
+
+  // action: "draft" | "send" | "whatsapp" | "email"
+  const run = async (action) => {
+    if (!validateForm()) return;
     setSaving(true);
     try {
-      const payload = {
-        title: f.title,
-        lead: f.contactType === "lead" ? f.lead : null,
-        customer: f.contactType === "customer" ? f.customer : null,
-        business: f.business || null,
-        valid_until: f.valid_until || null,
-        notes: f.notes,
-        tax_percent: Number(f.tax_percent) || 0,
-        items: f.items.filter((it) => it.description.trim()).map((it) => ({
-          description: it.description, quantity: Number(it.quantity) || 0,
-          unit_price: Number(it.unit_price) || 0, discount: Number(it.discount) || 0,
-        })),
-      };
-      const { data } = f.id
-        ? await api.patch(`/proposals/${f.id}/`, payload)
-        : await api.post("/proposals/", payload);
-      if (alsoSend) { await api.post(`/proposals/${data.id}/send/`); toast.success("Proposal sent"); }
-      else toast.success(f.id ? "Proposal updated" : "Proposal saved (draft)");
+      const data = await persist();
+      if (action === "send") {
+        await api.post(`/proposals/${data.id}/send/`);
+        toast.success("Proposal sent");
+      } else if (action === "whatsapp" || action === "email") {
+        const { data: r } = await api.post(`/proposals/${data.id}/send_via/`, { channel: action });
+        const label = action === "whatsapp" ? "WhatsApp" : "Email";
+        toast.success(`Proposal ${label} ${r.live ? "sent ✔" : "logged"}${r.error ? ": " + r.error : ""}`);
+      } else {
+        toast.success(f.id ? "Proposal updated" : "Proposal saved (draft)");
+      }
       onSaved?.(data);
     } catch (e) {
-      toast.error("Save failed: " + JSON.stringify(e.response?.data || e.message));
+      toast.error("Failed: " + JSON.stringify(e.response?.data || e.message));
     } finally {
       setSaving(false);
     }
@@ -84,8 +103,10 @@ export default function ProposalBuilder({ initial, onClose, onSaved }) {
       footer={
         <>
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn-ghost border border-ink-200" disabled={saving} onClick={() => save(false)}>Save Draft</button>
-          <button className="btn-primary" disabled={saving} onClick={() => save(true)}><Send size={15} /> Save &amp; Send</button>
+          <button className="btn-ghost border border-ink-200" disabled={saving} onClick={() => run("draft")}>Save Draft</button>
+          <button className="btn-ghost border border-emerald-200 text-emerald-700" disabled={saving} onClick={() => run("whatsapp")}><MessageCircle size={15} /> WhatsApp</button>
+          <button className="btn-ghost border border-blue-200 text-blue-700" disabled={saving} onClick={() => run("email")}><Mail size={15} /> Email</button>
+          <button className="btn-primary" disabled={saving} onClick={() => run("send")}><Send size={15} /> Save &amp; Send</button>
         </>
       }>
       <div className="space-y-5">
@@ -136,9 +157,15 @@ export default function ProposalBuilder({ initial, onClose, onSaved }) {
             {f.items.map((it, i) => (
               <div key={i} className="flex gap-2.5 items-center">
                 {f.business ? (
-                  <select className="input flex-1" value={it.description} onChange={(e) => setItem(i, "description", e.target.value)}>
+                  <select className="input flex-1" value={it.description} onChange={(e) => {
+                    const name = e.target.value;
+                    const prod = products.find((p) => p.name === name);
+                    setF((s) => ({ ...s, items: s.items.map((x, j) => j === i
+                      ? { ...x, description: name, unit_price: prod ? Number(prod.price) || 0 : x.unit_price }
+                      : x) }));
+                  }}>
                     <option value="">Select product / service</option>
-                    {products.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    {products.map((p) => <option key={p.id} value={p.name}>{p.name}{p.price ? ` — $${p.price}` : ""}</option>)}
                   </select>
                 ) : (
                   <input className="input flex-1 !bg-ink-100 cursor-not-allowed" placeholder="Pehle business select karo" disabled />

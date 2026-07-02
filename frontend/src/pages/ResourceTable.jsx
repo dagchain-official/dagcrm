@@ -434,7 +434,7 @@ export default function ResourceTable() {
       <Modal open={!!modal} onClose={() => setModal(null)}
         title={`${modal?.mode === "edit" ? "Edit" : "New"} ${cfg.title}`}>
         {modal && (
-          <DataForm fields={cfg.fields} initial={modal.row} submitting={saving}
+          <DataForm fields={cfg.fields} initial={modal.row} submitting={saving} autofill={cfg.autofill}
             onSubmit={save} onCancel={() => setModal(null)} />
         )}
       </Modal>

@@ -101,6 +101,19 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ["id", "business", "business_name", "name", "product_type",
                   "price", "revenue_type", "status"]
 
+    def validate(self, attrs):
+        # Prevent duplicate products: same name within the same business (case-insensitive).
+        business = attrs.get("business") or getattr(self.instance, "business", None)
+        name = (attrs.get("name") or getattr(self.instance, "name", "") or "").strip()
+        if business and name:
+            qs = Product.objects.filter(business=business, name__iexact=name)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {"name": f"'{name}' already exists for this business."})
+        return attrs
+
 
 class BusinessSerializer(serializers.ModelSerializer):
     products = ProductSerializer(many=True, read_only=True)

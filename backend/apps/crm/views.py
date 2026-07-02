@@ -501,6 +501,63 @@ class ProposalViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(proposal).data)
 
     @action(detail=True, methods=["post"])
+    def send_via(self, request, pk=None):
+        """Deliver the proposal to the client over WhatsApp or Email, log a
+        Communication on the timeline, and mark the proposal as sent."""
+        from django.utils import timezone
+        from .models import Communication
+
+        channel = (request.data.get("channel") or "").lower()
+        if channel not in ("whatsapp", "email"):
+            return Response({"detail": "channel must be 'whatsapp' or 'email'."}, status=400)
+
+        p = self.get_object()
+        target = p.lead or p.customer
+        if not target:
+            return Response({"detail": "Proposal has no lead/customer to send to."}, status=400)
+        name = getattr(target, "name", "there")
+        phone = getattr(target, "phone", "") or ""
+        email = getattr(target, "email", "") or ""
+
+        body = (f"Hi {name}, here is your proposal {p.reference}: {p.title}. "
+                f"Total: ${p.total}.")
+        if p.valid_until:
+            body += f" Valid until {p.valid_until}."
+        if p.notes:
+            body += f"\nNote: {p.notes}"
+
+        if channel == "whatsapp":
+            if not phone:
+                return Response({"detail": "No phone number on the recipient."}, status=400)
+            from .telephony import send_whatsapp
+            result = send_whatsapp(phone, body)
+        else:
+            if not email:
+                return Response({"detail": "No email on the recipient."}, status=400)
+            from django.conf import settings
+            from django.core.mail import send_mail
+            try:
+                send_mail(f"Proposal {p.reference}: {p.title}", body,
+                          settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+                result = {"live": True, "note": "Email sent"}
+            except Exception as e:  # noqa: BLE001
+                result = {"live": False, "error": str(e)[:150]}
+
+        Communication.objects.create(lead=p.lead, customer=p.customer, channel=channel,
+                                     message=body, direction="outbound")
+
+        if p.status in ("draft", "revised"):
+            p.status = "sent"
+            p.sent_at = timezone.now()
+            p.sent_by = self._actor(request)
+            p.save(update_fields=["status", "sent_at", "sent_by"])
+            if p.lead_id:
+                LeadActivity.objects.create(
+                    lead=p.lead, user=self._actor(request), activity_type="proposal",
+                    remarks=f"Proposal {p.reference} sent via {channel}: {p.title}")
+        return Response({"channel": channel, **result, **self.get_serializer(p).data})
+
+    @action(detail=True, methods=["post"])
     def revise(self, request, pk=None):
         """Create the next version of a proposal. The old version is frozen
         (is_current=False) so the full revision history is preserved."""

@@ -20,6 +20,13 @@ class UserPermissionSerializer(serializers.ModelSerializer):
         model = UserPermission
         fields = ["id", "user", "user_name", "business", "business_name", "product",
                   "can_view", "can_create", "can_edit", "can_delete"]
+        # `product` is part of the (user, business, product) unique_together. DRF's
+        # auto UniqueTogetherValidator would otherwise force `product` to be required,
+        # blocking business-only grants (no specific product) from the Permission
+        # Matrix. Make it optional and drop that validator (the DB constraint still
+        # protects against real duplicates; the UI checks before creating).
+        extra_kwargs = {"product": {"required": False, "allow_null": True}}
+        validators = []
 
 
 class ModulePermissionSerializer(serializers.ModelSerializer):

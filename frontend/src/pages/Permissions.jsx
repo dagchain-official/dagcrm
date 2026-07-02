@@ -48,14 +48,33 @@ function ModulePerms() {
 
   const toggle = async (module, field) => {
     const row = byModule[module];
-    if (!row) return;
-    const next = { ...row, [field]: !row[field] };
-    setRows((rs) => rs.map((r) => (r.module === module ? next : r))); // optimistic
-    try {
-      await api.patch(`/module-permissions/${row.id}/`, { [field]: next[field] });
-    } catch {
-      setRows((rs) => rs.map((r) => (r.module === module ? row : r))); // revert
-      toast.error("Update failed");
+    if (row) {
+      // existing row -> PATCH the single field
+      const next = { ...row, [field]: !row[field] };
+      setRows((rs) => rs.map((r) => (r.module === module ? next : r))); // optimistic
+      try {
+        await api.patch(`/module-permissions/${row.id}/`, { [field]: next[field] });
+      } catch {
+        setRows((rs) => rs.map((r) => (r.module === module ? row : r))); // revert
+        toast.error("Update failed");
+      }
+    } else {
+      // no row yet for this role+module -> CREATE it with the toggled field on
+      const optimistic = {
+        id: `tmp-${module}`, role: Number(roleId), module,
+        can_view: false, can_create: false, can_edit: false, can_delete: false,
+        [field]: true,
+      };
+      setRows((rs) => [...rs, optimistic]); // optimistic
+      try {
+        const { data } = await api.post("/module-permissions/", {
+          role: Number(roleId), module, [field]: true,
+        });
+        setRows((rs) => rs.map((r) => (r.module === module ? data : r)));
+      } catch {
+        setRows((rs) => rs.filter((r) => r !== optimistic)); // revert
+        toast.error("Update failed");
+      }
     }
   };
 

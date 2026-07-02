@@ -162,7 +162,8 @@ export const RESOURCES = {
     fields: [
       { key: "name", label: "Product name", required: true },
       { key: "business", label: "Business", type: "ref", ref: "businesses", labelKey: "name", required: true },
-      { key: "product_type", label: "Type (e.g. Node, Coin, Subscription, Course)" },
+      { key: "product_type", label: "Type (e.g. Node, Coin, Subscription, Course)",
+        type: "creatable", optionsFrom: { endpoint: "products", field: "product_type" } },
       { key: "price", label: "Price", type: "number" },
       { key: "revenue_type", label: "Revenue type", type: "select",
         options: [
@@ -446,6 +447,9 @@ export const RESOURCES = {
   },
   payrolls: {
     title: "Payroll", endpoint: "payrolls",
+    // Auto-calculate basic/incentive/deduction when an employee (and month/year) is chosen.
+    autofill: { endpoint: "payrolls/suggest", trigger: ["employee", "month", "year"],
+                fills: ["basic_salary", "incentive", "bonus", "deduction"] },
     rowActions: [
       { label: "Payslip", icon: "download", variant: "info", download: (id) => `payrolls/${id}/payslip/` },
     ],
@@ -514,7 +518,8 @@ export const RESOURCES = {
       { key: "status", label: "Status", badge: true },
     ],
     fields: [
-      { key: "name", label: "Metric name (e.g. Lots Traded, Nodes Sold, Meetings)", required: true },
+      { key: "name", label: "Metric name (e.g. Lots Traded, Nodes Sold, Meetings)", required: true,
+        type: "creatable", optionsFrom: { endpoint: "metric-definitions", field: "name" } },
       { key: "business", label: "Business (blank = all)", type: "ref", ref: "businesses", labelKey: "name" },
       { key: "product", label: "Product (optional)", type: "ref", ref: "products", labelKey: "name", dependsOn: "business" },
       { key: "unit", label: "Unit ($, GB, count, lots)" },
