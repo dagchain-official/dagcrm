@@ -25,7 +25,14 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
     api.get(`/${autofill.endpoint}/`, { params })
       .then(({ data }) => setForm((f) => {
         const next = { ...f };
-        autofill.fills.forEach((k) => { if (data[k] !== undefined && data[k] !== null) next[k] = data[k]; });
+        autofill.fills.forEach((k) => {
+          if (autofill.reset) {
+            // overwrite mode: new selection fully replaces (clears if it has no value)
+            next[k] = (data[k] === undefined || data[k] === null) ? "" : data[k];
+          } else if (data[k] !== undefined && data[k] !== null) {
+            next[k] = data[k];
+          }
+        });
         return next;
       }))
       .catch(() => {});
