@@ -22,6 +22,9 @@ export const moduleOf = (to) => {
   if (to === "/hr/costs") return "cost-categories";
   if (to === "/hr/payroll") return "payrolls";
   if (to === "/hr/rules") return "formula-rules";
+  if (to === "/finance") return "reports";
+  if (to === "/aum") return "aum-entries";
+  if (to === "/contribution") return "contribution-entries";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
@@ -79,14 +82,9 @@ export const NAV = [
   {
     group: "Finance",
     items: [
-      { to: "/m/expenses", label: "Expenses", icon: Receipt },
-      { to: "/m/commissions", label: "Commissions", icon: Handshake },
-      { to: "/pnl", label: "P&L Statement", icon: TrendingUp },
-      { to: "/aum-board", label: "AUM Board", icon: Landmark },
-      { to: "/m/aum-entries", label: "AUM Entries", icon: PiggyBank },
-      { to: "/contribution-board", label: "Contribution", icon: Scale },
-      { to: "/m/contribution-entries", label: "Contribution Entries", icon: Coins },
-      { to: "/m/contribution-weights", label: "Contribution Formula", icon: Settings2 },
+      { to: "/finance", label: "Finance (P&L)", icon: TrendingUp },
+      { to: "/aum", label: "AUM", icon: Landmark },
+      { to: "/contribution", label: "Contribution", icon: Scale },
     ],
   },
   {
