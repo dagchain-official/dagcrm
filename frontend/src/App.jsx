@@ -12,6 +12,7 @@ import TargetsHub from "./pages/TargetsHub";
 import KpiHub from "./pages/KpiHub";
 import { PeopleHub, AttendanceHub, CostHub, PayrollHub, RulesHub } from "./pages/HrHubs";
 import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
+import ConfigHub from "./pages/ConfigHub";
 import KpiBoard from "./pages/KpiBoard";
 import Performance from "./pages/Performance";
 import IncentiveBoard from "./pages/IncentiveBoard";
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="finance" element={<FinanceHub />} />
         <Route path="aum" element={<AumHub />} />
         <Route path="contribution" element={<ContributionHub />} />
+        <Route path="config" element={<ConfigHub />} />
         <Route path="kpi-board" element={<KpiBoard />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />

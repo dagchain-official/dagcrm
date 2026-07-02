@@ -25,6 +25,7 @@ export const moduleOf = (to) => {
   if (to === "/finance") return "reports";
   if (to === "/aum") return "aum-entries";
   if (to === "/contribution") return "contribution-entries";
+  if (to === "/config") return "businesses";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
@@ -57,15 +58,6 @@ export const NAV = [
     ],
   },
   {
-    group: "Setup",
-    items: [
-      { to: "/m/businesses", label: "Businesses", icon: Building2 },
-      { to: "/m/products", label: "Products", icon: Package },
-      { to: "/m/metric-definitions", label: "KPI Definitions", icon: BarChart4 },
-      { to: "/m/lead-sources", label: "Lead Sources", icon: Radio },
-    ],
-  },
-  {
     group: "Support",
     items: [{ to: "/m/tickets", label: "Support Desk", icon: LifeBuoy }],
   },
@@ -94,6 +86,7 @@ export const NAV = [
       { to: "/m/roles", label: "Roles", icon: Shield },
       { to: "/m/teams", label: "Teams", icon: UsersRound },
       { to: "/permissions", label: "Permission Matrix", icon: ShieldCheck },
+      { to: "/config", label: "Configuration", icon: Settings2 },
       { to: "/integrations", label: "Integration Hub", icon: Plug },
       { to: "/reports", label: "Reports", icon: BarChart3 },
     ],
