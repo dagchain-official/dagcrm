@@ -27,7 +27,7 @@ class IntegrationsConfig(AppConfig):
 def _autosync_loop():
     """Every AUTO_SYNC_INTERVAL seconds, pull connected FXArtha connections so
     deposits/withdrawals, revenue, AUM and contribution update on their own."""
-    interval = int(os.environ.get("AUTO_SYNC_INTERVAL", "600"))  # default 10 min
+    interval = int(os.environ.get("AUTO_SYNC_INTERVAL", "60"))  # default 1 min
     time.sleep(20)  # let the server finish booting
     while True:
         try:
