@@ -580,6 +580,9 @@ export const RESOURCES = {
   },
   "aum-entries": {
     title: "AUM Entries", endpoint: "aum-entries",
+    // Select a customer -> pull that FXArtha client's deposit/withdrawal + RM + business.
+    autofill: { endpoint: "reports/customer-fx", trigger: ["customer", "entry_type"],
+                fills: ["employee", "business", "amount"] },
     filters: [
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
       { key: "entry_type", label: "Type", options: sel("deposit", "withdrawal") },
@@ -604,6 +607,9 @@ export const RESOURCES = {
   },
   "contribution-entries": {
     title: "Contribution Entries", endpoint: "contribution-entries",
+    // Select a customer -> pull that FXArtha client's brokerage/insurance/staking/loss + RM + business.
+    autofill: { endpoint: "reports/customer-fx", trigger: ["customer"],
+                fills: ["employee", "business", "deposit", "trading_loss", "brokerage", "insurance", "staking"] },
     filters: [
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
       { key: "business", label: "Business", ref: "businesses", labelKey: "name" },

@@ -333,6 +333,7 @@ class MetricEntry(models.Model):
     value = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
     lead = models.ForeignKey(Lead, on_delete=models.SET_NULL, null=True, blank=True)
+    external_id = models.CharField(max_length=80, blank=True, db_index=True)  # idempotent external sync key
     note = models.CharField(max_length=200, blank=True)
     date = models.DateField()
 
@@ -376,6 +377,7 @@ class ContributionEntry(models.Model):
     insurance = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     staking = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     other = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    external_id = models.CharField(max_length=80, blank=True, db_index=True)  # idempotent external sync key
     date = models.DateField()
 
     class Meta:

@@ -593,3 +593,48 @@ def kpi_performance(request):
             })
     rows.sort(key=lambda r: (r["metric"], -r["value"]))
     return Response({"month": month, "year": year, "count": len(rows), "rows": rows})
+
+
+@api_view(["GET"])
+def customer_fx(request):
+    """Auto-fill values for the AUM / Contribution forms from a customer's synced
+    FXArtha data. Select a customer -> deposits, withdrawals, brokerage, insurance,
+    staking, trading loss (+ their RM & business) come back."""
+    from django.db.models import Sum
+    from apps.crm.models import AumEntry, ContributionEntry, Customer
+    from apps.hr.models import Employee
+
+    cust = Customer.objects.filter(id=request.query_params.get("customer")).first()
+    if not cust:
+        return Response({"found": False})
+    entry_type = request.query_params.get("entry_type", "deposit")
+
+    # RM (employee) of this customer, via the originating lead
+    emp_id = None
+    if cust.lead_id and cust.lead.assigned_to_id:
+        e = Employee.objects.filter(user_id=cust.lead.assigned_to_id).first()
+        emp_id = e.id if e else None
+
+    aum = AumEntry.objects.filter(customer=cust, external_id__startswith="fxa")
+    deposit = float(aum.filter(entry_type="deposit").aggregate(s=Sum("amount"))["s"] or 0)
+    withdrawal = float(aum.filter(entry_type="withdrawal").aggregate(s=Sum("amount"))["s"] or 0)
+
+    ce = ContributionEntry.objects.filter(customer=cust, external_id__startswith="fxa")
+    c = ce.aggregate(b=Sum("brokerage"), i=Sum("insurance"), s=Sum("staking"),
+                     t=Sum("trading_loss"), d=Sum("deposit"))
+
+    biz_id = None
+    a0, c0 = aum.first(), ce.first()
+    if a0:
+        biz_id = a0.business_id
+    elif c0:
+        biz_id = c0.business_id
+
+    return Response({
+        "found": bool(aum.exists() or ce.exists()),
+        "employee": emp_id, "business": biz_id,
+        "deposit": round(float(c["d"] or deposit), 2), "withdrawal": round(withdrawal, 2),
+        "amount": round(withdrawal if entry_type == "withdrawal" else deposit, 2),
+        "brokerage": round(float(c["b"] or 0), 2), "insurance": round(float(c["i"] or 0), 2),
+        "staking": round(float(c["s"] or 0), 2), "trading_loss": round(float(c["t"] or 0), 2),
+    })

@@ -90,7 +90,8 @@ def _upsert_lead(conn, item, source, next_rm):
 
 
 def _sync_customer(conn, item, business):
-    from apps.crm.models import AumEntry, Customer, Lead
+    from apps.crm.models import (AumEntry, ContributionEntry, Customer, Lead,
+                                 MetricDefinition, MetricEntry)
     from apps.hr.models import Employee
     from apps.sales.models import Revenue
 
@@ -116,24 +117,47 @@ def _sync_customer(conn, item, business):
             defaults={"customer": cust, "business": business,
                       "gross_revenue": gross, "commission": comm})
 
-    # AUM — attribute to the lead's auto-assigned RM's employee (if any)
+    # Everything below is attributed to the lead's auto-assigned RM's employee.
     emp = None
     if lead and lead.assigned_to_id:
         emp = Employee.objects.filter(user_id=lead.assigned_to_id).first()
+    when = _date(item.get("account_opened_at"))
     dep = float(item.get("total_deposit") or 0)
     wd = float(item.get("total_withdrawal") or 0)
-    if emp and (dep or wd):
-        when = _date(item.get("account_opened_at"))
-        if dep:
-            AumEntry.objects.update_or_create(
-                external_id=f"fxa-dep:{acct}",
-                defaults={"employee": emp, "customer": cust, "business": business,
-                          "entry_type": "deposit", "amount": dep, "date": when, "note": "FXArtha sync"})
-        if wd:
-            AumEntry.objects.update_or_create(
-                external_id=f"fxa-wd:{acct}",
-                defaults={"employee": emp, "customer": cust, "business": business,
-                          "entry_type": "withdrawal", "amount": wd, "date": when, "note": "FXArtha sync"})
+
+    # AUM (PART 11) — deposits / withdrawals -> Net New AUM
+    if emp and dep:
+        AumEntry.objects.update_or_create(
+            external_id=f"fxa-dep:{acct}",
+            defaults={"employee": emp, "customer": cust, "business": business,
+                      "entry_type": "deposit", "amount": dep, "date": when, "note": "FXArtha sync"})
+    if emp and wd:
+        AumEntry.objects.update_or_create(
+            external_id=f"fxa-wd:{acct}",
+            defaults={"employee": emp, "customer": cust, "business": business,
+                      "entry_type": "withdrawal", "amount": wd, "date": when, "note": "FXArtha sync"})
+
+    # Contribution (PART 12) — client business-contribution components
+    brokerage = float(item.get("brokerage") or item.get("gross_brokerage") or 0)
+    insurance = float(item.get("insurance") or 0)
+    staking = float(item.get("staking") or 0)
+    trading_loss = float(item.get("trading_loss") or 0)
+    if emp and (brokerage or insurance or staking or trading_loss or dep):
+        ContributionEntry.objects.update_or_create(
+            external_id=f"fxa-contrib:{acct}",
+            defaults={"employee": emp, "customer": cust, "business": business,
+                      "deposit": dep, "trading_loss": trading_loss, "brokerage": brokerage,
+                      "insurance": insurance, "staking": staking, "other": 0, "date": when})
+
+    # KPI (PART 10) — Lots Traded -> MetricEntry on the "Lots Traded" metric
+    lots = float(item.get("lots_traded") or 0)
+    if emp and lots:
+        md = MetricDefinition.objects.filter(name__icontains="lot").first()
+        if md:
+            MetricEntry.objects.update_or_create(
+                external_id=f"fxa-lots:{acct}",
+                defaults={"metric": md, "employee": emp, "customer": cust,
+                          "value": lots, "date": when, "note": "FXArtha sync"})
     return cust
 
 
