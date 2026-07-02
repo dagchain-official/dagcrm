@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import RefSelect from "./RefSelect";
 import CreatableSelect from "./CreatableSelect";
 import api from "../api/client";
+import { COUNTRY_DIAL } from "../config/countries";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -35,6 +36,13 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
       const next = { ...f, [k]: v };
       // changing a parent field resets any field that depends on it
       fields.forEach((fld) => { if (fld.dependsOn === k) next[fld.key] = ""; });
+      // a field with `dialTo` (Country) auto-fills the target (Phone) with the dial code
+      const cur = fields.find((x) => x.key === k);
+      if (cur?.dialTo && v && COUNTRY_DIAL[v]) {
+        const code = COUNTRY_DIAL[v];
+        const rest = (next[cur.dialTo] || "").replace(/^\+\d{1,4}\s*/, "").trim();
+        next[cur.dialTo] = rest ? `${code} ${rest}` : `${code} `;
+      }
       return next;
     });
     setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));

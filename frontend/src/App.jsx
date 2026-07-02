@@ -6,6 +6,11 @@ import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
 import PnL from "./pages/PnL";
 import TargetBoard from "./pages/TargetBoard";
+import AssignTarget from "./pages/AssignTarget";
+import TeamRequests from "./pages/TeamRequests";
+import TargetsHub from "./pages/TargetsHub";
+import KpiHub from "./pages/KpiHub";
+import { PeopleHub, AttendanceHub, CostHub, PayrollHub, RulesHub } from "./pages/HrHubs";
 import KpiBoard from "./pages/KpiBoard";
 import Performance from "./pages/Performance";
 import IncentiveBoard from "./pages/IncentiveBoard";
@@ -57,6 +62,15 @@ export default function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="pnl" element={<PnL />} />
         <Route path="target-board" element={<TargetBoard />} />
+        <Route path="assign-target" element={<AssignTarget />} />
+        <Route path="team-requests" element={<TeamRequests />} />
+        <Route path="targets" element={<TargetsHub />} />
+        <Route path="kpi" element={<KpiHub />} />
+        <Route path="hr/people" element={<PeopleHub />} />
+        <Route path="hr/attendance" element={<AttendanceHub />} />
+        <Route path="hr/costs" element={<CostHub />} />
+        <Route path="hr/payroll" element={<PayrollHub />} />
+        <Route path="hr/rules" element={<RulesHub />} />
         <Route path="kpi-board" element={<KpiBoard />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />

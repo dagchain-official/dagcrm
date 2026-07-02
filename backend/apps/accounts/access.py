@@ -7,19 +7,23 @@ Layer 3  Module CRUD -> per role+module view/create/edit/delete (ModulePermissio
 
 # ---- Roles (document hierarchy) ----
 ROLES = [
-    "Super Admin", "Business Head", "Sales Manager", "Team Leader",
+    "Super Admin", "Business Head", "Sales Director", "Sales Manager", "Team Leader",
     "Sales Executive", "Support", "HR", "Finance",
 ]
 
 # Roles that see ALL data (company-wide), bypass business scoping.
 MANAGER_ROLES = {"Super Admin", "Business Head"}
 
-# Roles that leads can be assigned to (sales chain only).
+# Roles that can ASSIGN targets / build teams for others (management chain).
+# Admin assigns anyone; Business Head / Sales Director only within their own subtree.
+TARGET_ASSIGNER_ROLES = {"Super Admin", "Business Head", "Sales Director"}
+
+# Roles that see ALL data (company-wide), bypass business scoping.
 ASSIGNABLE_LEAD_ROLES = ["Sales Manager", "Team Leader", "Sales Executive"]
 
 # Roles that may ASSIGN/DISTRIBUTE leads to others. Sales Executive is the last
 # rung — it works its own leads but cannot assign to anyone.
-LEAD_ASSIGNER_ROLES = {"Super Admin", "Business Head", "Sales Manager", "Team Leader"}
+LEAD_ASSIGNER_ROLES = {"Super Admin", "Business Head", "Sales Director", "Sales Manager", "Team Leader"}
 
 
 def can_assign_leads(user):
@@ -31,6 +35,7 @@ def can_assign_leads(user):
 ROLE_DASHBOARD = {
     "Super Admin": "admin",
     "Business Head": "admin",
+    "Sales Director": "admin",
     "Sales Manager": "sales-manager",
     "Team Leader": "team-leader",
     "Sales Executive": "sales-exec",
@@ -69,6 +74,13 @@ def _view(keys):
 ROLE_MATRIX = {
     "Super Admin": _full(MODULES),
     "Business Head": _full(MODULES),
+    "Sales Director": {
+        **_full(_split("leads lead-activities opportunities proposals customers communications targets "
+                       "metric-entries aum-entries contribution-entries teams")),
+        **_view(_split("revenues products businesses lead-sources tickets reports users "
+                       "metric-definitions employees")),
+        "leaves": "vce", "leave-types": "v",
+    },
     "Sales Manager": {
         **_full(_split("leads lead-activities opportunities proposals customers communications targets "
                        "metric-entries aum-entries contribution-entries")),
@@ -182,6 +194,45 @@ def role_permissions(user):
         out[p.module] = {"view": p.can_view, "create": p.can_create,
                          "edit": p.can_edit, "delete": p.can_delete}
     return out
+
+
+def subordinate_user_ids(user, include_self=False):
+    """All user ids in this user's management subtree (via Employee.manager chain)."""
+    from apps.hr.models import Employee
+    reports = {}
+    for e in Employee.objects.values("user_id", "manager_id"):
+        reports.setdefault(e["manager_id"], []).append(e["user_id"])
+    out = set()
+    if include_self:
+        out.add(user.id)
+    stack = [user.id]
+    while stack:
+        mid = stack.pop()
+        for uid in reports.get(mid, []):
+            if uid and uid not in out:
+                out.add(uid)
+                stack.append(uid)
+    return out
+
+
+def can_assign_targets(user):
+    """Whether the user may assign targets / build teams at all."""
+    if getattr(user, "is_superuser", False):
+        return True
+    return getattr(getattr(user, "role", None), "name", None) in TARGET_ASSIGNER_ROLES
+
+
+def can_assign_to(actor, target_user_id):
+    """Delegation rule: admin -> anyone (incl. other businesses);
+    Business Head / Sales Director -> only users inside their own subtree."""
+    if getattr(actor, "is_superuser", False):
+        return True
+    role = getattr(getattr(actor, "role", None), "name", None)
+    if role == "Super Admin":
+        return True
+    if role in ("Business Head", "Sales Director"):
+        return target_user_id in subordinate_user_ids(actor)
+    return False
 
 
 def allowed_business_ids(user):

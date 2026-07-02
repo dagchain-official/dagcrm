@@ -1,7 +1,8 @@
 // Single source of truth for every CRUD module.
 // `columns` -> table; `fields` -> create/edit form.
-// field types: text, number, email, date, datetime-local, textarea, select, ref
+// field types: text, number, email, date, datetime-local, textarea, select, ref, creatable
 // ref fields load options from another endpoint (labelKey shown to user).
+import { COUNTRY_OPTIONS } from "./countries";
 
 export const STATUS_COLORS = {
   active: "bg-emerald-50 text-emerald-700",
@@ -202,7 +203,7 @@ export const RESOURCES = {
       { key: "name", label: "Name", required: true },
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Phone" },
-      { key: "country", label: "Country" },
+      { key: "country", label: "Country", type: "select", options: COUNTRY_OPTIONS, dialTo: "phone" },
       { key: "source", label: "Source", type: "ref", ref: "lead-sources", labelKey: "name" },
       { key: "assigned_to", label: "Assign to", type: "ref", ref: "users/assignable", labelKey: "name" },
       { key: "status", label: "Status", type: "select", options: sel("new", "contacted", "qualified", "converted", "lost") },
@@ -264,7 +265,7 @@ export const RESOURCES = {
       { key: "name", label: "Name", required: true },
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Phone" },
-      { key: "country", label: "Country" },
+      { key: "country", label: "Country", type: "select", options: COUNTRY_OPTIONS, dialTo: "phone" },
     ],
   },
   communications: {
@@ -537,6 +538,10 @@ export const RESOURCES = {
   },
   "metric-entries": {
     title: "KPI Entries", endpoint: "metric-entries",
+    // For derived metrics (Calls, Meetings, Leads Converted) auto-fetch the value
+    // from the employee's real CRM activity when metric/employee/date are chosen.
+    autofill: { endpoint: "metric-entries/suggest", trigger: ["metric", "employee", "date"],
+                fills: ["value"] },
     filters: [
       { key: "metric", label: "Metric", ref: "metric-definitions", labelKey: "name" },
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },

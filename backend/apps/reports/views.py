@@ -442,3 +442,154 @@ def formula_run(request):
     month = int((request.data or {}).get("month") or today.month)
     year = int((request.data or {}).get("year") or today.year)
     return Response(run_formulas(month, year))
+
+
+def _ctc_members(scope, _id, month, year):
+    """Resolve the employees covered by a target scope and their CTC."""
+    from apps.accounts.models import Team, TeamMember
+    from apps.accounts.access import subordinate_user_ids
+    User = get_user_model()
+
+    emps = []
+    if scope == "user" and _id:
+        e = Employee.objects.select_related("user").filter(user_id=_id).first()
+        emps = [e] if e else []
+    elif scope == "team" and _id:
+        team = Team.objects.filter(id=_id).first()
+        if team:
+            uids = set(TeamMember.objects.filter(team=team).values_list("user_id", flat=True))
+            if team.leader_id:
+                uids.add(team.leader_id)
+            emps = list(Employee.objects.select_related("user").filter(user_id__in=uids))
+    elif scope in ("business", "subtree") and _id:
+        head = User.objects.filter(id=_id).first()
+        if head:
+            uids = subordinate_user_ids(head, include_self=True)
+            emps = list(Employee.objects.select_related("user").filter(user_id__in=uids))
+
+    rows = [{"user_id": e.user_id, "name": e.user.name if e.user else "—",
+             "ctc": round(float(e.monthly_ctc(month, year)), 2)} for e in emps if e]
+    return rows
+
+
+@api_view(["GET"])
+def ctc_preview(request):
+    """CTC (+ suggested target) for a target scope: individual / team / business.
+    Business = the whole management subtree under the chosen head."""
+    today = timezone.localdate()
+    month = int(request.query_params.get("month") or today.month)
+    year = int(request.query_params.get("year") or today.year)
+    scope = request.query_params.get("scope", "user")
+    try:
+        mult = float(request.query_params.get("multiplier") or 1)
+    except ValueError:
+        mult = 1.0
+    rows = _ctc_members(scope, request.query_params.get("id"), month, year)
+    total = round(sum(r["ctc"] for r in rows), 2)
+    return Response({
+        "scope": scope, "month": month, "year": year,
+        "ctc": total, "count": len(rows), "members": rows,
+        "multiplier": mult, "suggested_target": round(total * mult, 2),
+    })
+
+
+@api_view(["POST"])
+def assign_target(request):
+    """Create + assign a target (individual/team/business) with the CTC-based value.
+    Delegation: Admin can assign to anyone; Business Head / Sales Director only within
+    their own subtree; nobody else can assign."""
+    from datetime import date
+    from apps.accounts.access import can_assign_targets, can_assign_to
+    from apps.accounts.models import Team, TeamMember
+    from apps.crm.models import Target, TargetAssignment
+    from apps.notifications.models import notify
+
+    actor = request.user
+    if not can_assign_targets(actor):
+        return Response({"detail": "You are not allowed to assign targets."}, status=403)
+
+    d = request.data or {}
+    scope = d.get("scope", "user")
+    _id = d.get("id")
+    if not _id:
+        return Response({"detail": "Select who to assign the target to."}, status=400)
+
+    today = timezone.localdate()
+    month = int(d.get("month") or today.month)
+    year = int(d.get("year") or today.year)
+    rows = _ctc_members(scope, _id, month, year)
+    if not rows:
+        return Response({"detail": "No employees found for this selection."}, status=400)
+
+    # Delegation check against every covered user.
+    for r in rows:
+        if not can_assign_to(actor, r["user_id"]):
+            return Response({"detail": "You can only assign within your own team/business."}, status=403)
+
+    try:
+        mult = float(d.get("multiplier") or 1)
+    except (TypeError, ValueError):
+        mult = 1.0
+    ctc_total = round(sum(r["ctc"] for r in rows), 2)
+    value = d.get("value")
+    value = float(value) if value not in (None, "") else round(ctc_total * mult, 2)
+
+    start = d.get("start_date") or date(year, month, 1).isoformat()
+    end = d.get("end_date") or date(year, month, 28).isoformat()
+    name = d.get("name") or f"{scope.title()} target ({month:02d}/{year})"
+
+    t = Target.objects.create(name=name, target_type=d.get("target_type", "revenue"),
+                              value=value, start_date=start, end_date=end)
+    if scope == "team":
+        TargetAssignment.objects.create(target=t, team_id=_id)
+    else:  # user / business -> assign to the chosen user (head)
+        TargetAssignment.objects.create(target=t, user_id=_id)
+
+    # notify everyone covered
+    from django.contrib.auth import get_user_model
+    for u in get_user_model().objects.filter(id__in=[r["user_id"] for r in rows]):
+        notify(u, title="New target assigned",
+               body=f"{name}: ${value:,.0f} (CTC ${ctc_total:,.0f} × {mult})",
+               kind="info", link="/target-board")
+
+    return Response({"id": t.id, "name": t.name, "value": value, "ctc": ctc_total,
+                     "multiplier": mult, "scope": scope, "assignees": len(rows)}, status=201)
+
+
+@api_view(["GET"])
+def kpi_performance(request):
+    """Flat, filterable, AUTO-detected KPI performance — one row per employee×metric
+    for a month. Derived metrics (calls / meetings / conversions) are computed live
+    from CRM activity; manual metrics use their entries. Filter by year / month /
+    metric / employee."""
+    from apps.crm.models import MetricDefinition
+    from .metrics import _leaf_stats
+    today = timezone.localdate()
+    month = int(request.query_params.get("month") or today.month)
+    year = int(request.query_params.get("year") or today.year)
+    metric_id = request.query_params.get("metric")
+    employee_id = request.query_params.get("employee")
+
+    mdefs = list(MetricDefinition.objects.filter(status="active"))
+    if metric_id:
+        mdefs = [m for m in mdefs if str(m.id) == str(metric_id)]
+    stats = _leaf_stats(mdefs, month, year)
+
+    emps = list(Employee.objects.select_related("user").exclude(user__is_superuser=True))
+    if employee_id:
+        emps = [e for e in emps if str(e.id) == str(employee_id)]
+
+    rows = []
+    for e in emps:
+        for m in mdefs:
+            val, w = stats.get((e.id, m.id), (0.0, 0))
+            if val == 0 and w == 0:
+                continue  # only rows with detected activity
+            rows.append({
+                "employee": e.user.name if e.user else "—", "employee_id": e.id,
+                "metric": m.name, "metric_id": m.id, "unit": m.unit,
+                "value": round(val, 2), "source": m.source, "category": m.category,
+                "month": month, "year": year,
+            })
+    rows.sort(key=lambda r: (r["metric"], -r["value"]))
+    return Response({"month": month, "year": year, "count": len(rows), "rows": rows})

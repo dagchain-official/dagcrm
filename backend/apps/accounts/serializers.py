@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import ModulePermission, Role, Team, TeamMember, UserPermission
+from .models import ModulePermission, Role, Team, TeamMember, TeamRequest, UserPermission
 
 User = get_user_model()
 
@@ -89,3 +89,17 @@ class TeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
         fields = ["id", "name", "leader", "leader_name", "members", "created_at"]
+
+
+class TeamRequestSerializer(serializers.ModelSerializer):
+    requested_by_name = serializers.CharField(source="requested_by.name", read_only=True)
+    member_name = serializers.CharField(source="member.name", read_only=True)
+    team_name = serializers.CharField(source="team.name", read_only=True)
+    decided_by_name = serializers.CharField(source="decided_by.name", read_only=True)
+
+    class Meta:
+        model = TeamRequest
+        fields = ["id", "requested_by", "requested_by_name", "member", "member_name",
+                  "team", "team_name", "reason", "status", "decided_by", "decided_by_name",
+                  "decided_at", "created_at"]
+        read_only_fields = ["requested_by", "status", "decided_by", "decided_at", "created_at"]

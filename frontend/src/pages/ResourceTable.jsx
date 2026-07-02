@@ -68,8 +68,9 @@ function exportCsv(name, columns, rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function ResourceTable() {
-  const { resource } = useParams();
+export default function ResourceTable({ resource: propResource }) {
+  const params = useParams();
+  const resource = propResource || params.resource;
   const cfg = RESOURCES[resource];
   const { can, user } = useAuth();
   const toast = useToast();

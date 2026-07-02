@@ -11,10 +11,17 @@ import {
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
+  if (to === "/targets" || to === "/assign-target") return "targets";
+  if (to === "/team-requests") return "teams";
+  if (to === "/hr/people") return "employees";
+  if (to === "/hr/attendance") return "attendance";
+  if (to === "/hr/costs") return "cost-categories";
+  if (to === "/hr/payroll") return "payrolls";
+  if (to === "/hr/rules") return "formula-rules";
   if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
@@ -40,11 +47,9 @@ export const NAV = [
       { to: "/proposals", label: "Proposals", icon: FileText },
       { to: "/m/customers", label: "Customers", icon: UserCheck },
       { to: "/m/communications", label: "Communications", icon: MessageSquare },
-      { to: "/m/targets", label: "Targets", icon: Crosshair },
-      { to: "/target-board", label: "Target Board", icon: Gauge },
-      { to: "/kpi-board", label: "KPI Board", icon: BarChart4 },
-      { to: "/m/metric-entries", label: "KPI Entries", icon: ListPlus },
-      { to: "/performance", label: "Performance", icon: Trophy },
+      { to: "/targets", label: "Targets", icon: Crosshair },
+      { to: "/team-requests", label: "Team Requests", icon: UserPlus },
+      { to: "/kpi", label: "KPI & Performance", icon: BarChart4 },
       { to: "/m/revenues", label: "Revenue", icon: DollarSign },
     ],
   },
@@ -64,25 +69,11 @@ export const NAV = [
   {
     group: "HR & People",
     items: [
-      { to: "/m/employees", label: "Employees", icon: Briefcase },
-      { to: "/m/hierarchy-levels", label: "Hierarchy Levels", icon: UsersRound },
-      { to: "/m/cost-categories", label: "Cost Categories", icon: Receipt },
-      { to: "/m/employee-costs", label: "Employee Costs", icon: Wallet },
-      { to: "/m/departments", label: "Departments", icon: Building2 },
-      { to: "/m/attendance", label: "Attendance", icon: Clock },
-      { to: "/m/employee-activities", label: "Activity Tracking", icon: Activity },
-      { to: "/m/leaves", label: "Leaves", icon: CalendarOff },
-      { to: "/m/leave-types", label: "Leave Types", icon: Settings2 },
-      { to: "/m/payrolls", label: "Payroll", icon: Wallet },
-      { to: "/m/incentives", label: "Incentives", icon: Award },
-      { to: "/incentive-board", label: "Incentive Board", icon: Coins },
-      { to: "/m/incentive-slabs", label: "Incentive Slabs", icon: Layers },
-      { to: "/m/activity-incentives", label: "Activity Incentives", icon: Coins },
-      { to: "/formula-builder", label: "Formula Builder", icon: Wand2 },
-      { to: "/formula-board", label: "Formula Payouts", icon: Calculator },
-      { to: "/m/incentive-rules", label: "Incentive Rules", icon: Settings2 },
-      { to: "/m/target-multipliers", label: "Target Multipliers", icon: Gauge },
-      { to: "/m/performance-weights", label: "Performance Weights", icon: Trophy },
+      { to: "/hr/people", label: "People", icon: Briefcase },
+      { to: "/hr/attendance", label: "Attendance & Leave", icon: Clock },
+      { to: "/hr/costs", label: "Cost & CTC", icon: Wallet },
+      { to: "/hr/payroll", label: "Payroll & Incentives", icon: Award },
+      { to: "/hr/rules", label: "Rules & Config", icon: Wand2 },
     ],
   },
   {

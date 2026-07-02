@@ -6,6 +6,7 @@ from .views import (
     ModulePermissionViewSet,
     RoleViewSet,
     TeamMemberViewSet,
+    TeamRequestViewSet,
     TeamViewSet,
     UserPermissionViewSet,
     UserViewSet,
@@ -18,6 +19,7 @@ router.register("user-permissions", UserPermissionViewSet)
 router.register("module-permissions", ModulePermissionViewSet)
 router.register("teams", TeamViewSet)
 router.register("team-members", TeamMemberViewSet)
+router.register("team-requests", TeamRequestViewSet)
 
 urlpatterns = router.urls + [
     path("access/meta/", AccessMetaView.as_view()),

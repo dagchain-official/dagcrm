@@ -27,5 +27,8 @@ urlpatterns = [
     path("reports/formula-variables/", views.formula_variables),
     path("reports/formula-board/", views.formula_board),
     path("reports/formula-run/", views.formula_run),
+    path("reports/ctc-preview/", views.ctc_preview),
+    path("reports/assign-target/", views.assign_target),
+    path("reports/kpi-performance/", views.kpi_performance),
     path("ai/ask/", views.ai_ask),
 ]

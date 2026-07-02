@@ -48,6 +48,39 @@ class MetricEntryViewSet(viewsets.ModelViewSet):
     serializer_class = MetricEntrySerializer
     filterset_fields = ["metric", "employee", "date"]
 
+    @action(detail=False, methods=["get"])
+    def suggest(self, request):
+        """For a DERIVED metric (e.g. Calls / Meetings / Leads Converted), auto-compute
+        the value from the employee's real CRM activity for the month of the given date.
+        Manual metrics return value=null (nothing to auto-fill)."""
+        from django.utils import timezone
+        from apps.hr.models import Employee
+
+        md = MetricDefinition.objects.filter(id=request.query_params.get("metric")).first()
+        emp = Employee.objects.filter(id=request.query_params.get("employee")).select_related("user").first()
+        if not md or not emp or not emp.user_id or md.source != "derived" or not md.derived_key:
+            return Response({"value": None, "derived": False})
+
+        today = timezone.localdate()
+        y, m = today.year, today.month
+        ds = request.query_params.get("date")
+        if ds:
+            try:
+                y, m = int(ds[:4]), int(ds[5:7])
+            except (ValueError, IndexError):
+                pass
+
+        uid, key, val = emp.user_id, md.derived_key, 0
+        if key in ("lead_activity:call", "lead_activity:meeting"):
+            atype = key.split(":")[1]
+            val = LeadActivity.objects.filter(user_id=uid, activity_type=atype,
+                                              created_at__year=y, created_at__month=m).count()
+        elif key == "lead:converted":
+            qs = Lead.objects.filter(assigned_to_id=uid, status="converted")
+            val = (qs.filter(converted_at__year=y, converted_at__month=m).count()
+                   or qs.filter(converted_at__isnull=True).count())
+        return Response({"value": val, "derived": True, "metric": md.name, "period": f"{m:02d}/{y}"})
+
 
 class AumEntryViewSet(viewsets.ModelViewSet):
     queryset = AumEntry.objects.select_related("employee", "employee__user", "customer").all()

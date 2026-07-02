@@ -7,11 +7,12 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .api_permissions import IsAdminView
-from .models import ModulePermission, Role, Team, TeamMember, UserPermission
+from .models import ModulePermission, Role, Team, TeamMember, TeamRequest, UserPermission
 from .serializers import (
     ModulePermissionSerializer,
     RoleSerializer,
     TeamMemberSerializer,
+    TeamRequestSerializer,
     TeamSerializer,
     UserPermissionSerializer,
     UserSerializer,
@@ -205,3 +206,65 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
     queryset = TeamMember.objects.select_related("team", "user").all()
     serializer_class = TeamMemberSerializer
     filterset_fields = ["team", "user"]
+
+
+class TeamRequestViewSet(viewsets.ModelViewSet):
+    """Sales Manager raises a request to add a person to their team; a higher
+    authority (Sales Director / Business Head / Admin) approves or rejects it."""
+    queryset = TeamRequest.objects.select_related(
+        "requested_by", "member", "team", "decided_by").all()
+    serializer_class = TeamRequestSerializer
+    filterset_fields = ["status", "requested_by", "member"]
+
+    def get_queryset(self):
+        from .access import is_admin_view, subordinate_user_ids, TARGET_ASSIGNER_ROLES
+        user = self.request.user
+        qs = super().get_queryset()
+        if user.is_superuser:
+            return qs
+        role = getattr(getattr(user, "role", None), "name", "")
+        if is_admin_view(user) or role in TARGET_ASSIGNER_ROLES:
+            return qs.filter(requested_by_id__in=subordinate_user_ids(user, include_self=True))
+        return qs.filter(requested_by=user)
+
+    def perform_create(self, serializer):
+        serializer.save(requested_by=self.request.user, status="pending")
+        from apps.notifications.models import notify
+        req = serializer.instance
+        mgr = getattr(self.request.user, "manager", None)
+        if mgr:
+            notify(mgr, title="Team member request",
+                   body=f"{self.request.user.name} requested to add {req.member.name}.",
+                   kind="info", link="/team-requests")
+
+    def _decide(self, request, approve):
+        from django.utils import timezone
+        from .access import can_assign_to, is_admin_view, TARGET_ASSIGNER_ROLES
+        from apps.notifications.models import notify
+        req = self.get_object()
+        user = request.user
+        role = getattr(getattr(user, "role", None), "name", "")
+        if not (user.is_superuser or is_admin_view(user) or role in TARGET_ASSIGNER_ROLES):
+            return Response({"detail": "Only a higher authority can decide requests."}, status=403)
+        if not (user.is_superuser or role == "Super Admin") and not can_assign_to(user, req.requested_by_id):
+            return Response({"detail": "This request is outside your team."}, status=403)
+        if req.status != "pending":
+            return Response({"detail": f"Already {req.status}."}, status=400)
+        req.status = "approved" if approve else "rejected"
+        req.decided_by = user
+        req.decided_at = timezone.now()
+        req.save(update_fields=["status", "decided_by", "decided_at"])
+        if approve and req.team_id:
+            TeamMember.objects.get_or_create(team=req.team, user=req.member)
+        notify(req.requested_by, title=f"Team request {req.status}",
+               body=f"Your request to add {req.member.name} was {req.status}.",
+               kind="success" if approve else "warning", link="/team-requests")
+        return Response(self.get_serializer(req).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, True)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, False)

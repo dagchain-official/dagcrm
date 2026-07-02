@@ -100,3 +100,24 @@ class TeamMember(models.Model):
 
     class Meta:
         unique_together = ("team", "user")
+
+
+class TeamRequest(models.Model):
+    """A Sales Manager cannot pick their own team members directly — they raise a
+    request for a person, which a higher authority (Sales Director / Business Head /
+    Admin) approves or rejects. On approval the person is added to the team."""
+    STATUS = [("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")]
+    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="team_requests")
+    member = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requested_in")
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name="join_requests")
+    reason = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="pending")
+    decided_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="team_decisions")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.requested_by} wants {self.member} ({self.status})"
