@@ -135,6 +135,13 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self._enforce_assignment(serializer)
+        # Auto-distribute: if no RM was chosen, load-balance to the least-busy rep
+        # (round-robin) so a new lead never sits unassigned.
+        if not serializer.validated_data.get("assigned_to"):
+            from apps.integrations.services import _next_rm
+            rm = _next_rm()
+            if rm:
+                serializer.validated_data["assigned_to"] = rm
         lead = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
         self._notify_assignee(lead, self.request.user)
 

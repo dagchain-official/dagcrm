@@ -630,8 +630,25 @@ def customer_fx(request):
     elif c0:
         biz_id = c0.business_id
 
+    # Fallback for manual customers (no FXArtha rows): derive business from the
+    # customer's products, revenue, or the originating lead's interest.
+    if not biz_id:
+        from apps.crm.models import CustomerProduct, LeadInterest
+        cp = CustomerProduct.objects.filter(customer=cust).exclude(business__isnull=True).first()
+        if cp:
+            biz_id = cp.business_id
+    if not biz_id:
+        rv = Revenue.objects.filter(customer=cust).exclude(business__isnull=True).first()
+        if rv:
+            biz_id = rv.business_id
+    if not biz_id and cust.lead_id:
+        from apps.crm.models import LeadInterest
+        li = LeadInterest.objects.filter(lead=cust.lead).exclude(business__isnull=True).first()
+        if li:
+            biz_id = li.business_id
+
     return Response({
-        "found": bool(aum.exists() or ce.exists()),
+        "found": bool(aum.exists() or ce.exists() or biz_id),
         "employee": emp_id, "business": biz_id,
         "deposit": round(float(c["d"] or deposit), 2), "withdrawal": round(withdrawal, 2),
         "amount": round(withdrawal if entry_type == "withdrawal" else deposit, 2),
