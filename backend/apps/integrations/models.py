@@ -26,7 +26,11 @@ PLATFORMS = {
 class IntegrationConnection(models.Model):
     STATUS = [("connected", "Connected"), ("disconnected", "Disconnected")]
 
-    platform = models.CharField(max_length=20, unique=True)
+    platform = models.CharField(max_length=20)
+    # Which business this connection feeds. Null = global (not tied to a business).
+    business = models.ForeignKey("crm.Business", on_delete=models.CASCADE,
+                                 null=True, blank=True, related_name="integrations")
+    name = models.CharField(max_length=120, blank=True)   # custom label, e.g. "FX Artha Instagram"
     status = models.CharField(max_length=20, choices=STATUS, default="disconnected")
     webhook_secret = models.CharField(max_length=64, blank=True)
     config = models.JSONField(default=dict, blank=True)   # tokens / page ids
@@ -35,16 +39,29 @@ class IntegrationConnection(models.Model):
     last_lead_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        # one connection per (platform, business) pair
+        unique_together = ("platform", "business")
+
     def __str__(self):
-        return f"{self.platform} ({self.status})"
+        return f"{self.label} ({self.status})"
 
     @property
     def label(self):
-        return PLATFORMS.get(self.platform, {}).get("label", self.platform)
+        base = PLATFORMS.get(self.platform, {}).get("label", self.platform)
+        if self.name:
+            return self.name
+        if self.business_id:
+            return f"{self.business.name} — {base}"
+        return base
 
     @property
     def source_name(self):
-        return PLATFORMS.get(self.platform, {}).get("source", self.platform.title())
+        base = PLATFORMS.get(self.platform, {}).get("source", self.platform.title())
+        # keep leads traceable to the business (e.g. "Meta Ads · FX Artha")
+        if self.business_id:
+            return f"{base} · {self.business.name}"
+        return base
 
 
 class IntegrationLog(models.Model):

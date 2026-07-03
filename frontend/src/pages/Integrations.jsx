@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import {
   Facebook, Chrome, MessageCircle, Linkedin, Music2, Globe, Send,
   Plug, Copy, RefreshCw, Zap, CheckCircle2, Circle, X, LineChart, RefreshCcw,
+  Plus, Building2, Trash2,
 } from "lucide-react";
 import api from "../api/client";
 import { Spinner, Modal } from "../components/ui";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
 const ICONS = {
@@ -28,16 +30,48 @@ const ago = (v) => {
 
 export default function Integrations() {
   const toast = useToast();
+  const { user } = useAuth();
+  const businesses = user?.businesses || [];
   const [list, setList] = useState(null);
+  const [catalogue, setCatalogue] = useState([]);
   const [active, setActive] = useState(null);   // connection being managed
   const [cfg, setCfg] = useState({});
   const [auto, setAuto] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [adding, setAdding] = useState(null);   // {platform, business, name} while creating
 
   const load = () => api.get("/integrations/connections/").then((r) => setList(r.data)).catch(() => setList([]));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get("/integrations/connections/catalogue/").then((r) => setCatalogue(r.data)).catch(() => setCatalogue([]));
+  }, []);
 
   const open = (c) => { setActive(c); setCfg(c.config || {}); setAuto(c.auto_assign); };
+
+  const openAdd = () => setAdding({ platform: "", business: "", name: "" });
+  const createConn = async () => {
+    if (!adding.platform) return toast.error("Pick a platform");
+    try {
+      const { data } = await api.post("/integrations/connections/", {
+        platform: adding.platform,
+        business: adding.business || null,
+        name: adding.name || "",
+        status: "disconnected",
+      });
+      setAdding(null);
+      await load();
+      open(data);   // jump straight into the manage modal
+      toast.success(`${data.label} added — ab connect karo`);
+    } catch (e) {
+      const d = e.response?.data;
+      toast.error(d?.non_field_errors?.[0] || d?.detail || "Is business ke liye ye platform pehle se hai");
+    }
+  };
+  const removeConn = async () => {
+    if (!window.confirm(`Delete "${active.label}"? Iske leads reh jaayenge, sirf connection hatega.`)) return;
+    await api.delete(`/integrations/connections/${active.id}/`);
+    setActive(null); load(); toast.info("Integration removed");
+  };
 
   const connect = async () => {
     const { data } = await api.post(`/integrations/connections/${active.id}/connect/`, { config: cfg, auto_assign: auto });
@@ -75,16 +109,27 @@ export default function Integrations() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2"><Plug className="text-brand-600" /> Integration Hub</h1>
-        <p className="text-sm text-ink-400">Social platforms se leads automatically CRM me. Connect karo → webhook URL platform pe daalo → leads aane lagein.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2"><Plug className="text-brand-600" /> Integration Hub</h1>
+          <p className="text-sm text-ink-400">Har business ka apna Instagram / Google Ads etc. jodo → uska webhook URL us platform pe daalo → leads seedhe us business me aayenge.</p>
+        </div>
+        <button className="btn-primary shrink-0" onClick={openAdd}><Plus size={16} /> Add Integration</button>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div className="card p-5"><p className="text-3xl font-extrabold text-emerald-600">{connected}</p><p className="text-sm text-ink-400">Connected</p></div>
-        <div className="card p-5"><p className="text-3xl font-extrabold text-ink-900">{list.length}</p><p className="text-sm text-ink-400">Platforms</p></div>
+        <div className="card p-5"><p className="text-3xl font-extrabold text-ink-900">{list.length}</p><p className="text-sm text-ink-400">Integrations</p></div>
         <div className="card p-5"><p className="text-3xl font-extrabold text-brand-600">{totalLeads}</p><p className="text-sm text-ink-400">Leads ingested</p></div>
       </div>
+
+      {list.length === 0 && (
+        <div className="card p-10 text-center">
+          <p className="text-ink-500 font-semibold">Abhi koi integration nahi hai.</p>
+          <p className="text-sm text-ink-400 mt-1">“Add Integration” dabao, business + platform chuno, aur webhook URL us platform pe daalo.</p>
+          <button className="btn-primary mt-4 mx-auto" onClick={openAdd}><Plus size={16} /> Add Integration</button>
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {list.map((c) => {
@@ -99,7 +144,9 @@ export default function Integrations() {
                   : <span className="badge bg-ink-100 text-ink-500 flex items-center gap-1"><Circle size={12} /> Off</span>}
               </div>
               <h3 className="font-bold text-ink-900 mt-3">{c.label}</h3>
-              <p className="text-xs text-ink-400">Source tag: {c.source_name}</p>
+              <p className="text-xs mt-0.5 inline-flex items-center gap-1 text-ink-500">
+                <Building2 size={12} /> {c.business_name || "Global (koi business nahi)"}
+              </p>
               <div className="flex gap-4 mt-3 text-sm">
                 <div><span className="font-extrabold text-ink-900">{c.total_leads}</span> <span className="text-ink-400">leads</span></div>
                 <div className="text-ink-400">last: {ago(c.last_lead_at)}</div>
@@ -112,14 +159,48 @@ export default function Integrations() {
         })}
       </div>
 
+      {/* add-integration modal */}
+      <Modal open={!!adding} onClose={() => setAdding(null)} title="Add integration"
+        footer={<>
+          <button className="btn-ghost" onClick={() => setAdding(null)}>Cancel</button>
+          <button className="btn-primary" onClick={createConn}><Plus size={15} /> Add</button>
+        </>}>
+        {adding && (
+          <div className="space-y-4">
+            <div>
+              <label className="label">Platform</label>
+              <select className="input" value={adding.platform} onChange={(e) => setAdding({ ...adding, platform: e.target.value })}>
+                <option value="">Choose a platform…</option>
+                {catalogue.map((p) => <option key={p.slug} value={p.slug}>{p.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Business</label>
+              <select className="input" value={adding.business} onChange={(e) => setAdding({ ...adding, business: e.target.value })}>
+                <option value="">Global (kisi business se nahi)</option>
+                {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <p className="text-xs text-ink-400 mt-1">Is integration ke leads isi business me jaayenge aur isi business ke RMs ko assign honge.</p>
+            </div>
+            <div>
+              <label className="label">Custom name <span className="text-ink-400 font-normal">(optional)</span></label>
+              <input className="input" placeholder="e.g. FX Artha Instagram" value={adding.name} onChange={(e) => setAdding({ ...adding, name: e.target.value })} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* manage modal */}
       <Modal open={!!active} onClose={() => setActive(null)} title={active ? `${active.label}` : ""}>
         {active && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`badge ${active.status === "connected" ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-500"}`}>{active.status}</span>
+              <span className="badge bg-brand-50 text-brand-700 inline-flex items-center gap-1"><Building2 size={12} /> {active.business_name || "Global"}</span>
               <span className="text-xs text-ink-400">{active.total_leads} leads ingested</span>
+              <button onClick={removeConn} className="ml-auto text-xs text-rose-600 inline-flex items-center gap-1 hover:underline"><Trash2 size={13} /> Delete</button>
             </div>
+            <p className="text-xs text-ink-400 -mt-1">Source tag: {active.source_name}</p>
 
             {/* webhook URL (webhook connectors only) */}
             {active.platform !== "fxartha" && (

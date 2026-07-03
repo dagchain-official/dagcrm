@@ -153,6 +153,7 @@ class LeadActivitySerializer(serializers.ModelSerializer):
 
 class LeadSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source="source.name", read_only=True)
+    business_name = serializers.CharField(source="business.name", read_only=True)
     assigned_name = serializers.CharField(source="assigned_to.name", read_only=True)
     interests = LeadInterestSerializer(many=True, read_only=True)
     activity_count = serializers.IntegerField(source="activities.count", read_only=True)
@@ -160,8 +161,8 @@ class LeadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = ["id", "lead_code", "name", "email", "phone", "country", "source",
-                  "source_name", "assigned_to", "assigned_name", "created_by", "status",
-                  "score", "interests", "activity_count", "created_at"]
+                  "source_name", "business", "business_name", "assigned_to", "assigned_name",
+                  "created_by", "status", "score", "interests", "activity_count", "created_at"]
         read_only_fields = ["created_at", "score"]
 
     def to_representation(self, instance):

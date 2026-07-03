@@ -49,13 +49,18 @@ def normalize(platform, payload):
     return out
 
 
-def _next_rm():
-    """Pick the sales rep with the fewest leads (load-balanced)."""
+def _next_rm(business=None):
+    """Pick the least-busy sales rep (load-balanced). If a business is given,
+    only reps who can access that business are eligible (fallback to all)."""
     from django.contrib.auth import get_user_model
-    from apps.accounts.access import ASSIGNABLE_LEAD_ROLES
+    from apps.accounts.access import ASSIGNABLE_LEAD_ROLES, allowed_business_ids
     from apps.crm.models import Lead
     User = get_user_model()
     rms = list(User.objects.filter(role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True))
+    if business is not None:
+        scoped = [u for u in rms
+                  if (allowed_business_ids(u) is None) or (business.id in allowed_business_ids(u))]
+        rms = scoped or rms  # if nobody is scoped to this business, don't block ingestion
     if not rms:
         return None
     return min(rms, key=lambda u: Lead.objects.filter(assigned_to=u).count())
@@ -82,11 +87,11 @@ def ingest_lead(conn, fields):
     while Lead.objects.filter(lead_code=f"{prefix}{n:05d}").exists():
         n += 1
 
-    assigned = _next_rm() if conn.auto_assign else None
+    assigned = _next_rm(conn.business) if conn.auto_assign else None
     lead = Lead.objects.create(
         lead_code=f"{prefix}{n:05d}", name=name, email=email, phone=phone,
         country=fields.get("country", ""), source=source, status="new",
-        assigned_to=assigned,
+        business=conn.business, assigned_to=assigned,
     )
 
     # notify the RM

@@ -15,15 +15,19 @@ from .services import process_webhook
 
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
-def webhook(request, platform):
+def webhook(request, platform, conn_id=None):
     """Public endpoint that external platforms POST leads to.
 
     GET  -> verification handshake (Meta-style hub.challenge).
     POST -> ingest leads (secret verified via ?key= or X-Webhook-Secret header).
+
+    conn_id in the path selects a specific (platform, business) connection.
+    Without it (legacy URL), the first connection for the platform is used.
     """
     if platform not in PLATFORMS:
         return Response({"detail": "Unknown platform"}, status=404)
-    conn = IntegrationConnection.objects.filter(platform=platform).first()
+    qs = IntegrationConnection.objects.filter(platform=platform)
+    conn = qs.filter(pk=conn_id).first() if conn_id else qs.first()
 
     # Meta subscription verification
     if request.method == "GET":
@@ -44,18 +48,25 @@ def webhook(request, platform):
 
 
 class IntegrationConnectionViewSet(viewsets.ModelViewSet):
-    """Admin-managed integration connections (one row per platform)."""
-    queryset = IntegrationConnection.objects.prefetch_related("logs").all()
+    """Admin-managed integration connections — one row per (platform, business)."""
+    queryset = IntegrationConnection.objects.select_related("business").prefetch_related("logs").order_by("business__name", "platform")
     serializer_class = IntegrationConnectionSerializer
     permission_classes = [IsAdminView]
     pagination_class = None
+    filterset_fields = ["platform", "business", "status"]
 
-    def list(self, request, *args, **kwargs):
-        # ensure a row exists for every catalogued platform
-        for slug in PLATFORMS:
-            IntegrationConnection.objects.get_or_create(
-                platform=slug, defaults={"webhook_secret": secrets.token_hex(16)})
-        return super().list(request, *args, **kwargs)
+    def perform_create(self, serializer):
+        # each new connection gets its own webhook secret
+        serializer.save(webhook_secret=secrets.token_hex(16))
+
+    @action(detail=False, methods=["get"])
+    def catalogue(self, request):
+        """Platform catalogue for the 'Add integration' picker."""
+        return Response([
+            {"slug": slug, "label": meta["label"], "source": meta["source"],
+             "fields": meta.get("fields", []), "poll": bool(meta.get("poll"))}
+            for slug, meta in PLATFORMS.items()
+        ])
 
     @action(detail=True, methods=["post"])
     def connect(self, request, pk=None):

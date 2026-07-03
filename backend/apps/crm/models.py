@@ -62,6 +62,7 @@ class Lead(models.Model):
     phone = models.CharField(max_length=30, blank=True)
     country = models.CharField(max_length=80, blank=True)
     source = models.ForeignKey(LeadSource, on_delete=models.SET_NULL, null=True, blank=True, related_name="leads")
+    business = models.ForeignKey(Business, on_delete=models.SET_NULL, null=True, blank=True, related_name="leads")
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_leads")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_leads")
     status = models.CharField(max_length=20, choices=STATUS, default="new")

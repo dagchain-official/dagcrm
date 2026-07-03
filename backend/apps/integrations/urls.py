@@ -7,5 +7,6 @@ router = DefaultRouter()
 router.register("integrations/connections", IntegrationConnectionViewSet, basename="integration")
 
 urlpatterns = router.urls + [
-    path("integrations/<str:platform>/webhook/", webhook),
+    path("integrations/<str:platform>/<int:conn_id>/webhook/", webhook),
+    path("integrations/<str:platform>/webhook/", webhook),  # legacy (first conn)
 ]
