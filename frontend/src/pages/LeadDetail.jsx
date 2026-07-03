@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Phone, MessageCircle, Mail, FileText, Mic, StickyNote,
@@ -33,19 +33,38 @@ export default function LeadDetail() {
   const [busy, setBusy] = useState(false);
   const [msgModal, setMsgModal] = useState(null); // {type}
   const [msg, setMsg] = useState("");
+  const [subject, setSubject] = useState("");
+  const [emailAccounts, setEmailAccounts] = useState([]);
+  const [emailFrom, setEmailFrom] = useState("");
   const [proposal, setProposal] = useState(null);
 
   const load = () => api.get(`/leads/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
   usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
 
-  const engage = async (type, message = "") => {
+  // when the email modal opens, load the user's configured from-accounts
+  useEffect(() => {
+    if (msgModal?.type !== "email") return;
+    api.get("/email-accounts/").then((r) => {
+      const active = (r.data || []).filter((a) => a.is_active);
+      setEmailAccounts(active);
+      const def = active.find((a) => a.is_default) || active[0];
+      setEmailFrom(def ? String(def.id) : "");
+    }).catch(() => setEmailAccounts([]));
+  }, [msgModal]);
+
+  const engage = async (type, opts = {}) => {
     setBusy(true);
     try {
       const prev = d.lead.status;
-      const { data } = await api.post(`/leads/${id}/engage/`, { type, message });
+      const { data } = await api.post(`/leads/${id}/engage/`, {
+        type,
+        message: opts.message || "",
+        subject: opts.subject || "",
+        email_account: opts.emailAccount || null,
+      });
       await load();
       const t = data.telephony;
-      const liveNote = t?.live ? " (live via Twilio)" : t?.note ? ` — ${t.note}` : "";
+      const liveNote = t?.note ? ` — ${t.note}` : t?.live ? " (live)" : "";
       toast.success(`${type === "call" ? "Call placed" : type === "whatsapp" ? "WhatsApp sent" : type === "email" ? "Email sent" : "Proposal sent"}${liveNote}`);
       if (data.lead.status !== prev) toast.info(`Status auto-advanced: ${prev} → ${data.lead.status}`);
     } catch (e) {
@@ -54,6 +73,7 @@ export default function LeadDetail() {
       setBusy(false);
       setMsgModal(null);
       setMsg("");
+      setSubject("");
     }
   };
 
@@ -153,13 +173,42 @@ export default function LeadDetail() {
       <Modal open={!!msgModal} onClose={() => setMsgModal(null)} title={msgModal ? `Send ${msgModal.type === "whatsapp" ? "WhatsApp" : "Email"}` : ""}
         footer={<>
           <button className="btn-ghost" onClick={() => setMsgModal(null)}>Cancel</button>
-          <button className="btn-primary" disabled={busy} onClick={() => engage(msgModal.type, msg)}><Send size={15} /> Send</button>
+          <button className="btn-primary" disabled={busy}
+            onClick={() => engage(msgModal.type, { message: msg, subject, emailAccount: emailFrom })}>
+            <Send size={15} /> Send
+          </button>
         </>}>
         {msgModal && (
-          <div>
-            <p className="text-sm text-ink-500 mb-3">To: <b>{l.name}</b>{(msgModal.type === "whatsapp" ? l.phone : l.email) ? ` (${msgModal.type === "whatsapp" ? l.phone : l.email})` : ""}</p>
+          <div className="space-y-3">
+            <p className="text-sm text-ink-500">To: <b>{l.name}</b>{(msgModal.type === "whatsapp" ? l.phone : l.email) ? ` (${msgModal.type === "whatsapp" ? l.phone : l.email})` : ""}</p>
+
+            {msgModal.type === "email" && (
+              <>
+                <div>
+                  <label className="label">From</label>
+                  {emailAccounts.length > 0 ? (
+                    <select className="input" value={emailFrom} onChange={(e) => setEmailFrom(e.target.value)}>
+                      {emailAccounts.map((a) => (
+                        <option key={a.id} value={a.id}>{a.label} — {a.from_email}{a.is_default ? " (default)" : ""}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                      No business email configured. Add one in <Link to="/profile" className="underline font-medium">Settings</Link> to send from your own address — for now it'll just be logged.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="label">Subject</label>
+                  <input className="input" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+                </div>
+              </>
+            )}
+
             <textarea className="input min-h-[110px]" placeholder="Type your message…" value={msg} onChange={(e) => setMsg(e.target.value)} />
-            <p className="text-xs text-ink-400 mt-2">Twilio configured ho to live bhejega, warna activity me log hoga.</p>
+            {msgModal.type === "whatsapp"
+              ? <p className="text-xs text-ink-400">Twilio configured ho to live bhejega, warna activity me log hoga.</p>
+              : <p className="text-xs text-ink-400">Selected account ke SMTP se real email jaayega; warna activity me log hoga.</p>}
           </div>
         )}
       </Modal>

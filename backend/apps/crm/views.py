@@ -174,7 +174,9 @@ class LeadViewSet(viewsets.ModelViewSet):
         kind = request.data.get("type", "note")          # call|whatsapp|email|proposal|note
         remarks = request.data.get("remarks", "")
         message = request.data.get("message", "")
-        user = request.user if request.user.is_authenticated else None
+        subject = request.data.get("subject", "")
+        sender = request.user if request.user.is_authenticated else None  # who is acting (for email 'from')
+        user = sender
         if user and user.is_superuser:
             user = None  # founder's actions not tracked as activity
 
@@ -187,16 +189,22 @@ class LeadViewSet(viewsets.ModelViewSet):
 
         telephony = None
         if kind in ("whatsapp", "email", "proposal"):
+            logged = message or (f"{labels.get(kind)} to {lead.name}")
+            if kind == "email" and subject:
+                logged = f"[{subject}] {logged}"
             Communication.objects.create(
                 lead=lead,
                 channel="whatsapp" if kind == "whatsapp" else "email",
                 direction="outbound",
-                message=message or (f"{labels.get(kind)} to {lead.name}"),
+                message=logged,
             )
         if kind == "call":
             telephony = make_call(lead.phone, getattr(user, "phone", "") or None)
         elif kind == "whatsapp":
             telephony = send_whatsapp(lead.phone, message or f"Hi {lead.name}, following up.")
+        elif kind == "email":
+            telephony = self._send_lead_email(sender, lead, subject, message,
+                                              request.data.get("email_account"))
 
         lead.refresh_from_db()  # status may have auto-advanced via signal
         return Response({
@@ -204,6 +212,42 @@ class LeadViewSet(viewsets.ModelViewSet):
             "lead": LeadSerializer(lead, context={"request": request}).data,
             "telephony": telephony,
         })
+
+    def _send_lead_email(self, sender, lead, subject, body, account_id):
+        """Send a real email to the lead via the sender's chosen EmailAccount.
+        Falls back to the global DEFAULT backend if no account is configured.
+        Returns a {live, note} dict (same shape the frontend uses for telephony)."""
+        from django.conf import settings
+        from django.core.mail import EmailMessage, get_connection
+        from apps.accounts.models import EmailAccount
+
+        if not lead.email:
+            return {"live": False, "note": "lead has no email address"}
+
+        acc = None
+        if sender is not None:
+            qs = EmailAccount.objects.filter(user=sender, is_active=True)
+            acc = qs.filter(pk=account_id).first() if account_id else None
+            if acc is None and account_id:
+                return {"live": False, "note": "selected email account not found"}
+
+        subject = subject or f"A message from {getattr(sender, 'name', '') or 'DAGOS'}"
+        body = body or f"Hi {lead.name},"
+        try:
+            if acc and acc.smtp_host:
+                conn = get_connection(
+                    backend="django.core.mail.backends.smtp.EmailBackend",
+                    host=acc.smtp_host, port=acc.smtp_port, username=acc.smtp_username,
+                    password=acc.smtp_password, use_tls=acc.use_tls, fail_silently=False,
+                )
+                from_email = f"{acc.from_name} <{acc.from_email}>" if acc.from_name else acc.from_email
+                EmailMessage(subject, body, from_email, [lead.email], connection=conn).send(fail_silently=False)
+                return {"live": True, "note": f"sent from {acc.from_email}"}
+            # no per-user account → global backend (console in dev)
+            EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [lead.email]).send(fail_silently=False)
+            return {"live": False, "note": "logged (no business email configured)"}
+        except Exception as e:
+            return {"live": False, "note": f"send failed: {e}"}
 
     @action(detail=False, methods=["post"])
     def distribute(self, request):

@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AccessMetaView,
+    EmailAccountViewSet,
     ModulePermissionViewSet,
     RoleViewSet,
     TeamMemberViewSet,
@@ -15,6 +16,7 @@ from .views import (
 router = DefaultRouter()
 router.register("roles", RoleViewSet)
 router.register("users", UserViewSet)
+router.register("email-accounts", EmailAccountViewSet, basename="email-account")
 router.register("user-permissions", UserPermissionViewSet)
 router.register("module-permissions", ModulePermissionViewSet)
 router.register("teams", TeamViewSet)

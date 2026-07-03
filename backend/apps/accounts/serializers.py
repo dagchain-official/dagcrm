@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import ModulePermission, Role, Team, TeamMember, TeamRequest, UserPermission
+from .models import EmailAccount, ModulePermission, Role, Team, TeamMember, TeamRequest, UserPermission
 
 User = get_user_model()
 
@@ -72,6 +72,28 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class EmailAccountSerializer(serializers.ModelSerializer):
+    # password is write-only — never sent back to the browser
+    smtp_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    has_password = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EmailAccount
+        fields = ["id", "label", "from_name", "from_email", "smtp_host", "smtp_port",
+                  "smtp_username", "smtp_password", "has_password", "use_tls",
+                  "is_default", "is_active", "created_at"]
+        read_only_fields = ["created_at"]
+
+    def get_has_password(self, obj):
+        return bool(obj.smtp_password)
+
+    def update(self, instance, validated_data):
+        # keep the existing password if the form left it blank
+        if not validated_data.get("smtp_password"):
+            validated_data.pop("smtp_password", None)
+        return super().update(instance, validated_data)
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):

@@ -7,8 +7,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .api_permissions import IsAdminView
-from .models import ModulePermission, Role, Team, TeamMember, TeamRequest, UserPermission
+from .models import EmailAccount, ModulePermission, Role, Team, TeamMember, TeamRequest, UserPermission
 from .serializers import (
+    EmailAccountSerializer,
     ModulePermissionSerializer,
     RoleSerializer,
     TeamMemberSerializer,
@@ -169,6 +170,46 @@ class UserViewSet(viewsets.ModelViewSet):
             {"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", "")}
             for u in users
         ])
+
+
+class EmailAccountViewSet(viewsets.ModelViewSet):
+    """Self-service: a user manages their own 'from' business mailboxes."""
+    serializer_class = EmailAccountSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        return EmailAccount.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        self._sync_default(serializer.save(user=self.request.user))
+
+    def perform_update(self, serializer):
+        self._sync_default(serializer.save())
+
+    def _sync_default(self, acc):
+        # only one default per user
+        if acc.is_default:
+            EmailAccount.objects.filter(user=acc.user).exclude(pk=acc.pk).update(is_default=False)
+
+    @action(detail=True, methods=["post"])
+    def test(self, request, pk=None):
+        """Open an SMTP connection with the stored creds to verify they work."""
+        from django.core.mail import get_connection
+        acc = self.get_object()
+        if not acc.smtp_host:
+            return Response({"ok": False, "detail": "No SMTP host configured."}, status=400)
+        try:
+            conn = get_connection(
+                backend="django.core.mail.backends.smtp.EmailBackend",
+                host=acc.smtp_host, port=acc.smtp_port, username=acc.smtp_username,
+                password=acc.smtp_password, use_tls=acc.use_tls, fail_silently=False,
+            )
+            conn.open()
+            conn.close()
+            return Response({"ok": True, "detail": "SMTP connection successful."})
+        except Exception as e:
+            return Response({"ok": False, "detail": str(e)}, status=400)
 
 
 class UserPermissionViewSet(viewsets.ModelViewSet):

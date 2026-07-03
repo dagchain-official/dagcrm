@@ -53,6 +53,31 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.name} <{self.email}>"
 
 
+class EmailAccount(models.Model):
+    """A 'from' business mailbox a user can send lead emails through.
+    Each user may configure multiple accounts (different businesses / addresses)
+    and pick one when emailing a lead. Real delivery uses the stored SMTP creds."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_accounts")
+    label = models.CharField(max_length=80)                 # e.g. "FX Artha Sales"
+    from_name = models.CharField(max_length=120, blank=True)  # display name on the email
+    from_email = models.EmailField()
+    smtp_host = models.CharField(max_length=120, blank=True)
+    smtp_port = models.PositiveIntegerField(default=587)
+    smtp_username = models.CharField(max_length=190, blank=True)
+    smtp_password = models.CharField(max_length=255, blank=True)  # app password
+    use_tls = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-is_default", "label"]
+
+    def __str__(self):
+        return f"{self.label} <{self.from_email}>"
+
+
 class UserPermission(models.Model):
     """Per business / product access matrix for a user."""
 
