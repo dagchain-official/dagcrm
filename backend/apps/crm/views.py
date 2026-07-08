@@ -46,7 +46,7 @@ class MetricEntryViewSet(viewsets.ModelViewSet):
                 .select_related("metric", "employee", "employee__user", "customer", "lead")
                 .all())
     serializer_class = MetricEntrySerializer
-    filterset_fields = ["metric", "employee", "date"]
+    filterset_fields = ["metric", "employee", "customer", "date"]
 
     @action(detail=False, methods=["get"])
     def suggest(self, request):
@@ -478,6 +478,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
         total_gross = revenues.aggregate(s=Sum("gross_revenue"))["s"] or 0
         open_tickets = tickets.exclude(status__in=["resolved", "closed"]).count()
 
+        # Trading activity for this specific trader (from FXArtha sync): lots + AUM.
+        lots_traded = (MetricEntry.objects.filter(customer=customer, metric__name__icontains="lot")
+                       .aggregate(s=Sum("value"))["s"] or 0)
+        aum = AumEntry.objects.filter(customer=customer)
+        deposits = aum.filter(entry_type="deposit").aggregate(s=Sum("amount"))["s"] or 0
+        withdrawals = aum.filter(entry_type="withdrawal").aggregate(s=Sum("amount"))["s"] or 0
+
         # unified timeline (newest first)
         timeline = []
         for r in revenues:
@@ -509,6 +516,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "total_tickets": tickets.count(),
                 "communications_count": comms.count(),
             },
+            "trading": {
+                "lots_traded": lots_traded,
+                "deposits": deposits,
+                "withdrawals": withdrawals,
+                "net_aum": deposits - withdrawals,
+            },
             "products": CustomerProductSerializer(products, many=True).data,
             "revenues": RevenueSerializer(revenues, many=True).data,
             "tickets": TicketSerializer(tickets, many=True).data,
@@ -517,6 +530,41 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "attachments": AttachmentSerializer(customer.attachments.all(), many=True, context={"request": request}).data,
             "timeline": timeline,
         })
+
+    @action(detail=True, methods=["post"])
+    def reassign(self, request, pk=None):
+        """Hand a (converted) customer to another employee. Only lead-assigners
+        (admins/managers) may do this. Future revenue/AUM/KPI credit follows the
+        new owner; already-recorded AUM/contribution/KPI entries stay with the
+        old RM (they carry a stamped employee)."""
+        from apps.accounts.access import can_assign_leads
+        from apps.notifications.models import notify
+        from django.contrib.auth import get_user_model
+
+        if not can_assign_leads(request.user):
+            return Response({"detail": "Sirf admin/manager customer reassign kar sakte hain."}, status=403)
+        new_id = request.data.get("user")
+        if not new_id:
+            return Response({"detail": "Select an employee to reassign to."}, status=400)
+        User = get_user_model()
+        new_user = User.objects.filter(pk=new_id, is_active=True).first()
+        if not new_user:
+            return Response({"detail": "Selected employee not found."}, status=400)
+
+        customer = self.get_object()
+        customer.assigned_to = new_user
+        customer.save(update_fields=["assigned_to"])
+        # keep the originating lead aligned too — but only when this is its sole
+        # customer, so a shared lead's other customers aren't moved.
+        lead = customer.lead
+        if lead and lead.customers.count() == 1:
+            lead.assigned_to = new_user
+            lead.save(update_fields=["assigned_to"])
+
+        notify(new_user, title="Customer assigned to you",
+               body=f"{customer.name} ab aapke paas hai.", kind="info",
+               link=f"/customers/{customer.id}")
+        return Response(CustomerSerializer(customer).data)
 
 
 class CustomerProductViewSet(viewsets.ModelViewSet):
@@ -686,7 +734,7 @@ class ProposalViewSet(viewsets.ModelViewSet):
             lead = p.lead
             customer = Customer.objects.create(
                 name=lead.name, email=lead.email, phone=lead.phone,
-                country=lead.country, lead=lead,
+                country=lead.country, lead=lead, assigned_to=lead.assigned_to,
             )
             if lead.status != "converted":
                 lead.status = "converted"

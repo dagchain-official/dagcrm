@@ -13,6 +13,7 @@ from .metrics import compute_kpis, scoped_kpis
 from .performance import compute_performance, scoped_performance
 from .pnl import compute_pnl, scoped_for
 from .targets import compute_targets, scoped_targets
+from .traders import compute_traders_lots, scoped_traders_lots
 
 from django.contrib.auth import get_user_model
 
@@ -295,6 +296,21 @@ def target_board(request):
     month = int(request.query_params.get("month", today.month))
     year = int(request.query_params.get("year", today.year))
     return Response(scoped_targets(user, compute_targets(month, year)))
+
+
+@api_view(["GET"])
+def traders_lots(request):
+    """Traders & Lots — per employee: their traders, lots (month + total),
+    and estimated per-lot commission. Optional ?rate= overrides the configured
+    Activity-Incentive lots rate."""
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    rate = request.query_params.get("rate")
+    emp = request.query_params.get("employee")
+    data = compute_traders_lots(month, year, float(rate) if rate else None,
+                                int(emp) if emp else None)
+    return Response(scoped_traders_lots(request.user, data))
 
 
 @api_view(["GET"])

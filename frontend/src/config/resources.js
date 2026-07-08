@@ -260,6 +260,7 @@ export const RESOURCES = {
       { key: "email", label: "Email" },
       { key: "phone", label: "Phone" },
       { key: "country", label: "Country" },
+      { key: "assigned_name", label: "RM" },
     ],
     fields: [
       { key: "name", label: "Name", required: true },
@@ -545,10 +546,12 @@ export const RESOURCES = {
     filters: [
       { key: "metric", label: "Metric", ref: "metric-definitions", labelKey: "name" },
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+      { key: "customer", label: "Trader", ref: "customers", labelKey: "name" },
     ],
     columns: [
       { key: "metric_name", label: "Metric" },
       { key: "employee_name", label: "Employee" },
+      { key: "customer_name", label: "Trader" },
       { key: "value", label: "Value" },
       { key: "unit", label: "Unit" },
       { key: "date", label: "Date" },

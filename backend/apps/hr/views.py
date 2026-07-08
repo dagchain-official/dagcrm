@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -14,9 +14,9 @@ User = get_user_model()
 from apps.accounts.scoping import BusinessScopedMixin
 
 from .models import (
-    Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
+    Attendance, Candidate, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
     ActivityIncentive, FormulaRule, HierarchyLevel, Incentive, IncentiveRule, IncentiveSlab,
-    Leave, LeaveType, Payroll, PerformanceWeight, TargetMultiplier,
+    JobPosting, Leave, LeaveType, Payroll, PerformanceWeight, TargetMultiplier,
 )
 from .services import today_activity, today_attendance
 
@@ -544,3 +544,90 @@ class IncentiveViewSet(viewsets.ModelViewSet):
             "skipped_no_owner": skipped_no_owner,
             "skipped_no_rule": skipped_no_rule,
         })
+
+
+# ---- Recruitment / ATS ----------------------------------------------------
+class JobPostingViewSet(viewsets.ModelViewSet):
+    from .serializers import JobPostingSerializer
+    queryset = JobPosting.objects.select_related("business", "department").all()
+    serializer_class = JobPostingSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["status", "business", "department"]
+    search_fields = ["title", "role_name"]
+
+
+class CandidateViewSet(viewsets.ModelViewSet):
+    from .serializers import CandidateSerializer
+    queryset = Candidate.objects.select_related("job").all()
+    serializer_class = CandidateSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["job", "status"]
+    search_fields = ["name", "email", "phone"]
+
+    @action(detail=True, methods=["post"])
+    def set_status(self, request, pk=None):
+        cand = self.get_object()
+        new = request.data.get("status")
+        if new not in dict(Candidate.STATUS):
+            return Response({"detail": "Invalid status."}, status=400)
+        cand.status = new
+        cand.save(update_fields=["status"])
+        return Response(self.get_serializer(cand).data)
+
+    @action(detail=True, methods=["post"])
+    def rescore(self, request, pk=None):
+        """Re-run the match after a job's required skills change."""
+        from .recruitment import score_resume
+        cand = self.get_object()
+        pct, matched, missing = score_resume(cand.resume_text, cand.job.required_skills)
+        cand.match_pct, cand.matched_skills, cand.missing_skills = pct, matched, missing
+        if cand.status in ("applied", "shortlisted"):
+            cand.status = "shortlisted" if pct >= cand.job.min_match_pct else "applied"
+        cand.save()
+        return Response(self.get_serializer(cand).data)
+
+
+class PublicJobView(APIView):
+    """Public job-ad page + application intake (no login). One shareable link
+    per job (its public_token). POST parses the resume, scores it against the
+    job's required skills, and auto-shortlists at/above the threshold."""
+    permission_classes = [AllowAny]
+
+    def _job(self, token):
+        return JobPosting.objects.filter(public_token=token, status="open").first()
+
+    def get(self, request, token):
+        job = self._job(token)
+        if not job:
+            return Response({"detail": "This job is closed or the link is invalid."}, status=404)
+        return Response({
+            "title": job.title, "role_name": job.role_name,
+            "business_name": job.business.name if job.business else "",
+            "location": job.location, "experience": job.experience,
+            "description": job.description,
+        })
+
+    def post(self, request, token):
+        from .recruitment import extract_text, score_resume
+        job = self._job(token)
+        if not job:
+            return Response({"detail": "This job is closed or the link is invalid."}, status=404)
+        name = (request.data.get("name") or "").strip()
+        if not name:
+            return Response({"detail": "Please enter your name."}, status=400)
+
+        resume = request.FILES.get("resume")
+        pasted = request.data.get("resume_text") or ""
+        text = ((extract_text(resume) + "\n" + pasted) if resume else pasted).strip()
+        pct, matched, missing = score_resume(text, job.required_skills)
+
+        Candidate.objects.create(
+            job=job, name=name,
+            email=request.data.get("email", ""), phone=request.data.get("phone", ""),
+            resume=resume, resume_text=text[:20000],
+            match_pct=pct, matched_skills=matched, missing_skills=missing,
+            status="shortlisted" if pct >= job.min_match_pct else "applied",
+        )
+        # candidates never see their score — just a confirmation
+        return Response({"status": "received",
+                         "message": f"Thanks {name}! Your application for {job.title} has been received."})

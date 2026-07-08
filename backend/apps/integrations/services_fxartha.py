@@ -107,6 +107,11 @@ def _sync_customer(conn, item, business):
         "lead": lead,
     }
     cust, _ = Customer.objects.update_or_create(external_id=uid, defaults=fields)
+    # Seed the owner from the lead's RM on first sight; never overwrite a manual
+    # reassignment (that's why assigned_to is not in `defaults`).
+    if cust.assigned_to_id is None and lead and lead.assigned_to_id:
+        cust.assigned_to_id = lead.assigned_to_id
+        cust.save(update_fields=["assigned_to"])
 
     # Revenue (skip empty). net_revenue is auto (gross − commission).
     gross = float(item.get("gross_brokerage") or 0)
@@ -117,10 +122,10 @@ def _sync_customer(conn, item, business):
             defaults={"customer": cust, "business": business,
                       "gross_revenue": gross, "commission": comm})
 
-    # Everything below is attributed to the lead's auto-assigned RM's employee.
-    emp = None
-    if lead and lead.assigned_to_id:
-        emp = Employee.objects.filter(user_id=lead.assigned_to_id).first()
+    # Everything below is attributed to the customer's current owner (a manual
+    # reassignment wins over the lead's original RM).
+    owner_uid = cust.assigned_to_id or (lead.assigned_to_id if lead else None)
+    emp = Employee.objects.filter(user_id=owner_uid).first() if owner_uid else None
     when = _date(item.get("account_opened_at"))
     dep = float(item.get("total_deposit") or 0)
     wd = float(item.get("total_withdrawal") or 0)

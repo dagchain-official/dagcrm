@@ -3,12 +3,14 @@
 Profit = Revenue − Cost, rolled up the org tree (manager chain from PART 2):
   RM profit = own;  TL profit = self + reports;  SM/BH inherit upward.
 
-Revenue is attributed via customer -> lead -> assigned_to (the existing path).
-Revenue with no lead/owner is NOT lost — it surfaces as "unattributed".
+Revenue is attributed to the customer's owner: customer.assigned_to if set (a
+reassigned customer), else the originating lead's assignee (customer -> lead ->
+assigned_to). Revenue with no owner is NOT lost — it surfaces as "unattributed".
 Cost = monthly CTC (PART 3: salary + extra costs). net_revenue is used so a
 partner commission is never double-counted.
 """
 from django.db.models import Sum
+from django.db.models.functions import Coalesce
 
 from apps.hr.models import Employee
 from apps.sales.models import Revenue
@@ -16,11 +18,12 @@ from apps.sales.models import Revenue
 
 def _revenue_by_user(month, year):
     rows = (Revenue.objects.filter(created_at__year=year, created_at__month=month)
-            .values("customer__lead__assigned_to")
+            .annotate(owner=Coalesce("customer__assigned_to", "customer__lead__assigned_to"))
+            .values("owner")
             .annotate(t=Sum("net_revenue")))
     by_user, unattributed = {}, 0.0
     for r in rows:
-        uid = r["customer__lead__assigned_to"]
+        uid = r["owner"]
         amt = float(r["t"] or 0)
         if uid:
             by_user[uid] = by_user.get(uid, 0.0) + amt

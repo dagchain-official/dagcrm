@@ -14,6 +14,9 @@ import { PeopleHub, AttendanceHub, CostHub, PayrollHub, RulesHub } from "./pages
 import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
 import ConfigHub from "./pages/ConfigHub";
 import KpiBoard from "./pages/KpiBoard";
+import TradersLots from "./pages/TradersLots";
+import Recruitment from "./pages/Recruitment";
+import ApplyPage from "./pages/ApplyPage";
 import Performance from "./pages/Performance";
 import IncentiveBoard from "./pages/IncentiveBoard";
 import FormulaBuilder from "./pages/FormulaBuilder";
@@ -49,6 +52,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/apply/:token" element={<ApplyPage />} />
       <Route
         path="/"
         element={
@@ -73,11 +77,13 @@ export default function App() {
         <Route path="hr/costs" element={<CostHub />} />
         <Route path="hr/payroll" element={<PayrollHub />} />
         <Route path="hr/rules" element={<RulesHub />} />
+        <Route path="recruitment" element={<Recruitment />} />
         <Route path="finance" element={<FinanceHub />} />
         <Route path="aum" element={<AumHub />} />
         <Route path="contribution" element={<ContributionHub />} />
         <Route path="config" element={<ConfigHub />} />
         <Route path="kpi-board" element={<KpiBoard />} />
+        <Route path="traders-lots" element={<TradersLots />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="formula-builder" element={<FormulaBuilder />} />
