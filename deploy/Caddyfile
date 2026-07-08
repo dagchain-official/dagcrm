@@ -1,0 +1,37 @@
+# Automatic HTTPS via Let's Encrypt — just point the domain at this server.
+# {$DOMAIN} comes from the .env file (e.g. dagcrm.com).
+{$DOMAIN}, www.{$DOMAIN} {
+	encode gzip
+
+	# AI microservice — strip the /ai prefix so /ai/score/lead -> /score/lead
+	handle_path /ai/* {
+		reverse_proxy ai-service:8100
+	}
+
+	# Django REST API (keeps the /api prefix that Django expects)
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# Django admin
+	handle /admin/* {
+		reverse_proxy backend:8000
+	}
+
+	# Django static (admin / DRF) and uploaded files (resumes, attachments)
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	# Everything else = the React single-page app
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}

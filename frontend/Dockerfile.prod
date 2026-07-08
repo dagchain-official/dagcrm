@@ -1,0 +1,16 @@
+# Build the React app into static files, then hand them to a volume that Caddy serves.
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+# Same-origin API paths — Caddy proxies /api and /ai on the live domain.
+ARG VITE_API_URL=/api
+ARG VITE_AI_URL=/ai
+RUN printf "VITE_API_URL=%s\nVITE_AI_URL=%s\n" "$VITE_API_URL" "$VITE_AI_URL" > .env.production
+RUN npm run build
+
+# Tiny image: copies the built site into the shared volume on start, then exits.
+FROM alpine:3.20
+COPY --from=build /app/dist /dist
+CMD ["sh", "-c", "rm -rf /out/* && cp -r /dist/. /out/ && echo 'frontend built into volume'"]

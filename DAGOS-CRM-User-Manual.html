@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAGOS CRM — User Manual</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-dark:#3730A3; --accent-soft:#EEF0FB;
+    --ink:#1A1C23; --ink-soft:#454B5A; --ink-faint:#8A8F9E;
+    --line:#E6E7EC; --bg:#FFFFFF; --panel:#F7F8FB;
+    --setup:#B45309; --setup-bg:#FBF1E3;
+    --daily:#0F7A52; --daily-bg:#E4F4EC;
+    --monthly:#6D28D9; --monthly-bg:#F0EAFB;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--panel);color:var(--ink);font-family:var(--serif);line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .page{max-width:920px;margin:0 auto;background:var(--bg);}
+  .pad{padding:0 clamp(20px,5vw,64px);}
+
+  /* cover */
+  .cover{background:linear-gradient(135deg,#4F46E5,#3730A3);color:#fff;padding:60px clamp(20px,5vw,64px) 52px;}
+  .cover .eyebrow{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:.85;margin:0 0 18px;}
+  .cover h1{font-family:var(--sans);font-size:clamp(32px,6vw,52px);font-weight:800;letter-spacing:-.02em;line-height:1.05;margin:0 0 14px;}
+  .cover p{font-size:18px;max-width:60ch;margin:0;opacity:.94;}
+  .cover .meta{margin-top:30px;display:flex;flex-wrap:wrap;gap:26px;font-family:var(--sans);font-size:13.5px;}
+  .cover .meta b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;font-weight:700;margin-bottom:3px;}
+
+  h2{font-family:var(--sans);font-size:26px;font-weight:800;letter-spacing:-.01em;margin:0 0 6px;color:var(--ink);scroll-margin-top:20px;}
+  h3{font-family:var(--sans);font-size:18px;font-weight:700;margin:26px 0 8px;color:var(--ink);}
+  p{margin:0 0 12px;}
+  a{color:var(--accent);}
+
+  .part{padding:44px 0 8px;border-top:1px solid var(--line);}
+  .part:first-of-type{border-top:none;}
+  .part-tag{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 8px;}
+  .lead{color:var(--ink-soft);font-size:16.5px;max-width:64ch;}
+
+  /* TOC */
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin:8px 0 4px;font-family:var(--sans);}
+  .toc h4{margin:0 0 12px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);}
+  .toc ol{margin:0;padding-left:0;list-style:none;columns:2;column-gap:34px;}
+  .toc li{margin:0 0 7px;font-size:14px;break-inside:avoid;}
+  .toc a{text-decoration:none;color:var(--ink-soft);}
+  .toc a:hover{color:var(--accent);}
+  .toc .n{display:inline-block;width:22px;color:var(--accent);font-weight:700;}
+
+  /* section card */
+  .sec{margin:22px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg);}
+  .sec-head{display:flex;align-items:baseline;gap:12px;padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line);}
+  .sec-head .num{font-family:var(--sans);font-weight:800;font-size:15px;color:var(--accent);min-width:26px;}
+  .sec-head h3{margin:0;font-size:18px;}
+  .sec-body{padding:18px 22px 22px;}
+  .path{font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);background:var(--accent-soft);border-radius:8px;padding:5px 11px;display:inline-block;margin:0 0 14px;}
+  .path b{color:var(--accent-dark);}
+
+  .who{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-left:auto;white-space:nowrap;}
+  .w-setup{background:var(--setup-bg);color:var(--setup);}
+  .w-daily{background:var(--daily-bg);color:var(--daily);}
+  .w-monthly{background:var(--monthly-bg);color:var(--monthly);}
+
+  .label{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin:16px 0 7px;}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;}
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;}
+  th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font-family:var(--sans);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700;background:var(--panel);}
+  tr:last-child td{border-bottom:none;}
+  td .f{font-family:var(--mono);font-size:13px;color:var(--accent-dark);}
+  .goes{background:var(--panel);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px;font-size:14px;margin-top:14px;}
+  .goes b{font-family:var(--sans);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent-dark);}
+
+  ul.clean{margin:8px 0;padding-left:20px;}
+  ul.clean li{margin:0 0 6px;}
+  .callout{border-radius:12px;padding:16px 20px;margin:18px 0;font-size:15px;}
+  .c-tip{background:var(--daily-bg);border:1px solid #BEE3D0;}
+  .c-note{background:var(--setup-bg);border:1px solid #EAD4AE;}
+  .callout b{font-family:var(--sans);}
+
+  /* flow steps */
+  .steps{counter-reset:s;margin:14px 0;}
+  .step{position:relative;padding:12px 0 12px 46px;border-bottom:1px dashed var(--line);}
+  .step:last-child{border-bottom:none;}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:11px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--sans);font-weight:800;font-size:14px;display:grid;place-items:center;}
+  .step b{font-family:var(--sans);}
+  .step .arrow{font-family:var(--sans);color:var(--ink-faint);font-size:13px;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0;font-family:var(--sans);font-size:13px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:11px;height:11px;border-radius:50%;}
+
+  footer{padding:36px clamp(20px,5vw,64px);color:var(--ink-faint);font-family:var(--sans);font-size:13px;border-top:1px solid var(--line);background:var(--panel);}
+
+  .printbar{position:sticky;top:0;z-index:5;background:var(--accent);color:#fff;font-family:var(--sans);font-size:13.5px;padding:9px 16px;display:flex;justify-content:center;gap:14px;align-items:center;}
+  .printbar button{font:inherit;font-weight:700;background:#fff;color:var(--accent-dark);border:none;border-radius:7px;padding:6px 14px;cursor:pointer;}
+
+  @media(max-width:640px){.toc ol{columns:1;}}
+  @media print{
+    .printbar{display:none;}
+    body{background:#fff;}
+    .page{max-width:none;}
+    .sec,.toc{break-inside:avoid;}
+    .part{break-before:auto;}
+    .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+<div class="printbar">
+  <span>DAGOS CRM — User Manual</span>
+  <button onclick="window.print()">Save as PDF / Print</button>
+</div>
+
+<div class="page">
+  <!-- COVER -->
+  <header class="cover">
+    <p class="eyebrow">User Manual · Version 1.0</p>
+    <h1>DAGOS CRM<br>Complete User Guide</h1>
+    <p>A step-by-step guide to every section of your CRM — what to enter, who does it, and where each piece of information flows. Follow it top to bottom for first-time setup, or jump to any section.</p>
+    <div class="meta">
+      <div><b>Access</b>Web browser · your CRM address</div>
+      <div><b>Login</b>Email &amp; password (given by admin)</div>
+      <div><b>Audience</b>Admins, Managers &amp; Staff</div>
+    </div>
+  </header>
+
+  <div class="pad">
+    <!-- HOW TO USE -->
+    <section class="part" id="intro">
+      <p class="part-tag">Before you begin</p>
+      <h2>How to read this manual</h2>
+      <p class="lead">The CRM is organised into a left-hand menu with grouped sections. This manual follows the same order. Each section below tells you three things: <b>what it is</b>, <b>what to enter</b>, and <b>where that data is used next</b>.</p>
+
+      <div class="legend">
+        <span><span class="dot" style="background:var(--setup)"></span> <b style="font-weight:700">Setup</b> — do once at the start</span>
+        <span><span class="dot" style="background:var(--daily)"></span> <b style="font-weight:700">Daily</b> — regular operations</span>
+        <span><span class="dot" style="background:var(--monthly)"></span> <b style="font-weight:700">Monthly</b> — end-of-month tasks</span>
+      </div>
+
+      <div class="toc">
+        <h4>Contents</h4>
+        <ol>
+          <li><span class="n">A.</span><a href="#getting-started">Getting Started &amp; Login</a></li>
+          <li><span class="n">B.</span><a href="#setup">Initial Setup (do first)</a></li>
+          <li><span class="n">1</span><a href="#s1">Businesses</a></li>
+          <li><span class="n">2</span><a href="#s2">Products</a></li>
+          <li><span class="n">3</span><a href="#s3">KPI Definitions</a></li>
+          <li><span class="n">4</span><a href="#s4">Lead Sources</a></li>
+          <li><span class="n">5</span><a href="#s5">Users</a></li>
+          <li><span class="n">6</span><a href="#s6">Roles &amp; Permissions</a></li>
+          <li><span class="n">7</span><a href="#s7">Integrations</a></li>
+          <li><span class="n">C.</span><a href="#hr-setup">HR &amp; Payroll Setup</a></li>
+          <li><span class="n">8</span><a href="#s8">People (Employees)</a></li>
+          <li><span class="n">9</span><a href="#s9">Cost &amp; CTC</a></li>
+          <li><span class="n">10</span><a href="#s10">Target Multipliers</a></li>
+          <li><span class="n">11</span><a href="#s11">Incentive Rules (Slab/Activity/Formula)</a></li>
+          <li><span class="n">D.</span><a href="#sales">Daily Sales &amp; CRM</a></li>
+          <li><span class="n">12</span><a href="#s12">Leads</a></li>
+          <li><span class="n">13</span><a href="#s13">Lead Activities</a></li>
+          <li><span class="n">14</span><a href="#s14">Opportunities</a></li>
+          <li><span class="n">15</span><a href="#s15">Proposals</a></li>
+          <li><span class="n">16</span><a href="#s16">Customers (360°)</a></li>
+          <li><span class="n">17</span><a href="#s17">Communications</a></li>
+          <li><span class="n">18</span><a href="#s18">Revenue</a></li>
+          <li><span class="n">E.</span><a href="#perf">Targets, KPI &amp; Finance</a></li>
+          <li><span class="n">19</span><a href="#s19">Targets</a></li>
+          <li><span class="n">20</span><a href="#s20">KPI &amp; Performance</a></li>
+          <li><span class="n">21</span><a href="#s21">Traders &amp; Lots</a></li>
+          <li><span class="n">22</span><a href="#s22">P&amp;L · AUM · Contribution</a></li>
+          <li><span class="n">F.</span><a href="#payroll">Monthly Payroll &amp; Incentives</a></li>
+          <li><span class="n">23</span><a href="#s23">KPI Entries</a></li>
+          <li><span class="n">24</span><a href="#s24">Incentive Board</a></li>
+          <li><span class="n">25</span><a href="#s25">Payroll</a></li>
+          <li><span class="n">G.</span><a href="#recruit">Recruitment</a></li>
+          <li><span class="n">26</span><a href="#s26">Jobs &amp; Resume Shortlisting</a></li>
+          <li><span class="n">H.</span><a href="#support">Support Desk</a></li>
+          <li><span class="n">I.</span><a href="#flows">Recommended Workflows</a></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- A. GETTING STARTED -->
+    <section class="part" id="getting-started">
+      <p class="part-tag">Part A</p>
+      <h2>Getting Started &amp; Login</h2>
+      <p class="lead">Open the CRM address in any modern browser (Chrome recommended) and sign in with the email &amp; password provided by your administrator.</p>
+      <ul class="clean">
+        <li><b>Dashboard:</b> After login, everyone lands on a dashboard tailored to their role — a founder/admin sees company-wide numbers, a sales person sees their own leads and targets.</li>
+        <li><b>Left menu:</b> All sections are grouped — <i>Overview, Sales &amp; CRM, Support, HR &amp; People, Finance, Administration</i>. You only see the sections your role is allowed to.</li>
+        <li><b>Top bar:</b> Global search, notifications (bell), theme toggle, and your profile / settings (gear icon).</li>
+        <li><b>Settings (gear):</b> Update your name, phone, password, and your personal <b>business email accounts</b> used to send mail to leads.</li>
+      </ul>
+    </section>
+
+    <!-- B. SETUP -->
+    <section class="part" id="setup">
+      <p class="part-tag">Part B · Do this first</p>
+      <h2>Initial Setup</h2>
+      <p class="lead">Complete these seven sections once, in order, before daily use. They define <i>what</i> your business sells, <i>who</i> your staff are, and <i>how</i> leads flow in. Most live under <b>Administration → Configuration</b>.</p>
+
+      <!-- 1 Businesses -->
+      <div class="sec" id="s1">
+        <div class="sec-head"><span class="num">1</span><h3>Businesses</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Configuration → Businesses</b></span>
+          <p>Your separate business units / brands (e.g. FX Artha, DAGChain). Everything — products, leads, revenue, targets — is organised under a business.</p>
+          <div class="label">What to enter</div>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Name</span></td><td>Business / brand name</td></tr>
+            <tr><td><span class="f">Description</span></td><td>Short note (optional)</td></tr>
+            <tr><td><span class="f">Status</span></td><td>Active / Inactive</td></tr>
+          </table></div>
+          <div class="goes"><b>Used in →</b> Products, Leads, Revenue, Targets, Integrations, Reports — every business-wise view.</div>
+        </div>
+      </div>
+
+      <!-- 2 Products -->
+      <div class="sec" id="s2">
+        <div class="sec-head"><span class="num">2</span><h3>Products</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Configuration → Products</b></span>
+          <p>The products / services each business offers. Used on proposals and to link a customer to what they bought.</p>
+          <div class="label">What to enter</div>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Business</span></td><td>Which business this product belongs to</td></tr>
+            <tr><td><span class="f">Name</span></td><td>Product / service name</td></tr>
+            <tr><td><span class="f">Product type</span></td><td>Category (free text)</td></tr>
+            <tr><td><span class="f">Price</span></td><td>Standard price</td></tr>
+            <tr><td><span class="f">Revenue type</span></td><td>One-time / recurring / per-unit / token</td></tr>
+          </table></div>
+          <div class="goes"><b>Used in →</b> Proposals, Customer products, Revenue.</div>
+        </div>
+      </div>
+
+      <!-- 3 KPI Definitions -->
+      <div class="sec" id="s3">
+        <div class="sec-head"><span class="num">3</span><h3>KPI Definitions</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Configuration → KPI Definitions</b></span>
+          <p>Define the performance metrics you want to track — e.g. “Lots Traded”, “Meetings”, “New Deposits”. These drive KPI boards, performance scores, and activity-based incentives.</p>
+          <div class="label">What to enter</div>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Name</span></td><td>Metric name</td></tr>
+            <tr><td><span class="f">Unit</span></td><td>lots, count, ₹, etc.</td></tr>
+            <tr><td><span class="f">Aggregation</span></td><td>How to total it: sum / count / average / latest</td></tr>
+            <tr><td><span class="f">Category</span></td><td>growth / activity (used by performance scoring)</td></tr>
+            <tr><td><span class="f">Source</span></td><td><b>Manual</b> (typed) or <b>Derived</b> (auto-counted from CRM, e.g. calls/meetings)</td></tr>
+          </table></div>
+          <div class="goes"><b>Used in →</b> KPI Entries, KPI Board, Performance, Activity Incentives, Traders &amp; Lots.</div>
+        </div>
+      </div>
+
+      <!-- 4 Lead Sources -->
+      <div class="sec" id="s4">
+        <div class="sec-head"><span class="num">4</span><h3>Lead Sources</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Configuration → Lead Sources</b></span>
+          <p>The channels leads come from (Website, Referral, Meta Ads…). Integrations create these automatically; add manual ones here.</p>
+          <div class="goes"><b>Used in →</b> Every Lead carries a source; reports break leads down by source.</div>
+        </div>
+      </div>
+
+      <!-- 5 Users -->
+      <div class="sec" id="s5">
+        <div class="sec-head"><span class="num">5</span><h3>Users</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Users</b></span>
+          <p>Create a login for every staff member and assign their role &amp; manager. This is the account they sign in with.</p>
+          <div class="label">What to enter</div>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Name / Email</span></td><td>Person’s name and login email</td></tr>
+            <tr><td><span class="f">Role</span></td><td>Super Admin, Business Head, Sales Manager, Team Leader, Sales Executive, Support, HR, Finance</td></tr>
+            <tr><td><span class="f">Manager</span></td><td>Who they report to (builds the org tree)</td></tr>
+            <tr><td><span class="f">Phone / Status</span></td><td>Contact &amp; active/inactive</td></tr>
+          </table></div>
+          <div class="goes"><b>Used in →</b> Lead assignment, targets, performance roll-up, payroll (each user also becomes an Employee record for HR).</div>
+        </div>
+      </div>
+
+      <!-- 6 Roles & Permissions -->
+      <div class="sec" id="s6">
+        <div class="sec-head"><span class="num">6</span><h3>Roles &amp; Permission Matrix</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Roles</b> &amp; <b>→ Permission Matrix</b></span>
+          <p>Control exactly what each role can <b>View / Create / Edit / Delete</b> in every module. The Permission Matrix is a simple grid of roles × sections — tick the boxes.</p>
+          <div class="goes"><b>Controls →</b> Which menu items and buttons each person sees. Set this once and it applies everywhere.</div>
+        </div>
+      </div>
+
+      <!-- 7 Integrations -->
+      <div class="sec" id="s7">
+        <div class="sec-head"><span class="num">7</span><h3>Integrations</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Administration → Integration Hub</b></span>
+          <p>Connect external sources so leads/data flow in automatically. Two kinds:</p>
+          <ul class="clean">
+            <li><b>Social ads (per business):</b> Click <b>“Add Integration”</b>, pick a platform (Instagram/Meta, Google Ads, WhatsApp…) and the business. You get a unique <b>webhook link</b> — paste it into that ad account. New leads then arrive tagged to that business and auto-assigned to its team.</li>
+            <li><b>FXArtha platform:</b> A “Sync” connector that pulls traders, deposits/withdrawals, revenue and lots every minute automatically.</li>
+          </ul>
+          <div class="goes"><b>Feeds →</b> Leads, Customers, Revenue, AUM, Contribution and the “Lots Traded” KPI.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- C. HR SETUP -->
+    <section class="part" id="hr-setup">
+      <p class="part-tag">Part C · Setup</p>
+      <h2>HR &amp; Payroll Setup</h2>
+      <p class="lead">Configure your team structure and the rules that turn performance into pay. Do this once; adjust when policy changes.</p>
+
+      <!-- 8 People -->
+      <div class="sec" id="s8">
+        <div class="sec-head"><span class="num">8</span><h3>People — Employees, Departments, Levels</h3><span class="who w-setup">HR / Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → People</b></span>
+          <p>Three tabs: <b>Employees</b> (salary, department, level, manager), <b>Departments</b>, and <b>Hierarchy Levels</b> (reporting order — 1 = top).</p>
+          <div class="label">Key field on Employees</div>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Salary</span></td><td>Monthly basic — the single source for CTC &amp; payroll</td></tr>
+            <tr><td><span class="f">Hierarchy Level</span></td><td>Rank in the org (drives targets &amp; performance)</td></tr>
+            <tr><td><span class="f">Manager</span></td><td>Reporting manager (used for team roll-ups)</td></tr>
+          </table></div>
+          <div class="goes"><b>Used in →</b> CTC, Targets, Performance, Payroll.</div>
+        </div>
+      </div>
+
+      <!-- 9 Cost & CTC -->
+      <div class="sec" id="s9">
+        <div class="sec-head"><span class="num">9</span><h3>Cost &amp; CTC</h3><span class="who w-setup">HR / Finance</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → Cost &amp; CTC</b></span>
+          <p>First define <b>Cost Categories</b> (Laptop, Internet, Visa…), then add each employee’s monthly <b>Employee Costs</b>. Salary + these costs = the employee’s <b>CTC</b>.</p>
+          <div class="goes"><b>Used in →</b> Target = CTC × multiplier; also P&amp;L cost.</div>
+        </div>
+      </div>
+
+      <!-- 10 Multipliers -->
+      <div class="sec" id="s10">
+        <div class="sec-head"><span class="num">10</span><h3>Target Multipliers &amp; Performance Weights</h3><span class="who w-setup">Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → Rules &amp; Config</b></span>
+          <ul class="clean">
+            <li><b>Target Multipliers:</b> “How many times their cost should each person earn?” e.g. 3× — set globally, per level, or per employee.</li>
+            <li><b>Performance Weights:</b> How much Revenue / Growth / Activity each count toward the performance score (default 60 / 25 / 15).</li>
+          </ul>
+          <div class="goes"><b>Used in →</b> Targets board, Auto Performance, Incentives.</div>
+        </div>
+      </div>
+
+      <!-- 11 Incentives -->
+      <div class="sec" id="s11">
+        <div class="sec-head"><span class="num">11</span><h3>Incentive Rules — Slabs, Activity &amp; Formula</h3><span class="who w-setup">HR / Finance</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → Payroll &amp; Incentives</b> and <b>→ Rules &amp; Config</b></span>
+          <p>Define how incentives are earned. Three tools (use whichever fits):</p>
+          <div class="tw"><table><tr><th>Tool</th><th>What it does</th></tr>
+            <tr><td><b>Incentive Slabs</b></td><td>Tiers by target-achievement %, e.g. 100–150% → 4% of revenue</td></tr>
+            <tr><td><b>Activity Incentives</b></td><td>Per-unit reward on a KPI, e.g. <span class="f">Lots Traded → ₹2 per lot</span></td></tr>
+            <tr><td><b>Formula Builder</b></td><td>Custom rules like “Revenue &gt; Cost × 2 → 10%” without any coding</td></tr>
+          </table></div>
+          <div class="callout c-note"><b>Per-lot commission is set here</b> — under <b>Activity Incentives</b>, metric = “Lots Traded”, rate = amount per lot. This rate then drives the Traders &amp; Lots report and payroll.</div>
+          <div class="goes"><b>Used in →</b> Incentive Board → Payroll.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- D. SALES -->
+    <section class="part" id="sales">
+      <p class="part-tag">Part D · Daily</p>
+      <h2>Daily Sales &amp; CRM</h2>
+      <p class="lead">The day-to-day heart of the system — capturing leads, working them, and converting to paying customers.</p>
+
+      <!-- 12 Leads -->
+      <div class="sec" id="s12">
+        <div class="sec-head"><span class="num">12</span><h3>Leads</h3><span class="who w-daily">Sales</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Leads</b></span>
+          <p>Every potential customer. Leads arrive automatically from ads/FXArtha, or you add them manually / import a CSV.</p>
+          <div class="label">What to enter (manual)</div>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Name / Email / Phone</span></td><td>Contact details</td></tr>
+            <tr><td><span class="f">Country / Source</span></td><td>Origin &amp; channel</td></tr>
+            <tr><td><span class="f">Assigned To</span></td><td>Which sales person owns it (blank = auto round-robin)</td></tr>
+          </table></div>
+          <div class="label">Working a lead (open any lead)</div>
+          <ul class="clean">
+            <li><b>Engage buttons</b> — Call, WhatsApp, Email, Send Proposal. Each is logged and the status moves forward automatically (Call → Contacted, Meeting/Proposal → Qualified).</li>
+            <li><b>Email</b> asks which of your business email accounts to send from.</li>
+          </ul>
+          <div class="goes"><b>Flows to →</b> Lead Activities, Opportunities, Proposals, and (on conversion) Customers.</div>
+        </div>
+      </div>
+
+      <!-- 13 Lead Activities -->
+      <div class="sec" id="s13">
+        <div class="sec-head"><span class="num">13</span><h3>Lead Activities</h3><span class="who w-daily">Sales</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Lead Activities</b></span>
+          <p>A log of every call / message / meeting / note across all leads. Mostly created automatically by the Engage buttons; you can also add a note manually.</p>
+          <div class="goes"><b>Used in →</b> Derived KPIs (Calls, Meetings) and each employee’s activity score.</div>
+        </div>
+      </div>
+
+      <!-- 14 Opportunities -->
+      <div class="sec" id="s14">
+        <div class="sec-head"><span class="num">14</span><h3>Opportunities</h3><span class="who w-daily">Sales</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Opportunities</b></span>
+          <p>A qualified deal in progress. Track the stage (proposal → negotiation → won/lost) and expected revenue. An accepted proposal creates a “won” opportunity automatically.</p>
+          <div class="goes"><b>Used in →</b> Pipeline value on dashboards.</div>
+        </div>
+      </div>
+
+      <!-- 15 Proposals -->
+      <div class="sec" id="s15">
+        <div class="sec-head"><span class="num">15</span><h3>Proposals</h3><span class="who w-daily">Sales</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Proposals</b> (or from a Lead/Customer)</span>
+          <p>A formal quote with line items. Add products, quantity, price and discount — totals and tax compute automatically. Send it, then mark <b>Accept</b> or <b>Reject</b>.</p>
+          <div class="callout c-tip"><b>“Accept” does a lot at once:</b> the lead becomes a <b>Customer</b>, an <b>Opportunity</b> is marked Won, a <b>Revenue</b> entry is created, and the product is marked active — all in one click.</div>
+        </div>
+      </div>
+
+      <!-- 16 Customers -->
+      <div class="sec" id="s16">
+        <div class="sec-head"><span class="num">16</span><h3>Customers (360° view)</h3><span class="who w-daily">Sales / Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Customers → open a customer</b></span>
+          <p>Everything about one customer in one place: revenue, products, tickets, communications, documents, trading activity, and a full timeline.</p>
+          <ul class="clean">
+            <li><b>Trading Activity:</b> that customer’s Lots traded, Deposits, Withdrawals, Net AUM (from FXArtha).</li>
+            <li><b>Reassign RM</b> (admins/managers): hand the customer to another employee — future credit follows the new owner, past stays with the old.</li>
+            <li><b>Quick actions:</b> add communication, ticket, revenue, proposal, or upload a document.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 17 Communications -->
+      <div class="sec" id="s17">
+        <div class="sec-head"><span class="num">17</span><h3>Communications</h3><span class="who w-daily">Sales / Support</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Communications</b></span>
+          <p>A record of messages exchanged with leads &amp; customers (channel, direction, text). Engage actions log here automatically; you can also add entries.</p>
+        </div>
+      </div>
+
+      <!-- 18 Revenue -->
+      <div class="sec" id="s18">
+        <div class="sec-head"><span class="num">18</span><h3>Revenue</h3><span class="who w-daily">Finance / Sales</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Revenue</b></span>
+          <p>The single record of money earned. Created automatically by accepted proposals and FXArtha sync; can be added manually.</p>
+          <div class="tw"><table><tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><span class="f">Customer / Business / Product</span></td><td>Who &amp; what</td></tr>
+            <tr><td><span class="f">Gross revenue</span></td><td>Total amount</td></tr>
+            <tr><td><span class="f">Commission</span></td><td>Partner commission (if any)</td></tr>
+            <tr><td><span class="f">Net revenue</span></td><td>Auto = Gross − Commission</td></tr>
+          </table></div>
+          <div class="goes"><b>Used in →</b> P&amp;L, Targets, Performance, Incentives.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- E. PERF -->
+    <section class="part" id="perf">
+      <p class="part-tag">Part E</p>
+      <h2>Targets, KPI &amp; Finance</h2>
+      <p class="lead">These read your live data and show performance — most are view-only boards, nothing to store.</p>
+
+      <div class="sec" id="s19">
+        <div class="sec-head"><span class="num">19</span><h3>Targets</h3><span class="who w-monthly">Managers</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Targets</b> · assign via <b>Assign Target</b></span>
+          <p>Each person’s revenue target (CTC × multiplier) and how much they’ve achieved. Senior roles assign targets to individuals, teams or departments.</p>
+        </div>
+      </div>
+
+      <div class="sec" id="s20">
+        <div class="sec-head"><span class="num">20</span><h3>KPI &amp; Performance</h3><span class="who w-monthly">Managers</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → KPI &amp; Performance</b></span>
+          <p>Tabs: <b>KPI Board</b> (metric scorecards), <b>Auto Performance</b>, <b>KPI Entries</b> (see Part F), and <b>Performance</b> (weighted 0–100 ranking of your team).</p>
+        </div>
+      </div>
+
+      <div class="sec" id="s21">
+        <div class="sec-head"><span class="num">21</span><h3>Traders &amp; Lots</h3><span class="who w-monthly">Managers / Finance</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → Traders &amp; Lots</b></span>
+          <p>Per employee, a breakdown of their traders and how many lots each traded (this month &amp; all-time), with estimated per-lot commission. Filter by employee, pick a month, or preview a different rate.</p>
+          <div class="goes"><b>Reads →</b> the “Lots Traded” KPI and your Activity-Incentive rate.</div>
+        </div>
+      </div>
+
+      <div class="sec" id="s22">
+        <div class="sec-head"><span class="num">22</span><h3>Finance — P&amp;L, AUM &amp; Contribution</h3><span class="who w-monthly">Finance</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Finance → Finance (P&amp;L) · AUM · Contribution</b></span>
+          <ul class="clean">
+            <li><b>P&amp;L:</b> Revenue − Cost = Profit, rolled up the org tree.</li>
+            <li><b>AUM:</b> deposits − withdrawals = net funds, per employee.</li>
+            <li><b>Contribution:</b> weighted business contribution from deposits, brokerage, etc.</li>
+          </ul>
+          <div class="callout c-tip"><b>Note:</b> these boards are calculated live every time you open them — there is nothing to save.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- F. PAYROLL -->
+    <section class="part" id="payroll">
+      <p class="part-tag">Part F · Monthly</p>
+      <h2>Monthly Payroll &amp; Incentives</h2>
+      <p class="lead">Run these at month-end, in order, to pay your team correctly.</p>
+
+      <div class="sec" id="s23">
+        <div class="sec-head"><span class="num">23</span><h3>KPI Entries</h3><span class="who w-monthly">HR / Managers</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Sales &amp; CRM → KPI &amp; Performance → KPI Entries</b></span>
+          <p>The actual metric values per employee. “Lots Traded” fills automatically from FXArtha; other manual KPIs (e.g. Active Traders) are entered here with <b>“+ New”</b>. There’s a <b>Trader</b> column and filter to see per-trader values.</p>
+        </div>
+      </div>
+
+      <div class="sec" id="s24">
+        <div class="sec-head"><span class="num">24</span><h3>Incentive Board</h3><span class="who w-monthly">HR / Finance</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → Payroll &amp; Incentives → Incentive Board</b></span>
+          <p>Preview each employee’s incentive (slab + activity) for the month. When correct, press <b>“Run”</b> — this writes the incentive into their payroll.</p>
+          <div class="callout c-note"><b>Important:</b> incentives are <b>not</b> paid automatically — you must press <b>Run</b>. Until then, payroll shows no incentive.</div>
+        </div>
+      </div>
+
+      <div class="sec" id="s25">
+        <div class="sec-head"><span class="num">25</span><h3>Payroll</h3><span class="who w-monthly">HR / Finance</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → Payroll &amp; Incentives → Payroll</b></span>
+          <p>Each employee’s payslip. Enter <b>Bonus</b> and any <b>Deduction</b>; the <b>Final salary</b> = Basic + Incentive + Bonus − Deduction is calculated automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- G. RECRUITMENT -->
+    <section class="part" id="recruit">
+      <p class="part-tag">Part G</p>
+      <h2>Recruitment</h2>
+      <div class="sec" id="s26">
+        <div class="sec-head"><span class="num">26</span><h3>Jobs &amp; Automatic Resume Shortlisting</h3><span class="who w-setup">HR / Admin</span></div>
+        <div class="sec-body">
+          <span class="path"><b>HR &amp; People → Recruitment</b></span>
+          <p>Post a job, share one link in your ad, and let the system filter resumes for you.</p>
+          <div class="steps">
+            <div class="step"><b>Create a job</b> — <span class="arrow">enter title, role, <b>required skills</b> (comma-separated), and a <b>shortlist threshold %</b>.</span></div>
+            <div class="step"><b>Copy the apply link</b> — <span class="arrow">each job has its own public link; put it as the “Apply” button in your ad.</span></div>
+            <div class="step"><b>Candidate applies</b> — <span class="arrow">they open the link, fill name/email/phone and upload a resume (PDF). No login needed.</span></div>
+            <div class="step"><b>Auto-scoring</b> — <span class="arrow">the system reads the resume, matches it against the required skills, gives a <b>% match</b>, and auto-<b>shortlists</b> anyone at/above your threshold.</span></div>
+            <div class="step"><b>Review</b> — <span class="arrow">candidates appear ranked by match %, with matched/missing skills and resume download. Mark Shortlist / Hire / Reject.</span></div>
+          </div>
+          <div class="callout c-note"><b>For resume filtering, use the CRM’s apply link in your ad.</b> A platform’s own lead form only collects name/phone (no resume), so it can’t be scored.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- H. SUPPORT -->
+    <section class="part" id="support">
+      <p class="part-tag">Part H</p>
+      <h2>Support Desk</h2>
+      <div class="sec">
+        <div class="sec-head"><span class="num">27</span><h3>Tickets</h3><span class="who w-daily">Support</span></div>
+        <div class="sec-body">
+          <span class="path"><b>Support → Support Desk</b></span>
+          <p>Log and track customer issues. Enter ticket number, category, priority and status; assign to a support agent and add comments. Tickets also show on the customer’s 360° view.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- I. WORKFLOWS -->
+    <section class="part" id="flows">
+      <p class="part-tag">Part I</p>
+      <h2>Recommended Workflows</h2>
+      <p class="lead">Quick end-to-end sequences that combine the sections above.</p>
+
+      <h3>First-time setup (in order)</h3>
+      <div class="steps">
+        <div class="step">Businesses → Products → KPI Definitions → Lead Sources</div>
+        <div class="step">Users → Roles &amp; Permission Matrix</div>
+        <div class="step">Employees (salary) → Cost &amp; CTC → Target Multipliers</div>
+        <div class="step">Incentive Slabs / Activity Incentives</div>
+        <div class="step">Integrations (connect ads &amp; FXArtha)</div>
+      </div>
+
+      <h3>Lead → Customer (daily)</h3>
+      <div class="steps">
+        <div class="step">Lead arrives (ad/manual) &amp; is assigned</div>
+        <div class="step">Engage: Call / WhatsApp / Email &nbsp;<span class="arrow">(status auto-advances)</span></div>
+        <div class="step">Send Proposal → customer accepts</div>
+        <div class="step"><span class="arrow">Auto:</span> Customer + Revenue + Won opportunity created</div>
+      </div>
+
+      <h3>Month-end payroll</h3>
+      <div class="steps">
+        <div class="step">Check KPI Entries (Lots auto; enter manual KPIs)</div>
+        <div class="step">Incentive Board → <b>Run</b></div>
+        <div class="step">Payroll → add Bonus/Deduction → Final salary auto</div>
+      </div>
+
+      <h3>Hiring</h3>
+      <div class="steps">
+        <div class="step">Recruitment → New Job (skills + threshold)</div>
+        <div class="step">Put the apply link in your ad</div>
+        <div class="step">Review auto-shortlisted candidates → Hire</div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <b style="color:var(--ink-soft)">DAGOS CRM — User Manual v1.0.</b><br>
+    Tip: click “Save as PDF / Print” at the top to export this guide as a PDF and share it with your team.
+    Section names in this manual match the labels in the app’s left-hand menu.
+  </footer>
+</div>
+</body>
+</html>

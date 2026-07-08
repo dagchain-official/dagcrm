@@ -1,0 +1,448 @@
+<title>DAGOS CRM — Auto Data-Flow Map</title>
+<style>
+  :root {
+    --bg: #F5F6F9;
+    --surface: #FFFFFF;
+    --surface-2: #F0F1F6;
+    --ink: #15171F;
+    --ink-soft: #565C6E;
+    --ink-faint: #878D9C;
+    --line: #E3E5EC;
+    --accent: #5B54E6;
+    --accent-soft: #ECEBFB;
+    /* automation-type semantic hues */
+    --auto: #0F9E68;      --auto-soft: #E1F5EC;   /* background, no human   */
+    --action: #5B54E6;    --action-soft: #ECEBFB; /* side-effect of a click */
+    --manual: #C97E00;    --manual-soft: #FBF0DC; /* must press Run         */
+    --live: #0B8FA6;      --live-soft: #DEF2F6;   /* computed, never stored */
+    --shadow: 0 1px 2px rgba(20,22,35,.04), 0 6px 20px rgba(20,22,35,.05);
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", "Roboto Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D0E13; --surface: #16181F; --surface-2: #1E212B; --ink: #ECEEF3;
+      --ink-soft: #A2A7B6; --ink-faint: #767C8D; --line: #292D39;
+      --accent: #8B85F2; --accent-soft: #221F38;
+      --auto: #3FCB93;   --auto-soft: #15291F;
+      --action: #8B85F2; --action-soft: #221F38;
+      --manual: #E7A93A; --manual-soft: #2E2413;
+      --live: #3EBFD6;   --live-soft: #10262C;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F5F6F9; --surface: #FFFFFF; --surface-2: #F0F1F6; --ink: #15171F;
+    --ink-soft: #565C6E; --ink-faint: #878D9C; --line: #E3E5EC;
+    --accent: #5B54E6; --accent-soft: #ECEBFB;
+    --auto: #0F9E68; --auto-soft: #E1F5EC; --action: #5B54E6; --action-soft: #ECEBFB;
+    --manual: #C97E00; --manual-soft: #FBF0DC; --live: #0B8FA6; --live-soft: #DEF2F6;
+    --shadow: 0 1px 2px rgba(20,22,35,.04), 0 6px 20px rgba(20,22,35,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D0E13; --surface: #16181F; --surface-2: #1E212B; --ink: #ECEEF3;
+    --ink-soft: #A2A7B6; --ink-faint: #767C8D; --line: #292D39;
+    --accent: #8B85F2; --accent-soft: #221F38;
+    --auto: #3FCB93; --auto-soft: #15291F; --action: #8B85F2; --action-soft: #221F38;
+    --manual: #E7A93A; --manual-soft: #2E2413; --live: #3EBFD6; --live-soft: #10262C;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-sans); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 22px 80px; }
+
+  /* ---- header ---- */
+  header { margin-bottom: 30px; }
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 10px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 42px); font-weight: 800; letter-spacing: -.02em;
+    margin: 0 0 12px; text-wrap: balance; line-height: 1.08;
+  }
+  .lede { font-size: 17px; color: var(--ink-soft); margin: 0; max-width: 62ch; }
+
+  /* ---- legend ---- */
+  .legend {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; margin: 26px 0 4px;
+  }
+  .legend-item {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 13px 15px; box-shadow: var(--shadow);
+  }
+  .legend-item .top { display: flex; align-items: center; gap: 9px; margin-bottom: 3px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  .legend-item h4 { margin: 0; font-size: 14px; font-weight: 700; }
+  .legend-item p { margin: 0; font-size: 12.5px; color: var(--ink-faint); line-height: 1.4; }
+  .k-auto { background: var(--auto); } .k-action { background: var(--action); }
+  .k-manual { background: var(--manual); } .k-live { background: var(--live); }
+
+  /* ---- section ---- */
+  section { margin-top: 44px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .sec-num {
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    color: var(--ink-faint); letter-spacing: .02em;
+  }
+  h2 { font-size: 22px; font-weight: 800; letter-spacing: -.015em; margin: 0; }
+  .sec-sub { color: var(--ink-soft); font-size: 14.5px; margin: 2px 0 18px; }
+
+  /* ---- flow card ---- */
+  .grid { display: grid; gap: 16px; }
+  .cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--rail, var(--accent));
+  }
+  .card.auto   { --rail: var(--auto); }
+  .card.action { --rail: var(--action); }
+  .card.manual { --rail: var(--manual); }
+  .card.live   { --rail: var(--live); }
+
+  .card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .card-head h3 { margin: 0; font-size: 16.5px; font-weight: 750; letter-spacing: -.01em; flex: 1 1 auto; }
+  .trigger {
+    font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .t-auto   { background: var(--auto-soft);   color: var(--auto); }
+  .t-action { background: var(--action-soft); color: var(--action); }
+  .t-manual { background: var(--manual-soft); color: var(--manual); }
+  .t-live   { background: var(--live-soft);   color: var(--live); }
+
+  .src { font-size: 14px; color: var(--ink-soft); margin: 4px 0 14px; }
+  .src b { color: var(--ink); font-weight: 650; }
+
+  .flow-line { margin: 12px 0 0; }
+  .flow-line .lbl {
+    font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--ink-faint); display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  }
+  .flow-line .lbl svg { width: 14px; height: 14px; flex: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    font-family: var(--font-mono); font-size: 12.5px; font-weight: 500;
+    background: var(--surface-2); border: 1px solid var(--line);
+    color: var(--ink); padding: 4px 10px; border-radius: 8px; white-space: nowrap;
+  }
+  .chip.hot { background: var(--auto-soft); border-color: transparent; color: var(--auto); font-weight: 600; }
+  .note {
+    margin: 14px 0 0; font-size: 13px; color: var(--ink-soft);
+    background: var(--surface-2); border-radius: 10px; padding: 9px 12px; line-height: 1.5;
+  }
+  .note b { color: var(--ink); }
+
+  /* ---- status ladder ---- */
+  .ladder { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin-top: 4px; }
+  .rung {
+    flex: 1 1 120px; min-width: 110px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 13px; position: relative;
+  }
+  .rung + .rung { margin-left: 8px; }
+  .rung .st { font-weight: 750; font-size: 14px; }
+  .rung .via { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+  .rung .via code { font-family: var(--font-mono); font-size: 11.5px; color: var(--action); }
+  .rung.term { border-style: dashed; }
+  .rung.term .st { color: var(--auto); }
+
+  /* ---- cheat table ---- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; background: var(--surface); }
+  th, td { text-align: left; padding: 12px 15px; font-size: 13.5px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); font-weight: 700; background: var(--surface-2); }
+  tr:last-child td { border-bottom: none; }
+  td.tag { white-space: nowrap; }
+  .pill { font-size: 12px; font-weight: 650; padding: 3px 9px; border-radius: 999px; display: inline-block; }
+  .p-auto { background: var(--auto-soft); color: var(--auto); }
+  .p-action { background: var(--action-soft); color: var(--action); }
+  .p-manual { background: var(--manual-soft); color: var(--manual); }
+  .p-live { background: var(--live-soft); color: var(--live); }
+
+  .callout {
+    margin-top: 20px; background: var(--manual-soft); border: 1px solid transparent;
+    border-radius: 16px; padding: 18px 20px;
+  }
+  .callout h3 { margin: 0 0 6px; font-size: 15px; font-weight: 750; color: var(--manual); display:flex; align-items:center; gap:8px; }
+  .callout p { margin: 0; font-size: 14px; color: var(--ink); line-height: 1.55; }
+  .callout p + p { margin-top: 8px; }
+
+  footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-faint); }
+  code.inl { font-family: var(--font-mono); font-size: .9em; background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">DAGOS CRM · Data Automation</p>
+    <h1>Kaun sa data khud bharta hai — aur kahaँ‑kahaँ jaata hai</h1>
+    <p class="lede">Poore CRM me jo bhi automatically fill ya update hota hai, uska ek jagah map. Har flow ka rang batata hai wo <b>kaise</b> chalta hai — bina click ke, tumhare ek action pe, button dabane pe, ya sirf screen kholne pe.</p>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="top"><span class="dot k-auto"></span><h4>Bilkul auto</h4></div>
+        <p>Background me chalta hai — koi insaan kuch nahi karta. Scheduled ya bahar se aaya data.</p>
+      </div>
+      <div class="legend-item">
+        <div class="top"><span class="dot k-action"></span><h4>Tumhare action ka asar</h4></div>
+        <p>Tum ek chhota kaam karte ho (call log, Accept) aur system khud kai jagah bhar deta hai.</p>
+      </div>
+      <div class="legend-item">
+        <div class="top"><span class="dot k-manual"></span><h4>Button dabao tab</h4></div>
+        <p>Jab tak "Run/Calculate" na dabao, number store nahi hota. (Incentive, Payroll.)</p>
+      </div>
+      <div class="legend-item">
+        <div class="top"><span class="dot k-live"></span><h4>Live nikalta hai</h4></div>
+        <p>Kabhi store nahi hota — har baar page kholte hi taaza data se hisaab hota hai.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 1. EXTERNAL IN ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Bahar se data andar aata hai</h2></div>
+    <p class="sec-sub">Trading platform aur social ads se leads/paisa apne aap CRM me.</p>
+
+    <div class="grid cols-2">
+      <div class="card auto">
+        <div class="card-head">
+          <h3>FXArtha Auto‑Sync</h3>
+          <span class="trigger t-auto">Har 1 min · auto</span>
+        </div>
+        <p class="src">Source: <b>FXArtha trading platform</b> (API se pull) — ya "Sync now" button.</p>
+        <div class="flow-line">
+          <div class="lbl">Yahaँ bharta hai</div>
+          <div class="chips">
+            <span class="chip">Leads</span><span class="chip">Customers</span>
+            <span class="chip">Revenue</span><span class="chip">AUM (deposit/withdrawal)</span>
+            <span class="chip">Contribution</span><span class="chip hot">KPI: Lots Traded</span>
+            <span class="chip">Dashboard snapshot</span>
+          </div>
+        </div>
+        <div class="flow-line">
+          <div class="lbl">Aage inme dikhta hai</div>
+          <div class="chips">
+            <span class="chip">AUM board</span><span class="chip">Contribution board</span>
+            <span class="chip">P&amp;L / Revenue</span><span class="chip">KPI board</span>
+            <span class="chip">Incentive hisaab</span>
+          </div>
+        </div>
+        <p class="note">Sab entries <b>external_id</b> se linked hain — dobara sync pe duplicate nahi banta, purana update ho jaata hai. Har lead/paisa uske assigned RM ke naam pe judta hai.</p>
+      </div>
+
+      <div class="card auto">
+        <div class="card-head">
+          <h3>Social Integrations</h3>
+          <span class="trigger t-auto">Webhook · auto</span>
+        </div>
+        <p class="src">Source: <b>har business ka apna</b> Instagram / Google Ads / WhatsApp / LinkedIn / TikTok / Website.</p>
+        <div class="flow-line">
+          <div class="lbl">Naya lead aate hi khud</div>
+          <div class="chips">
+            <span class="chip">Lead banta hai</span><span class="chip hot">us Business me tag</span>
+            <span class="chip">us Business ke RM ko assign</span><span class="chip">RM ko notification</span>
+          </div>
+        </div>
+        <p class="note">Assign <b>round‑robin</b> se hota hai — jis RM ke paas sabse kam leads, usko. Same phone/email pehle se ho to lead <b>skip</b> ho jaata hai. Har connection ka apna webhook URL.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. INSIDE A LEAD ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Lead pe kaam karte waqt</h2></div>
+    <p class="sec-sub">Engage buttons (Call / WhatsApp / Email / Meeting / Proposal) dabate hi status khud aage badhta hai.</p>
+
+    <div class="card action">
+      <div class="card-head">
+        <h3>Status auto‑advance ladder</h3>
+        <span class="trigger t-action">Action ka asar</span>
+      </div>
+      <p class="src">Jaise hi koi activity log hoti hai, lead ka status <b>aage</b> badhta hai — kabhi peeche nahi.</p>
+      <div class="ladder">
+        <div class="rung"><div class="st">New</div><div class="via">shuruaat</div></div>
+        <div class="rung"><div class="st">Contacted</div><div class="via">via <code>Call · WhatsApp · Email</code></div></div>
+        <div class="rung"><div class="st">Qualified</div><div class="via">via <code>Meeting · Proposal</code></div></div>
+        <div class="rung term"><div class="st">Converted</div><div class="via">sirf Proposal Accept / account ban‑ne pe</div></div>
+      </div>
+      <p class="note"><b>Zaroori:</b> activity se lead khud <b>Converted nahi</b> hota — wo sirf Proposal Accept, ya FXArtha me account holder aane pe hota hai. Converted/Lost ke baad status lock ho jaata hai.</p>
+      <div class="flow-line">
+        <div class="lbl">Saath me ye bhi auto</div>
+        <div class="chips">
+          <span class="chip">Employee activity counter +1 (call/note)</span>
+          <span class="chip">Email → asli mail + Communication log</span>
+          <span class="chip">Notification (agar reassign hua)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. PROPOSAL ACCEPT ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Proposal "Accept" — sabse bada cascade</h2></div>
+    <p class="sec-sub">Ek click "Accept", aur system 6 jagah ek saath likh deta hai.</p>
+
+    <div class="card action">
+      <div class="card-head">
+        <h3>Accept dabate hi khud ban jaata hai</h3>
+        <span class="trigger t-action">1 click → 6 kaam</span>
+      </div>
+      <p class="src">Source: RM/Manager <b>Proposal Accept</b> dabata hai.</p>
+      <div class="flow-line">
+        <div class="lbl">Ek saath bharta hai</div>
+        <div class="chips">
+          <span class="chip hot">Lead → Converted (+ date)</span>
+          <span class="chip">Customer ban‑ta hai</span>
+          <span class="chip">Opportunity → Won</span>
+          <span class="chip">Revenue entry</span>
+          <span class="chip">Customer Product → active</span>
+          <span class="chip">Activity note</span>
+        </div>
+      </div>
+      <p class="note">Revenue ka amount = proposal ka total. Yahi Revenue aage <b>P&amp;L, Targets, Performance aur Incentive</b> sabme count hota hai. Reject dabao to sirf status "rejected" + ek note.</p>
+    </div>
+  </section>
+
+  <!-- ============ 4. ON-SAVE MATH ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Save karte hi khud‑ba‑khud hisaab</h2></div>
+    <p class="sec-sub">Ye formulas har save pe apne aap chalte hain — tum type nahi karte.</p>
+
+    <div class="grid cols-2">
+      <div class="card action">
+        <div class="card-head"><h3>Revenue</h3><span class="trigger t-action">On save</span></div>
+        <p class="src"><b>Net revenue = Gross − Commission</b> — automatic.</p>
+      </div>
+      <div class="card action">
+        <div class="card-head"><h3>Payroll</h3><span class="trigger t-action">On save</span></div>
+        <p class="src"><b>Final salary = Basic + Incentive + Bonus − Deduction</b>.</p>
+      </div>
+      <div class="card action">
+        <div class="card-head"><h3>Proposal item</h3><span class="trigger t-action">On save</span></div>
+        <p class="src"><b>Amount = Qty × Price × (1 − Discount%)</b>; total/tax bhi auto.</p>
+      </div>
+      <div class="card action">
+        <div class="card-head"><h3>Conversion date</h3><span class="trigger t-action">On save</span></div>
+        <p class="src">Lead Converted hote hi <b>converted date</b> stamp — isi se mahine‑wise KPI count hoti hai.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. LIVE COMPUTED ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Live nikalta hai — kabhi store nahi hota</h2></div>
+    <p class="sec-sub">Ye saare boards har baar page kholte hi taaza data se dobara‑dobara hisaab karte hain. Inme koi "saved number" nahi hota.</p>
+
+    <div class="card live">
+      <div class="card-head">
+        <h3>Har baar screen pe compute hone waale</h3>
+        <span class="trigger t-live">Page kholte hi</span>
+      </div>
+      <div class="flow-line">
+        <div class="lbl">Boards</div>
+        <div class="chips">
+          <span class="chip">KPI board</span><span class="chip">Targets</span>
+          <span class="chip">Auto Performance</span><span class="chip">P&amp;L / Profit</span>
+          <span class="chip">AUM board</span><span class="chip">Contribution board</span>
+          <span class="chip">Saare Dashboards</span>
+        </div>
+      </div>
+      <div class="flow-line">
+        <div class="lbl">Derived KPIs (raw se ginti)</div>
+        <div class="chips">
+          <span class="chip">Calls = call activities ki ginti</span>
+          <span class="chip">Meetings = meeting activities</span>
+          <span class="chip">Leads Converted = converted leads</span>
+        </div>
+      </div>
+      <p class="note"><b>Target</b> = (Salary + monthly cost) × multiplier. <b>Achievement %</b> = us RM ka revenue ÷ target. <b>Performance score</b> = revenue + growth + activity KPIs ka weighted mix, peers se compare karke. Sab hisaab live — kuch save nahi hota.</p>
+    </div>
+  </section>
+
+  <!-- ============ 6. MANUAL RUN ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Paisa store karne ke liye button dabana zaroori</h2></div>
+    <p class="sec-sub">Incentive aur Payroll <b>apne aap post nahi hote</b>. Admin / Finance / HR ko "Run" dabana padta hai — tabhi number save hota hai.</p>
+
+    <div class="grid cols-2">
+      <div class="card manual">
+        <div class="card-head"><h3>Incentive / Formula Run</h3><span class="trigger t-manual">Run dabao</span></div>
+        <p class="src">Slab ya formula se incentive nikaal kar <b>Incentive</b> + <b>Payroll.incentive</b> me likhta hai → final salary dobara ban‑ti hai.</p>
+        <p class="note">Preview boards sirf dikhate hain; jab tak <b>Run</b> nahi dabate, payroll me kuch nahi jaata.</p>
+      </div>
+      <div class="card manual">
+        <div class="card-head"><h3>Assign Target</h3><span class="trigger t-manual">Button</span></div>
+        <p class="src">Target value save karta hai + covered logon ko notification. (Isse pehle "CTC preview" sirf suggestion deta hai.)</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h3>⚠ Dhyaan dene wali baat — Incentive engines</h3>
+      <p>Do naye engines (Slab aur Formula) dono <b>Payroll.incentive ko replace</b> karte hain, jodte nahi. Matlab jo <b>Run</b> aakhri me chalega, wahi payroll ka incentive number ban jaayega. Dono ek saath chahiye ho to formula me hi mila ke rakhna behtar.</p>
+    </div>
+  </section>
+
+  <!-- ============ 7. NOTIFICATIONS ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Notifications — apne aap bell bajti hai</h2></div>
+    <p class="sec-sub">In events pe sambandhit user ko turant in‑app (aur email) notification jaati hai.</p>
+    <div class="card action">
+      <div class="card-head"><h3>Auto notify kab</h3><span class="trigger t-action">Event pe</span></div>
+      <div class="chips" style="margin-top:6px">
+        <span class="chip">Lead assign hua → RM ko</span>
+        <span class="chip">Target assign → sabko</span>
+        <span class="chip">Leave approve/reject → employee ko</span>
+        <span class="chip">Team request → manager ko</span>
+        <span class="chip">Webhook/FXArtha se naya lead → RM ko</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHEAT SHEET ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">08</span><h2>Ek nazar me — cheat sheet</h2></div>
+    <p class="sec-sub">Konsa section auto‑bharta hai, kaise, aur data kahaँ se aata hai.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Section</th><th>Kaise</th><th>Data kahaँ se</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Leads</td><td class="tag"><span class="pill p-auto">Bilkul auto</span></td><td>FXArtha sync · social webhook · manual entry</td></tr>
+          <tr><td>Customers</td><td class="tag"><span class="pill p-auto">Bilkul auto</span></td><td>FXArtha sync · Proposal Accept</td></tr>
+          <tr><td>Revenue</td><td class="tag"><span class="pill p-auto">Auto</span></td><td>FXArtha sync · Proposal Accept (net khud ban‑ta)</td></tr>
+          <tr><td>AUM / Contribution entries</td><td class="tag"><span class="pill p-auto">Bilkul auto</span></td><td>FXArtha sync (deposit/withdrawal/brokerage…)</td></tr>
+          <tr><td>KPI: Lots Traded</td><td class="tag"><span class="pill p-auto">Bilkul auto</span></td><td>FXArtha sync</td></tr>
+          <tr><td>KPI: Active Traders / baaki manual</td><td class="tag"><span class="pill p-manual">Haath se</span></td><td>"+ New" se khud daalni padti hai</td></tr>
+          <tr><td>Lead status (New→Qualified)</td><td class="tag"><span class="pill p-action">Action pe</span></td><td>Engage activity log</td></tr>
+          <tr><td>Lead → Converted</td><td class="tag"><span class="pill p-action">Action pe</span></td><td>Proposal Accept · FXArtha account</td></tr>
+          <tr><td>KPI board · Targets · Performance</td><td class="tag"><span class="pill p-live">Live compute</span></td><td>Revenue + KPI entries + activities se</td></tr>
+          <tr><td>P&amp;L · AUM · Contribution boards</td><td class="tag"><span class="pill p-live">Live compute</span></td><td>Raw entries se har baar</td></tr>
+          <tr><td>Dashboards (sab)</td><td class="tag"><span class="pill p-live">Live compute</span></td><td>Live counts, kuch store nahi</td></tr>
+          <tr><td>Incentive · Payroll number</td><td class="tag"><span class="pill p-manual">Run dabao</span></td><td>Slab/Formula run → Payroll</td></tr>
+          <tr><td>Payroll final salary</td><td class="tag"><span class="pill p-action">On save</span></td><td>Basic+Incentive+Bonus−Deduction</td></tr>
+          <tr><td>Notifications</td><td class="tag"><span class="pill p-action">Event pe</span></td><td>Assign · approve · naya lead</td></tr>
+          <tr><td>Attendance hours</td><td class="tag"><span class="pill p-action">On save</span></td><td>Check‑in/out se</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" style="background:var(--live-soft)">
+      <h3 style="color:var(--live)">ℹ AI Lead Score abhi live nahi</h3>
+      <p>AI Assistant page pe lead ka score (0–100) dikhta hai, lekin wo abhi lead record me <b>save nahi hota</b> — sirf screen pe dikh kar chala jaata hai. Lead card pe jo score dikhta hai wo demo/seed ka hai. Chaaho to ise real me connect kar sakte hain (jab bolo).</p>
+    </div>
+  </section>
+
+  <footer>
+    Ye map DAGOS CRM ke actual code se banaya gaya hai. Rang = automation ka tareeka · <code class="inl">mono</code> chips = jahaँ data likhta/dikhta hai. Koi flow badle to bata dena, update kar dunga.
+  </footer>
+</div>
