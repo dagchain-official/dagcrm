@@ -15,6 +15,7 @@ import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
 import ConfigHub from "./pages/ConfigHub";
 import KpiBoard from "./pages/KpiBoard";
 import TradersLots from "./pages/TradersLots";
+import FxArthaTraders from "./pages/FxArthaTraders";
 import Recruitment from "./pages/Recruitment";
 import ApplyPage from "./pages/ApplyPage";
 import Performance from "./pages/Performance";
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="config" element={<ConfigHub />} />
         <Route path="kpi-board" element={<KpiBoard />} />
         <Route path="traders-lots" element={<TradersLots />} />
+        <Route path="fxartha-traders" element={<FxArthaTraders />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="formula-builder" element={<FormulaBuilder />} />

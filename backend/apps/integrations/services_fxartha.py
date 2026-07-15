@@ -154,7 +154,7 @@ def _sync_customer(conn, item, business):
                       "deposit": dep, "trading_loss": trading_loss, "brokerage": brokerage,
                       "insurance": insurance, "staking": staking, "other": 0, "date": when})
 
-    # KPI (PART 10) — Lots Traded -> MetricEntry on the "Lots Traded" metric
+    # KPI (PART 10) — feed the business's FXArtha metrics from the synced totals.
     lots = float(item.get("lots_traded") or 0)
     if emp and lots:
         md = MetricDefinition.objects.filter(name__icontains="lot").first()
@@ -163,6 +163,25 @@ def _sync_customer(conn, item, business):
                 external_id=f"fxa-lots:{acct}",
                 defaults={"metric": md, "employee": emp, "customer": cust,
                           "value": lots, "date": when, "note": "FXArtha sync"})
+    # New Deposits KPI — the trader's deposit total
+    if emp and dep:
+        mdd = MetricDefinition.objects.filter(name__icontains="deposit").first()
+        if mdd:
+            MetricEntry.objects.update_or_create(
+                external_id=f"fxa-newdep:{acct}",
+                defaults={"metric": mdd, "employee": emp, "customer": cust,
+                          "value": dep, "date": when, "note": "FXArtha sync"})
+    # Active Traders KPI — one per synced trader; the metric counts them per RM
+    if emp:
+        mda = MetricDefinition.objects.filter(name__icontains="active").first()
+        if mda:
+            if mda.aggregation != "count":     # ensure it totals a head-count
+                mda.aggregation = "count"
+                mda.save(update_fields=["aggregation"])
+            MetricEntry.objects.update_or_create(
+                external_id=f"fxa-active:{acct}",
+                defaults={"metric": mda, "employee": emp, "customer": cust,
+                          "value": 1, "date": when, "note": "FXArtha sync"})
     return cust
 
 

@@ -11,7 +11,7 @@ import {
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots"].includes(to)) return "reports";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
@@ -56,6 +56,7 @@ export const NAV = [
       { to: "/team-requests", label: "Team Requests", icon: UserPlus },
       { to: "/kpi", label: "KPI & Performance", icon: BarChart4 },
       { to: "/traders-lots", label: "Traders & Lots", icon: CandlestickChart },
+      { to: "/fxartha-traders", label: "FXArtha Traders", icon: TrendingUp },
       { to: "/m/revenues", label: "Revenue", icon: DollarSign },
     ],
   },

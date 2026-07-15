@@ -30,8 +30,27 @@ def _combine(agg, parts):
     return (sum(v for v, _ in parts), total_w)
 
 
-def _leaf_stats(mdefs, month, year):
-    """(employee_id, metric_id) -> (value, weight) for the period."""
+def _leaf_stats(mdefs, month, year, date_from=None, date_to=None):
+    """(employee_id, metric_id) -> (value, weight) for the period.
+
+    Period selection: a from/to date range wins; else month+year; else year-only;
+    else (all None) it is CUMULATIVE (no date filter)."""
+    def _flt(field, is_dt):
+        if date_from or date_to:
+            pre = f"{field}__date" if is_dt else field
+            k = {}
+            if date_from:
+                k[f"{pre}__gte"] = date_from
+            if date_to:
+                k[f"{pre}__lte"] = date_to
+            return k
+        k = {}
+        if year:
+            k[f"{field}__year"] = year
+        if month:
+            k[f"{field}__month"] = month
+        return k
+
     stats = defaultdict(lambda: (0.0, 0))
     manual = [m for m in mdefs if m.source == "manual"]
     derived = [m for m in mdefs if m.source == "derived"]
@@ -42,7 +61,7 @@ def _leaf_stats(mdefs, month, year):
         non_latest = [m.id for m in manual if m.aggregation != "latest"]
         if non_latest:
             rows = (MetricEntry.objects
-                    .filter(metric_id__in=non_latest, date__year=year, date__month=month)
+                    .filter(metric_id__in=non_latest, **_flt("date", False))
                     .values("metric_id", "employee_id")
                     .annotate(s=Sum("value"), c=Count("id"), a=Avg("value")))
             for r in rows:
@@ -58,7 +77,7 @@ def _leaf_stats(mdefs, month, year):
         if latest_ids:
             seen = set()
             for e in (MetricEntry.objects
-                      .filter(metric_id__in=latest_ids, date__year=year, date__month=month)
+                      .filter(metric_id__in=latest_ids, **_flt("date", False))
                       .order_by("metric_id", "employee_id", "-date", "-id")
                       .values("metric_id", "employee_id", "value")):
                 k = (e["employee_id"], e["metric_id"])
@@ -75,7 +94,7 @@ def _leaf_stats(mdefs, month, year):
             if m.derived_key in ("lead_activity:meeting", "lead_activity:call"):
                 atype = m.derived_key.split(":")[1]
                 rows = (LeadActivity.objects
-                        .filter(activity_type=atype, created_at__year=year, created_at__month=month)
+                        .filter(activity_type=atype, **_flt("created_at", True))
                         .values("lead__assigned_to").annotate(c=Count("id")))
                 for r in rows:
                     eid = u2e.get(r["lead__assigned_to"])
@@ -84,7 +103,7 @@ def _leaf_stats(mdefs, month, year):
             elif m.derived_key == "lead:converted":
                 # credit the month the lead was CONVERTED (not created)
                 rows = (Lead.objects
-                        .filter(status="converted", converted_at__year=year, converted_at__month=month)
+                        .filter(status="converted", **_flt("converted_at", True))
                         .values("assigned_to").annotate(c=Count("id")))
                 for r in rows:
                     eid = u2e.get(r["assigned_to"])
@@ -93,11 +112,11 @@ def _leaf_stats(mdefs, month, year):
     return stats
 
 
-def compute_kpis(month, year, business_id=None):
+def compute_kpis(month, year, business_id=None, date_from=None, date_to=None):
     mdefs = list(MetricDefinition.objects.filter(status="active").select_related("business"))
     if business_id:
         mdefs = [m for m in mdefs if m.business_id in (business_id, None)]
-    leaf = _leaf_stats(mdefs, month, year)
+    leaf = _leaf_stats(mdefs, month, year, date_from, date_to)
 
     emps = list(Employee.objects.select_related("user", "hierarchy_level")
                 .exclude(user__is_superuser=True))

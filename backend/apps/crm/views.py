@@ -104,6 +104,20 @@ class LeadSourceViewSet(viewsets.ModelViewSet):
     queryset = LeadSource.objects.all()
     serializer_class = LeadSourceSerializer
 
+    @action(detail=False, methods=["get"])
+    def social(self, request):
+        """Only social/marketing-platform lead sources (Meta, Google, WhatsApp…)
+        — excludes FXArtha (poll) and manual sources. Used by the Leads filters."""
+        from django.db.models import Q
+        from apps.integrations.models import PLATFORMS
+        social = [m["source"] for m in PLATFORMS.values() if not m.get("poll")]
+        if not social:
+            return Response([])
+        # Only clean platform names (Meta Ads, Google Ads…) — no FXArtha, no
+        # per-business "Base · Business" variants.
+        rows = LeadSource.objects.filter(name__in=social).order_by("name")
+        return Response([{"id": r.id, "name": r.name} for r in rows])
+
 
 class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.select_related("source", "assigned_to").prefetch_related("interests").all().order_by("-created_at")
@@ -112,7 +126,18 @@ class LeadViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "email", "phone", "lead_code"]
 
     def get_queryset(self):
+        from django.db.models import Q
+        from apps.integrations.models import PLATFORMS
         qs = super().get_queryset()
+        # Leads pipeline shows ONLY social/marketing-platform leads (Meta, Google,
+        # WhatsApp, LinkedIn, TikTok, Website, Telegram). FXArtha (poll) and manual
+        # leads are excluded — they live as Customers / synced records elsewhere.
+        social = [m["source"] for m in PLATFORMS.values() if not m.get("poll")]
+        if social:
+            q = Q()
+            for s in social:                       # base name, or per-business "Base · Biz"
+                q |= Q(source__name=s) | Q(source__name__startswith=f"{s} · ")
+            qs = qs.filter(q)
         if not is_admin_view(self.request.user):
             qs = qs.filter(assigned_to=self.request.user)
         return qs

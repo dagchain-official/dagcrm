@@ -49,15 +49,28 @@ function CardHead({ title, action }) {
   );
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const _now = new Date();
+
 export default function BusinessDashboard({ businessId }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
+  // KPI-card period: cumulative (default) | month | year | range
+  const [period, setPeriod] = useState("cumulative");
+  const [pMonth, setPMonth] = useState(_now.getMonth() + 1);
+  const [pYear, setPYear] = useState(_now.getFullYear());
+  const [pFrom, setPFrom] = useState("");
+  const [pTo, setPTo] = useState("");
 
   usePolling(() => {
-    api.get("/reports/business-dashboard/", { params: { business: businessId } })
+    const params = { business: businessId, period };
+    if (period === "month") { params.month = pMonth; params.year = pYear; }
+    if (period === "year") { params.year = pYear; }
+    if (period === "range") { if (pFrom) params.from = pFrom; if (pTo) params.to = pTo; }
+    api.get("/reports/business-dashboard/", { params })
       .then((r) => { setD(r.data); setErr(""); })
       .catch(() => setErr("Failed to load business dashboard."));
-  }, 5000, [businessId]);
+  }, 5000, [businessId, period, pMonth, pYear, pFrom, pTo]);
 
   if (err) return <EmptyState title="Error" hint={err} />;
   if (!d) return <Spinner label="Loading business…" />;
@@ -164,7 +177,43 @@ export default function BusinessDashboard({ businessId }) {
       {/* configurable KPI cards */}
       {kpis.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-3">Key metrics — {d.business.name}</p>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+              Key metrics — {d.business.name}
+              <span className="ml-2 normal-case text-ink-300">
+                ({period === "cumulative" ? "all-time" : period === "month" ? `${MONTHS[pMonth - 1]} ${pYear}` : period === "year" ? pYear : "date range"})
+              </span>
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select className="input !py-1.5 !w-auto text-sm" value={period} onChange={(e) => setPeriod(e.target.value)}>
+                <option value="cumulative">Cumulative</option>
+                <option value="month">Monthly</option>
+                <option value="year">Yearly</option>
+                <option value="range">Date range</option>
+              </select>
+              {period === "month" && (
+                <>
+                  <select className="input !py-1.5 !w-auto text-sm" value={pMonth} onChange={(e) => setPMonth(Number(e.target.value))}>
+                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                  <select className="input !py-1.5 !w-auto text-sm" value={pYear} onChange={(e) => setPYear(Number(e.target.value))}>
+                    {[pYear - 1, pYear, pYear + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </>
+              )}
+              {period === "year" && (
+                <select className="input !py-1.5 !w-auto text-sm" value={pYear} onChange={(e) => setPYear(Number(e.target.value))}>
+                  {[pYear - 2, pYear - 1, pYear, pYear + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              )}
+              {period === "range" && (
+                <>
+                  <input type="date" className="input !py-1.5 !w-auto text-sm" value={pFrom} onChange={(e) => setPFrom(e.target.value)} />
+                  <input type="date" className="input !py-1.5 !w-auto text-sm" value={pTo} onChange={(e) => setPTo(e.target.value)} />
+                </>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {kpis.map((k) => (
               <div key={k.name} className="card p-5">
