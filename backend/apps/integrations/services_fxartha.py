@@ -107,6 +107,11 @@ def _sync_customer(conn, item, business):
         "lead": lead,
     }
     cust, _ = Customer.objects.update_or_create(external_id=uid, defaults=fields)
+    # Seed the owner from the lead's RM on first sight; never overwrite a manual
+    # reassignment (that's why assigned_to is not in `defaults`).
+    if cust.assigned_to_id is None and lead and lead.assigned_to_id:
+        cust.assigned_to_id = lead.assigned_to_id
+        cust.save(update_fields=["assigned_to"])
 
     # Revenue (skip empty). net_revenue is auto (gross − commission).
     gross = float(item.get("gross_brokerage") or 0)
@@ -117,10 +122,10 @@ def _sync_customer(conn, item, business):
             defaults={"customer": cust, "business": business,
                       "gross_revenue": gross, "commission": comm})
 
-    # Everything below is attributed to the lead's auto-assigned RM's employee.
-    emp = None
-    if lead and lead.assigned_to_id:
-        emp = Employee.objects.filter(user_id=lead.assigned_to_id).first()
+    # Everything below is attributed to the customer's current owner (a manual
+    # reassignment wins over the lead's original RM).
+    owner_uid = cust.assigned_to_id or (lead.assigned_to_id if lead else None)
+    emp = Employee.objects.filter(user_id=owner_uid).first() if owner_uid else None
     when = _date(item.get("account_opened_at"))
     dep = float(item.get("total_deposit") or 0)
     wd = float(item.get("total_withdrawal") or 0)
@@ -149,7 +154,7 @@ def _sync_customer(conn, item, business):
                       "deposit": dep, "trading_loss": trading_loss, "brokerage": brokerage,
                       "insurance": insurance, "staking": staking, "other": 0, "date": when})
 
-    # KPI (PART 10) — Lots Traded -> MetricEntry on the "Lots Traded" metric
+    # KPI (PART 10) — feed the business's FXArtha metrics from the synced totals.
     lots = float(item.get("lots_traded") or 0)
     if emp and lots:
         md = MetricDefinition.objects.filter(name__icontains="lot").first()
@@ -158,6 +163,25 @@ def _sync_customer(conn, item, business):
                 external_id=f"fxa-lots:{acct}",
                 defaults={"metric": md, "employee": emp, "customer": cust,
                           "value": lots, "date": when, "note": "FXArtha sync"})
+    # New Deposits KPI — the trader's deposit total
+    if emp and dep:
+        mdd = MetricDefinition.objects.filter(name__icontains="deposit").first()
+        if mdd:
+            MetricEntry.objects.update_or_create(
+                external_id=f"fxa-newdep:{acct}",
+                defaults={"metric": mdd, "employee": emp, "customer": cust,
+                          "value": dep, "date": when, "note": "FXArtha sync"})
+    # Active Traders KPI — one per synced trader; the metric counts them per RM
+    if emp:
+        mda = MetricDefinition.objects.filter(name__icontains="active").first()
+        if mda:
+            if mda.aggregation != "count":     # ensure it totals a head-count
+                mda.aggregation = "count"
+                mda.save(update_fields=["aggregation"])
+            MetricEntry.objects.update_or_create(
+                external_id=f"fxa-active:{acct}",
+                defaults={"metric": mda, "employee": emp, "customer": cust,
+                          "value": 1, "date": when, "note": "FXArtha sync"})
     return cust
 
 

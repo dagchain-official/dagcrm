@@ -3,11 +3,11 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     ActivityHeartbeatView, ActivityTodayView, AttendanceTodayView, AttendanceViewSet,
-    CheckInView, CheckOutView, CostCategoryViewSet, DepartmentViewSet, EmployeeActivityViewSet,
-    EmployeeCostViewSet, EmployeeViewSet, HierarchyLevelViewSet, IncentiveRuleViewSet,
-    ActivityIncentiveViewSet, FormulaRuleViewSet, IncentiveSlabViewSet, IncentiveViewSet,
-    LeaveTypeViewSet, LeaveViewSet, MyLeavesView, PayrollViewSet, PerformanceWeightViewSet,
-    TargetMultiplierViewSet,
+    CandidateViewSet, CheckInView, CheckOutView, CostCategoryViewSet, DepartmentViewSet,
+    EmployeeActivityViewSet, EmployeeCostViewSet, EmployeeViewSet, HierarchyLevelViewSet,
+    IncentiveRuleViewSet, ActivityIncentiveViewSet, FormulaRuleViewSet, IncentiveSlabViewSet,
+    IncentiveViewSet, JobPostingViewSet, LeaveTypeViewSet, LeaveViewSet, MyLeavesView,
+    PayrollViewSet, PerformanceWeightViewSet, PublicJobView, TargetMultiplierViewSet,
 )
 
 router = DefaultRouter()
@@ -28,6 +28,8 @@ router.register("performance-weights", PerformanceWeightViewSet)
 router.register("incentive-slabs", IncentiveSlabViewSet)
 router.register("activity-incentives", ActivityIncentiveViewSet)
 router.register("formula-rules", FormulaRuleViewSet)
+router.register("job-postings", JobPostingViewSet)
+router.register("candidates", CandidateViewSet)
 
 # Explicit self-service paths MUST come before router (so "check-in" isn't
 # parsed as an attendance pk by the detail route).
@@ -38,4 +40,5 @@ urlpatterns = [
     path("activity/today/", ActivityTodayView.as_view()),
     path("activity/heartbeat/", ActivityHeartbeatView.as_view()),
     path("my-leaves/", MyLeavesView.as_view()),
+    path("jobs/apply/<str:token>/", PublicJobView.as_view()),   # public job ad + apply
 ] + router.urls

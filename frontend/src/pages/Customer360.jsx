@@ -3,7 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Package, LifeBuoy,
   MessageSquare, Calendar, Ticket as TicketIcon, Activity, UserPlus, Clock,
-  Plus, Upload, FileText, Download, Paperclip, FileSignature,
+  Plus, Upload, FileText, Download, Paperclip, FileSignature, UserCog,
+  CandlestickChart, ArrowDownToLine, ArrowUpFromLine, Wallet,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -11,6 +12,7 @@ import { Badge, Spinner, EmptyState, Modal } from "../components/ui";
 import DataForm from "../components/DataForm";
 import ProposalBuilder, { blankProposal } from "../components/ProposalBuilder";
 import { STATUS_COLORS } from "../config/resources";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
 const sel = (...o) => o.map((x) => ({ value: x, label: x[0].toUpperCase() + x.slice(1).replace("_", " ") }));
@@ -79,15 +81,39 @@ function Th({ children, right }) {
 export default function Customer360() {
   const { id } = useParams();
   const toast = useToast();
+  const { user } = useAuth();
   const [d, setD] = useState(null);
   const [tab, setTab] = useState("Overview");
   const [err, setErr] = useState(false);
   const [qa, setQa] = useState(null); // quick-action key
   const [saving, setSaving] = useState(false);
   const [proposal, setProposal] = useState(null);
+  const [reassign, setReassign] = useState(false);   // reassign modal open
+  const [assignables, setAssignables] = useState([]);
+  const [newOwner, setNewOwner] = useState("");
 
   const load = () => api.get(`/customers/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
   usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
+
+  const openReassign = () => {
+    setNewOwner("");
+    setReassign(true);
+    api.get("/users/assignable/").then((r) => setAssignables(r.data)).catch(() => setAssignables([]));
+  };
+  const submitReassign = async () => {
+    if (!newOwner) return toast.error("Kisi employee ko chuno");
+    setSaving(true);
+    try {
+      const { data } = await api.post(`/customers/${id}/reassign/`, { user: newOwner });
+      setReassign(false);
+      load();
+      toast.success(`Customer ab ${data.assigned_name} ke paas hai`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Reassign failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const submitQuick = async (form) => {
     setSaving(true);
@@ -122,6 +148,8 @@ export default function Customer360() {
 
   const c = d.customer;
   const k = d.kpis;
+  const tr = d.trading || {};
+  const num = (v) => Number(v || 0).toLocaleString();
 
   const Timeline = ({ items }) => (
     <div className="space-y-1">
@@ -166,6 +194,7 @@ export default function Customer360() {
               {c.phone && <span className="inline-flex items-center gap-1.5"><Phone size={14} /> {c.phone}</span>}
               {c.country && <span className="inline-flex items-center gap-1.5"><MapPin size={14} /> {c.country}</span>}
               <span className="inline-flex items-center gap-1.5"><Calendar size={14} /> Customer since {date(c.created_at)}</span>
+              <span className="inline-flex items-center gap-1.5"><UserCog size={14} /> RM: <b className="text-ink-700">{c.assigned_name || "Unassigned"}</b></span>
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -185,6 +214,9 @@ export default function Customer360() {
           <Upload size={15} /> Upload File
           <input type="file" className="hidden" onChange={upload} />
         </label>
+        {user?.can_assign_leads && (
+          <button className="chip" onClick={openReassign}><UserCog size={15} /> Reassign RM</button>
+        )}
       </div>
 
       {/* KPIs */}
@@ -193,6 +225,32 @@ export default function Customer360() {
         <Kpi icon={Package} label="Products" value={k.products_count} tint="bg-brand-100 text-brand-600" />
         <Kpi icon={LifeBuoy} label="Open Tickets" value={k.open_tickets} tint="bg-amber-100 text-amber-600" />
         <Kpi icon={MessageSquare} label="Communications" value={k.communications_count} tint="bg-blue-100 text-blue-600" />
+      </div>
+
+      {/* Trading activity (FXArtha) — per-trader lots & AUM, drives per-lot incentive */}
+      <div className="card p-5">
+        <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2">
+          <CandlestickChart size={18} className="text-brand-600" /> Trading Activity
+          <span className="text-xs font-normal text-ink-400">(FXArtha se auto)</span>
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-2xl bg-brand-50 border border-brand-100 p-4">
+            <div className="flex items-center gap-2 text-brand-600"><CandlestickChart size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Lots Traded</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">{num(tr.lots_traded)}</p>
+          </div>
+          <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+            <div className="flex items-center gap-2 text-emerald-600"><ArrowDownToLine size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Deposits</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.deposits)}</p>
+          </div>
+          <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4">
+            <div className="flex items-center gap-2 text-rose-500"><ArrowUpFromLine size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Withdrawals</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.withdrawals)}</p>
+          </div>
+          <div className="rounded-2xl bg-ink-50 border border-ink-100 p-4">
+            <div className="flex items-center gap-2 text-ink-600"><Wallet size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Net AUM</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.net_aum)}</p>
+          </div>
+        </div>
       </div>
 
       {/* tabs */}
@@ -376,6 +434,27 @@ export default function Customer360() {
             onCancel={() => setQa(null)}
           />
         )}
+      </Modal>
+
+      {/* reassign RM modal */}
+      <Modal open={reassign} onClose={() => setReassign(null)} title="Reassign to another employee"
+        footer={<>
+          <button className="btn-ghost" onClick={() => setReassign(false)}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submitReassign}><UserCog size={15} /> Reassign</button>
+        </>}>
+        <div className="space-y-3">
+          <p className="text-sm text-ink-500">Abhi RM: <b className="text-ink-800">{c.assigned_name || "Unassigned"}</b></p>
+          <div>
+            <label className="label">Naya RM</label>
+            <select className="input" value={newOwner} onChange={(e) => setNewOwner(e.target.value)}>
+              <option value="">Employee chuno…</option>
+              {assignables.map((u) => <option key={u.id} value={u.id}>{u.name} — {u.role_name}</option>)}
+            </select>
+          </div>
+          <p className="text-xs text-ink-400">
+            Aage ki revenue, AUM aur KPI naye RM ko milegi. Pichhla (jo pehle record ho chuka hai) purane RM ke paas hi rahega.
+          </p>
+        </div>
       </Modal>
 
       {proposal && (

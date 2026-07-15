@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
 from .models import (
-    Attendance, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
+    Attendance, Candidate, CostCategory, Department, Employee, EmployeeActivity, EmployeeCost,
     ActivityIncentive, FormulaCondition, FormulaRule, HierarchyLevel, Incentive, IncentiveRule,
-    IncentiveSlab, Leave, LeaveType, Payroll, PerformanceWeight, TargetMultiplier,
+    IncentiveSlab, JobPosting, Leave, LeaveType, Payroll, PerformanceWeight, TargetMultiplier,
 )
 
 
@@ -318,3 +318,39 @@ class PerformanceWeightSerializer(serializers.ModelSerializer):
         if scope == "global":
             attrs["hierarchy_level"] = None
         return attrs
+
+
+class JobPostingSerializer(serializers.ModelSerializer):
+    business_name = serializers.CharField(source="business.name", read_only=True)
+    department_name = serializers.CharField(source="department.department_name", read_only=True)
+    candidate_count = serializers.IntegerField(source="candidates.count", read_only=True)
+    shortlisted_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobPosting
+        fields = ["id", "title", "role_name", "business", "business_name", "department",
+                  "department_name", "location", "experience", "description",
+                  "required_skills", "min_match_pct", "public_token", "status",
+                  "candidate_count", "shortlisted_count", "created_at"]
+        read_only_fields = ["public_token", "created_at"]
+
+    def get_shortlisted_count(self, obj):
+        return obj.candidates.filter(status__in=["shortlisted", "hired"]).count()
+
+
+class CandidateSerializer(serializers.ModelSerializer):
+    resume_url = serializers.SerializerMethodField()
+    job_title = serializers.CharField(source="job.title", read_only=True)
+
+    class Meta:
+        model = Candidate
+        fields = ["id", "job", "job_title", "name", "email", "phone", "resume", "resume_url",
+                  "match_pct", "matched_skills", "missing_skills", "status", "note", "created_at"]
+        read_only_fields = ["match_pct", "matched_skills", "missing_skills", "created_at"]
+        extra_kwargs = {"resume": {"write_only": True, "required": False}}
+
+    def get_resume_url(self, obj):
+        request = self.context.get("request")
+        if obj.resume and request:
+            return request.build_absolute_uri(obj.resume.url)
+        return None

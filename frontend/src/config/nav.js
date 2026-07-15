@@ -4,20 +4,21 @@ import {
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
   TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
-  Landmark, PiggyBank, Scale,
+  Landmark, PiggyBank, Scale, CandlestickChart,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board"].includes(to)) return "reports";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
   if (to === "/targets" || to === "/assign-target") return "targets";
   if (to === "/team-requests") return "teams";
   if (to === "/hr/people") return "employees";
+  if (to === "/recruitment") return "employees";
   if (to === "/hr/attendance") return "attendance";
   if (to === "/hr/costs") return "cost-categories";
   if (to === "/hr/payroll") return "payrolls";
@@ -54,6 +55,8 @@ export const NAV = [
       { to: "/targets", label: "Targets", icon: Crosshair },
       { to: "/team-requests", label: "Team Requests", icon: UserPlus },
       { to: "/kpi", label: "KPI & Performance", icon: BarChart4 },
+      { to: "/traders-lots", label: "Traders & Lots", icon: CandlestickChart },
+      { to: "/fxartha-traders", label: "FXArtha Traders", icon: TrendingUp },
       { to: "/m/revenues", label: "Revenue", icon: DollarSign },
     ],
   },
@@ -65,6 +68,7 @@ export const NAV = [
     group: "HR & People",
     items: [
       { to: "/hr/people", label: "People", icon: Briefcase },
+      { to: "/recruitment", label: "Recruitment", icon: UserPlus },
       { to: "/hr/attendance", label: "Attendance & Leave", icon: Clock },
       { to: "/hr/costs", label: "Cost & CTC", icon: Wallet },
       { to: "/hr/payroll", label: "Payroll & Incentives", icon: Award },

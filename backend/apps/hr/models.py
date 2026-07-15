@@ -339,3 +339,58 @@ class FormulaCondition(models.Model):
     right_value2 = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)  # for 'between'
     right_variable = models.CharField(max_length=40, blank=True)
     right_factor = models.DecimalField(max_digits=10, decimal_places=2, default=1)  # variable × factor
+
+
+# ---- Recruitment / ATS ----------------------------------------------------
+# Run a job ad -> candidates apply via a public link with their resume ->
+# the resume text is auto-matched against the job's required skills and scored
+# (% match). Candidates at/above the job's threshold are auto-shortlisted.
+class JobPosting(models.Model):
+    STATUS = [("open", "Open"), ("closed", "Closed")]
+    title = models.CharField(max_length=200)
+    role_name = models.CharField(max_length=120, blank=True)
+    business = models.ForeignKey("crm.Business", on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    location = models.CharField(max_length=120, blank=True)
+    experience = models.CharField(max_length=80, blank=True)      # e.g. "2-4 years"
+    description = models.TextField(blank=True)
+    required_skills = models.TextField(blank=True)                # comma / newline separated keywords
+    min_match_pct = models.PositiveIntegerField(default=60)       # auto-shortlist threshold
+    public_token = models.CharField(max_length=40, unique=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="open")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if not self.public_token:
+            import secrets
+            self.public_token = secrets.token_urlsafe(12)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+
+class Candidate(models.Model):
+    STATUS = [("applied", "Applied"), ("shortlisted", "Shortlisted"),
+              ("rejected", "Rejected"), ("hired", "Hired")]
+    job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name="candidates")
+    name = models.CharField(max_length=150)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    resume = models.FileField(upload_to="resumes/", null=True, blank=True)
+    resume_text = models.TextField(blank=True)                   # parsed / pasted
+    match_pct = models.PositiveIntegerField(default=0)
+    matched_skills = models.JSONField(default=list, blank=True)
+    missing_skills = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="applied")
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-match_pct", "-created_at"]
+
+    def __str__(self):
+        return f"{self.name} · {self.match_pct}%"

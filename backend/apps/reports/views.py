@@ -13,6 +13,8 @@ from .metrics import compute_kpis, scoped_kpis
 from .performance import compute_performance, scoped_performance
 from .pnl import compute_pnl, scoped_for
 from .targets import compute_targets, scoped_targets
+from .traders import compute_traders_lots, scoped_traders_lots
+from .fxartha import compute_fxartha_traders, scoped_fxartha_traders
 
 from django.contrib.auth import get_user_model
 
@@ -298,6 +300,33 @@ def target_board(request):
 
 
 @api_view(["GET"])
+def fxartha_traders(request):
+    """Full FXArtha trader detail: per trader — lots, brokerage, deposits,
+    withdrawals, net AUM, contribution, date, RM. Filters: ?q= ?from= ?to=."""
+    data = compute_fxartha_traders(
+        date_from=request.query_params.get("from"),
+        date_to=request.query_params.get("to"),
+        q=request.query_params.get("q"),
+    )
+    return Response(scoped_fxartha_traders(request.user, data))
+
+
+@api_view(["GET"])
+def traders_lots(request):
+    """Traders & Lots — per employee: their traders, lots (month + total),
+    and estimated per-lot commission. Optional ?rate= overrides the configured
+    Activity-Incentive lots rate."""
+    today = timezone.localdate()
+    month = int(request.query_params.get("month", today.month))
+    year = int(request.query_params.get("year", today.year))
+    rate = request.query_params.get("rate")
+    emp = request.query_params.get("employee")
+    data = compute_traders_lots(month, year, float(rate) if rate else None,
+                                int(emp) if emp else None)
+    return Response(scoped_traders_lots(request.user, data))
+
+
+@api_view(["GET"])
 def kpi_board(request):
     """Configurable KPIs (PART 6) per employee, rolled up the org tree.
     Optional ?business= filter. Aggregation-aware (sum/count/avg/latest)."""
@@ -330,8 +359,19 @@ def business_dashboard(request):
     trend = [{"month": t["m"].strftime("%b %Y") if t["m"] else "", "net": float(t["net"] or 0)}
              for t in trend][-6:]
 
-    # KPI cards = this business's OWN metrics (drop cross-business globals)
-    kpi = compute_kpis(month, year, business_id=biz.id)
+    # KPI cards = this business's OWN metrics (drop cross-business globals).
+    # Period: cumulative (default) | month | year | range (?period=&from=&to=).
+    period = request.query_params.get("period", "cumulative")
+    p_from = request.query_params.get("from")
+    p_to = request.query_params.get("to")
+    if period == "range" and (p_from or p_to):
+        kpi = compute_kpis(None, None, business_id=biz.id, date_from=p_from, date_to=p_to)
+    elif period == "month":
+        kpi = compute_kpis(month, year, business_id=biz.id)
+    elif period == "year":
+        kpi = compute_kpis(None, year, business_id=biz.id)
+    else:                                        # cumulative — all-time
+        kpi = compute_kpis(None, None, business_id=biz.id)
     kpi_cards = [{"name": m["name"], "unit": m["unit"], "category": m["category"],
                   "value": kpi["company"].get(m["id"], 0)}
                  for m in kpi["metrics"] if m["business"] == biz.name]

@@ -211,10 +211,12 @@ class CustomerProductSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     products = CustomerProductSerializer(many=True, read_only=True)
+    assigned_name = serializers.CharField(source="assigned_to.name", read_only=True)
 
     class Meta:
         model = Customer
-        fields = ["id", "name", "email", "phone", "country", "lead", "products", "created_at"]
+        fields = ["id", "name", "email", "phone", "country", "lead", "assigned_to",
+                  "assigned_name", "products", "created_at"]
         read_only_fields = ["created_at"]
 
 
@@ -312,12 +314,13 @@ class MetricDefinitionSerializer(serializers.ModelSerializer):
 class MetricEntrySerializer(serializers.ModelSerializer):
     metric_name = serializers.CharField(source="metric.name", read_only=True)
     employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
     unit = serializers.CharField(source="metric.unit", read_only=True)
 
     class Meta:
         model = MetricEntry
         fields = ["id", "metric", "metric_name", "unit", "employee", "employee_name",
-                  "value", "customer", "lead", "note", "date"]
+                  "value", "customer", "customer_name", "lead", "note", "date"]
 
     def validate_metric(self, metric):
         if metric.source == "derived":

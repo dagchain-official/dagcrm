@@ -132,6 +132,10 @@ class Customer(models.Model):
     phone = models.CharField(max_length=30, blank=True)
     country = models.CharField(max_length=80, blank=True)
     lead = models.ForeignKey(Lead, on_delete=models.SET_NULL, null=True, blank=True, related_name="customers")
+    # Owner RM. When set, overrides the lead's assignee for revenue/AUM/KPI credit
+    # going forward (used to reassign a converted customer to another employee).
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                    null=True, blank=True, related_name="assigned_customers")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

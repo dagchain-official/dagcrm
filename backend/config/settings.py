@@ -134,6 +134,14 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
 
+# HTTPS/admin behind a reverse proxy (e.g. Caddy). Set CSRF_TRUSTED_ORIGINS to
+# your domain(s) in prod, e.g. "https://dagcrm.com,https://www.dagcrm.com".
+_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+if _csrf:
+    CSRF_TRUSTED_ORIGINS = _csrf.split(",")
+# trust the proxy's X-Forwarded-Proto so Django knows the request is HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # ---- Email ----
 # Dev default: print emails to the console. Set EMAIL_HOST etc. for real SMTP.
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")

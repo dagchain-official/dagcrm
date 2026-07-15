@@ -186,7 +186,7 @@ export const RESOURCES = {
     distribute: { path: "leads/distribute" },
     filters: [
       { key: "status", label: "Status", options: sel("new", "contacted", "qualified", "converted", "lost") },
-      { key: "source", label: "Source", ref: "lead-sources", labelKey: "name" },
+      { key: "source", label: "Source", ref: "lead-sources/social", labelKey: "name" },
     ],
     columns: [
       { key: "lead_code", label: "Code" },
@@ -204,7 +204,7 @@ export const RESOURCES = {
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Phone" },
       { key: "country", label: "Country", type: "select", options: COUNTRY_OPTIONS, dialTo: "phone" },
-      { key: "source", label: "Source", type: "ref", ref: "lead-sources", labelKey: "name" },
+      { key: "source", label: "Source", type: "ref", ref: "lead-sources/social", labelKey: "name" },
       { key: "assigned_to", label: "Assign to", type: "ref", ref: "users/assignable", labelKey: "name" },
       { key: "status", label: "Status", type: "select", options: sel("new", "contacted", "qualified", "converted", "lost") },
     ],
@@ -260,6 +260,7 @@ export const RESOURCES = {
       { key: "email", label: "Email" },
       { key: "phone", label: "Phone" },
       { key: "country", label: "Country" },
+      { key: "assigned_name", label: "RM" },
     ],
     fields: [
       { key: "name", label: "Name", required: true },
@@ -545,10 +546,12 @@ export const RESOURCES = {
     filters: [
       { key: "metric", label: "Metric", ref: "metric-definitions", labelKey: "name" },
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+      { key: "customer", label: "Trader", ref: "customers", labelKey: "name" },
     ],
     columns: [
       { key: "metric_name", label: "Metric" },
       { key: "employee_name", label: "Employee" },
+      { key: "customer_name", label: "Trader" },
       { key: "value", label: "Value" },
       { key: "unit", label: "Unit" },
       { key: "date", label: "Date" },

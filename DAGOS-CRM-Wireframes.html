@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAGOS CRM — Full System Wireframes</title>
+<style>
+  :root{
+    --ink:#2b2f38; --soft:#6b7280; --faint:#9aa1ac;
+    --line:#c7ccd4; --line2:#dfe3e9; --fill:#eceef1; --fill2:#f4f5f7;
+    --canvas:#e8eaee; --paper:#ffffff;
+    --note:#2563eb; --note-bg:#e8effd; --accent:#111827;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1120px;margin:0 auto;padding:32px clamp(16px,4vw,40px) 80px;}
+
+  header.cover{margin-bottom:20px;}
+  .cover .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--note);margin:0 0 10px;}
+  h1{font-size:clamp(26px,5vw,38px);font-weight:800;letter-spacing:-.02em;margin:0 0 8px;}
+  .cover p{color:var(--soft);max-width:64ch;margin:0;font-size:16px;}
+
+  .printbar{position:sticky;top:0;z-index:9;background:var(--accent);color:#fff;font-family:var(--mono);font-size:12.5px;padding:8px 14px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap;}
+  .printbar button{font:inherit;font-weight:700;background:#fff;color:var(--accent);border:none;border-radius:6px;padding:5px 12px;cursor:pointer;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;background:var(--paper);border:1px solid var(--line2);border-radius:10px;padding:14px 18px;margin:16px 0 6px;font-size:13px;font-family:var(--mono);}
+  .legend b{color:var(--ink);}
+  .swatch{display:inline-block;width:26px;height:12px;border:1px solid var(--line);vertical-align:middle;margin-right:6px;border-radius:2px;}
+
+  h2.sec{font-size:13px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--note);margin:38px 0 4px;border-top:1px dashed var(--line);padding-top:20px;}
+  .screen-title{font-size:19px;font-weight:800;margin:14px 0 2px;}
+  .screen-sub{color:var(--soft);font-size:13.5px;margin:0 0 10px;}
+
+  .browser{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 2px 0 var(--line2);margin-bottom:8px;}
+  .chrome{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--fill2);border-bottom:1px solid var(--line2);}
+  .dots{display:flex;gap:5px;}
+  .dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block;}
+  .url{flex:1;font-family:var(--mono);font-size:11.5px;color:var(--soft);background:var(--paper);border:1px solid var(--line2);border-radius:5px;padding:3px 9px;}
+
+  .ph{background:var(--fill);border-radius:3px;}
+  .bar{height:9px;background:var(--fill);border-radius:5px;}
+  .bar.d{background:var(--line2);}
+  .w60{width:60%;} .w40{width:40%;} .w80{width:80%;} .w30{width:30%;} .w50{width:50%;} .w20{width:20%;} .w70{width:70%;}
+  .box{border:1px dashed var(--line);border-radius:6px;background:repeating-linear-gradient(135deg,var(--fill2),var(--fill2) 7px,var(--fill) 7px,var(--fill) 8px);display:grid;place-items:center;color:var(--faint);font-family:var(--mono);font-size:11px;text-align:center;padding:4px;}
+  .btn{border:1.4px solid var(--soft);border-radius:6px;padding:4px 11px;font-size:12px;font-weight:600;color:var(--ink);display:inline-flex;align-items:center;gap:5px;background:var(--paper);white-space:nowrap;}
+  .btn.solid{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--soft);font-family:var(--mono);background:var(--paper);white-space:nowrap;}
+  .chip.on{border-color:var(--soft);color:var(--ink);font-weight:600;}
+  .avatar{width:34px;height:34px;border-radius:50%;border:1.4px dashed var(--soft);display:grid;place-items:center;color:var(--faint);font-size:11px;flex:none;}
+  .sq{border:1.4px dashed var(--soft);border-radius:8px;display:grid;place-items:center;color:var(--faint);font-family:var(--mono);font-size:10px;flex:none;}
+  .lbl{font-family:var(--mono);font-size:11px;color:var(--soft);text-transform:uppercase;letter-spacing:.04em;}
+  .card{border:1px solid var(--line2);border-radius:8px;padding:12px;background:var(--paper);}
+  .stat{border:1px solid var(--line2);border-radius:8px;padding:11px;display:flex;flex-direction:column;gap:7px;}
+  .stat .big{height:20px;width:55%;background:var(--line2);border-radius:4px;}
+
+  .note{background:var(--note-bg);border:1px solid #bcd3fb;border-left:3px solid var(--note);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;color:#1e3a8a;margin:6px 0 14px;}
+  .note .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--note);display:block;margin-bottom:2px;}
+
+  .flex{display:flex;} .col{display:flex;flex-direction:column;} .g6{gap:6px;} .g8{gap:8px;} .g10{gap:10px;} .g14{gap:14px;}
+  .ac{align-items:center;} .jb{justify-content:space-between;} .wrapf{flex-wrap:wrap;} .f1{flex:1;} .grow{flex:1 1 auto;}
+  .pad{padding:14px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .mono{font-family:var(--mono);} .small{font-size:12px;color:var(--soft);}
+  .rowline{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line2);}
+  .rowline:last-child{border-bottom:none;}
+
+  .shell{display:grid;grid-template-columns:180px 1fr;min-height:430px;}
+  .sidebar{background:var(--fill2);border-right:1px solid var(--line2);padding:12px 10px;}
+  .navgroup{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:11px 4px 5px;}
+  .navitem{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;font-size:12px;color:var(--ink);}
+  .navitem.active{background:var(--fill);border:1px solid var(--line2);font-weight:600;}
+  .navitem .ic{width:13px;height:13px;border:1.3px solid var(--soft);border-radius:3px;flex:none;}
+  .topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line2);background:var(--paper);}
+  .content{padding:16px;background:var(--paper);}
+  .searchbar{flex:1;height:30px;border:1px solid var(--line2);border-radius:7px;background:var(--fill2);}
+
+  /* compact mini frames */
+  .minigrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;}
+  .mini{border:1.4px solid var(--line);border-radius:9px;background:var(--paper);overflow:hidden;box-shadow:0 2px 0 var(--line2);}
+  .mini .mc{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--fill2);border-bottom:1px solid var(--line2);}
+  .mini .mc .du{display:flex;gap:4px;} .mini .mc .du i{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  .mini .murl{font-family:var(--mono);font-size:10.5px;color:var(--soft);}
+  .mini .mb{padding:11px 12px;display:flex;flex-direction:column;gap:8px;min-height:120px;}
+  .mtitle{font-weight:700;font-size:13.5px;}
+  .toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .trow{display:flex;gap:8px;align-items:center;}
+  .trow .bar{flex:1;}
+  h3.grouphdr{font-size:16px;font-weight:800;margin:26px 0 4px;letter-spacing:-.01em;}
+
+  @media(max-width:760px){.shell{grid-template-columns:1fr;} .sidebar{display:none;} .grid4,.grid3{grid-template-columns:1fr 1fr;} .grid2,.minigrid{grid-template-columns:1fr;}}
+  @media print{.printbar{display:none;} body{background:#fff;} .browser,.mini,.screen-block{break-inside:avoid;}}
+  .screen-block{margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="printbar"><span>DAGOS CRM — Full System Wireframes (every screen)</span><button onclick="window.print()">Save as PDF / Print</button></div>
+<div class="wrap">
+
+  <header class="cover">
+    <p class="eyebrow">Low-fidelity wireframes · complete · v2.0</p>
+    <h1>DAGOS CRM — Full System Wireframes</h1>
+    <p>Every screen in the platform, laid out as a low-fidelity blueprint (structure only, no colours). Key screens are shown full-width; repeating list/tab screens are shown as compact frames. Nothing is left out.</p>
+  </header>
+
+  <div class="legend">
+    <span><span class="swatch"></span><b>grey bar</b> = text/data</span>
+    <span><span class="swatch" style="background:repeating-linear-gradient(135deg,#f4f5f7,#f4f5f7 6px,#eceef1 6px,#eceef1 7px)"></span><b>hatched</b> = image/chart</span>
+    <span><b>[button]</b> = action</span>
+    <span><b>◗ chip</b> = tab/filter/badge</span>
+    <span style="color:var(--note)"><b>blue note</b> = logic</span>
+  </div>
+
+  <!-- ===================== SITEMAP ===================== -->
+  <h2 class="sec">00 · Sitemap — full navigation</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com — left menu</div></div>
+    <div class="pad grid4">
+      <div class="card"><div class="lbl">Overview</div><div class="col g6" style="margin-top:8px"><div class="small">• Dashboard</div><div class="small">• My Attendance</div><div class="small">• My Leaves</div><div class="small">• AI Assistant</div></div></div>
+      <div class="card"><div class="lbl">Sales &amp; CRM</div><div class="col g6" style="margin-top:8px"><div class="small">• Leads</div><div class="small">• Lead Activities</div><div class="small">• Opportunities</div><div class="small">• Proposals</div><div class="small">• Customers</div><div class="small">• Communications</div><div class="small">• Targets</div><div class="small">• KPI &amp; Performance</div><div class="small">• Traders &amp; Lots</div><div class="small">• Revenue</div></div></div>
+      <div class="card"><div class="lbl">HR &amp; People</div><div class="col g6" style="margin-top:8px"><div class="small">• People</div><div class="small">• Recruitment</div><div class="small">• Attendance &amp; Leave</div><div class="small">• Cost &amp; CTC</div><div class="small">• Payroll &amp; Incentives</div><div class="small">• Rules &amp; Config</div></div></div>
+      <div class="card"><div class="lbl">Finance</div><div class="col g6" style="margin-top:8px"><div class="small">• Finance (P&amp;L)</div><div class="small">• AUM</div><div class="small">• Contribution</div></div>
+        <div class="lbl" style="margin-top:12px">Support</div><div class="small" style="margin-top:6px">• Support Desk</div></div>
+      <div class="card"><div class="lbl">Administration</div><div class="col g6" style="margin-top:8px"><div class="small">• Users</div><div class="small">• Roles</div><div class="small">• Teams</div><div class="small">• Permission Matrix</div><div class="small">• Configuration</div><div class="small">• Integration Hub</div><div class="small">• Reports</div></div></div>
+      <div class="card"><div class="lbl">Account</div><div class="col g6" style="margin-top:8px"><div class="small">• Profile &amp; Settings</div><div class="small">• Business Email Accounts</div><div class="small">• Change Password</div></div>
+        <div class="lbl" style="margin-top:12px">Public</div><div class="small" style="margin-top:6px">• Job Apply page</div></div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Access control</span> Har user apne role ke allowed sections hi dekhta hai (Permission Matrix se controlled).</div>
+
+  <!-- ===================== A. AUTH ===================== -->
+  <h3 class="grouphdr">A · Authentication</h3>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/login</div></div><div class="mb ac" style="justify-content:center">
+      <div class="mtitle">01 · Login</div><div class="sq" style="width:34px;height:34px">logo</div>
+      <div class="ph" style="height:26px;width:80%"></div><div class="ph" style="height:26px;width:80%"></div><div class="btn solid">Sign in</div><div class="small">Forgot password?</div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/reset-password</div></div><div class="mb ac" style="justify-content:center">
+      <div class="mtitle">02 · Reset Password</div><div class="small">emailed link se</div><div class="ph" style="height:26px;width:80%"></div><div class="ph" style="height:26px;width:80%"></div><div class="btn solid">Set new password</div></div></div>
+  </div>
+
+  <!-- ===================== B. OVERVIEW ===================== -->
+  <h3 class="grouphdr">B · Overview</h3>
+  <h2 class="sec">03 · App shell + Dashboard</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/</div></div>
+    <div class="shell">
+      <div class="sidebar">
+        <div class="flex ac g8" style="padding:2px 4px 8px"><div class="sq" style="width:24px;height:24px">D</div><div class="bar w60"></div></div>
+        <div class="navgroup">Overview</div><div class="navitem active"><span class="ic"></span> Dashboard</div><div class="navitem"><span class="ic"></span> AI Assistant</div>
+        <div class="navgroup">Sales &amp; CRM</div><div class="navitem"><span class="ic"></span> Leads</div><div class="navitem"><span class="ic"></span> Customers</div><div class="navitem"><span class="ic"></span> KPI &amp; Perf.</div>
+        <div class="navgroup">HR</div><div class="navitem"><span class="ic"></span> Recruitment</div><div class="navitem"><span class="ic"></span> Payroll</div>
+        <div class="navgroup">Admin</div><div class="navitem"><span class="ic"></span> Integrations</div>
+      </div>
+      <div class="col">
+        <div class="topbar"><div class="bar w30"></div><div class="searchbar"></div><div class="sq" style="width:26px;height:26px">🔔</div><div class="avatar">U</div></div>
+        <div class="content col g14">
+          <div class="flex jb ac"><div class="col g6"><div class="bar w40" style="height:16px"></div><div class="bar w30"></div></div><div class="btn">Business ▾</div></div>
+          <div class="grid4"><div class="stat"><div class="lbl">Leads</div><div class="big"></div></div><div class="stat"><div class="lbl">Revenue</div><div class="big"></div></div><div class="stat"><div class="lbl">Pipeline</div><div class="big"></div></div><div class="stat"><div class="lbl">Converted</div><div class="big"></div></div></div>
+          <div class="grid2"><div class="box" style="height:140px">Revenue chart</div><div class="box" style="height:140px">Leads by source</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Role-based</span> Dashboard role ke hisaab se badalta hai — Admin, Sales Manager, Team Leader, Sales Exec, HR, Finance, Support, aur per-Business dashboard (alag cards/charts har ek ke).</div>
+
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/ (HR dashboard)</div></div><div class="mb"><div class="mtitle">04 · HR Dashboard</div><div class="grid2"><div class="stat"><div class="lbl">Headcount</div><div class="big"></div></div><div class="stat"><div class="lbl">Present</div><div class="big"></div></div><div class="stat"><div class="lbl">Payroll</div><div class="big"></div></div><div class="stat"><div class="lbl">Incentives</div><div class="big"></div></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/ (Finance dashboard)</div></div><div class="mb"><div class="mtitle">05 · Finance Dashboard</div><div class="grid2"><div class="stat"><div class="lbl">Revenue</div><div class="big"></div></div><div class="stat"><div class="lbl">Expenses</div><div class="big"></div></div><div class="stat"><div class="lbl">Profit</div><div class="big"></div></div><div class="box" style="height:40px">by business</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/attendance-clock</div></div><div class="mb ac" style="justify-content:center"><div class="mtitle">06 · My Attendance</div><div class="box" style="width:90px;height:60px">clock</div><div class="flex g8"><div class="btn">Check-in</div><div class="btn">Check-out</div></div><div class="small">Working hours: auto</div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/leaves-mine</div></div><div class="mb"><div class="mtitle">07 · My Leaves</div><div class="btn solid" style="align-self:flex-start">Apply leave</div><div class="trow"><div class="bar w40"></div><div class="chip">pending</div></div><div class="trow"><div class="bar w60"></div><div class="chip">approved</div></div></div></div>
+  </div>
+
+  <h2 class="sec">08 · AI Assistant</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/ai</div></div>
+    <div class="content grid2" style="gap:14px">
+      <div class="card pad col g10" style="min-height:200px"><div class="lbl">Chat</div><div class="box" style="height:40px;align-self:flex-start;width:70%">assistant reply…</div><div class="box" style="height:34px;align-self:flex-end;width:55%">your question</div><div class="flex g8" style="margin-top:auto"><div class="searchbar"></div><div class="btn solid">Send</div></div></div>
+      <div class="card pad col g10"><div class="lbl">Lead Scoring</div><div class="ph" style="height:30px"></div><div class="btn solid" style="align-self:flex-start">Score lead</div><div class="box" style="height:70px">Score + grade + reasons + recommended action</div></div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">AI service</span> Alag FastAPI service (heuristic) — lead score, insights, chat. Aage Claude plug ho sakta hai.</div>
+
+  <!-- ===================== C. SALES & CRM ===================== -->
+  <h3 class="grouphdr">C · Sales &amp; CRM</h3>
+  <h2 class="sec">09 · List screen (Leads) — shared table pattern</h2>
+  <p class="screen-sub">Yahi layout ~25 modules chalata hai (Customers, Revenue, Users, Tickets, Opportunities…). Sirf columns badalte hain.</p>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/m/leads</div></div>
+    <div class="content col g14">
+      <div class="flex jb ac wrapf g10"><div class="bar w30" style="height:16px"></div><div class="flex g8 ac"><div class="searchbar" style="width:150px;flex:none"></div><div class="chip">Status ▾</div><div class="chip">Source ▾</div><div class="btn">Import</div><div class="btn">Export</div><div class="btn solid">+ New</div></div></div>
+      <div class="card pad">
+        <div class="rowline lbl"><div style="width:22px">#</div><div class="f1">Name</div><div class="f1">Email</div><div class="f1">Source</div><div style="width:80px">Status</div><div style="width:60px">Score</div><div style="width:52px">Actions</div></div>
+        <div class="rowline"><div style="width:22px" class="small">01</div><div class="f1"><div class="bar w60"></div></div><div class="f1"><div class="bar w80"></div></div><div class="f1"><div class="bar w40"></div></div><div style="width:80px"><span class="chip">new</span></div><div style="width:60px"><div class="bar w60"></div></div><div style="width:52px" class="mono small">✎🗑</div></div>
+        <div class="rowline"><div style="width:22px" class="small">02</div><div class="f1"><div class="bar w40"></div></div><div class="f1"><div class="bar w60"></div></div><div class="f1"><div class="bar w50"></div></div><div style="width:80px"><span class="chip">contacted</span></div><div style="width:60px"><div class="bar w40"></div></div><div style="width:52px" class="mono small">✎🗑</div></div>
+        <div class="rowline"><div style="width:22px" class="small">03</div><div class="f1"><div class="bar w50"></div></div><div class="f1"><div class="bar w80"></div></div><div class="f1"><div class="bar w30"></div></div><div style="width:80px"><span class="chip">qualified</span></div><div style="width:60px"><div class="bar w80"></div></div><div style="width:52px" class="mono small">✎🗑</div></div>
+        <div class="flex jb ac" style="padding-top:8px"><div class="small mono">1–25 of 240</div><div class="flex g6"><div class="btn">‹ Prev</div><div class="btn">Next ›</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">One pattern</span> "+ New" → modal form (fields config se). Row click → detail. Bulk actions: import CSV, distribute leads, export PDF/CSV.</div>
+
+  <h2 class="sec">10 · Lead Detail (360°)</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/leads/123</div></div>
+    <div class="content col g14">
+      <div class="small mono">‹ Back to Leads</div>
+      <div class="card pad flex ac g14 wrapf"><div class="avatar" style="width:50px;height:50px">JD</div><div class="grow col g6"><div class="bar w40" style="height:16px"></div><div class="flex g10 wrapf"><div class="bar w30"></div><div class="bar w30"></div><div class="bar w20"></div></div></div><div class="col g6" style="align-items:flex-end"><div class="lbl">AI Score</div><div class="bar" style="width:70px;height:16px;background:var(--line2)"></div></div></div>
+      <div class="flex g8 ac"><div class="chip on">New</div><div class="grow" style="height:5px;background:var(--line2);border-radius:4px"></div><div class="chip">Contacted</div><div class="grow" style="height:5px;background:var(--fill);border-radius:4px"></div><div class="chip">Qualified</div><div class="grow" style="height:5px;background:var(--fill);border-radius:4px"></div><div class="chip">Converted</div></div>
+      <div class="card pad"><div class="lbl" style="margin-bottom:8px">Engage</div><div class="flex g8 wrapf"><div class="btn">📞 Call</div><div class="btn">💬 WhatsApp</div><div class="btn">✉ Email</div><div class="btn">📄 Send Proposal</div></div></div>
+      <div class="card pad"><div class="lbl" style="margin-bottom:10px">Activity Timeline</div><div class="col g10"><div class="flex g10 ac"><div class="sq" style="width:24px;height:24px">•</div><div class="grow col g6"><div class="bar w40"></div><div class="bar w60"></div></div></div><div class="flex g10 ac"><div class="sq" style="width:24px;height:24px">•</div><div class="grow col g6"><div class="bar w30"></div><div class="bar w50"></div></div></div></div></div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Auto-advance</span> Call/WhatsApp/Email → Contacted; Meeting/Proposal → Qualified. Email pe "kaunse business email se" poocha jaata hai.</div>
+
+  <h2 class="sec">11 · Customer 360</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/customers/45</div></div>
+    <div class="content col g14">
+      <div class="card pad flex ac g14 wrapf"><div class="avatar" style="width:50px;height:50px">C</div><div class="grow col g6"><div class="bar w40" style="height:16px"></div><div class="flex g8 wrapf"><div class="bar w30"></div><span class="chip">RM: name</span></div></div><div class="btn">👤 Reassign RM</div><div class="col g6" style="align-items:flex-end"><div class="lbl">LTV</div><div class="bar" style="width:80px;height:18px;background:var(--line2)"></div></div></div>
+      <div class="flex g8 wrapf"><div class="chip">+ Communication</div><div class="chip">+ Ticket</div><div class="chip">+ Revenue</div><div class="chip">+ Proposal</div><div class="chip">⤒ Upload</div></div>
+      <div class="grid4"><div class="stat"><div class="lbl">Net Revenue</div><div class="big"></div></div><div class="stat"><div class="lbl">Products</div><div class="big"></div></div><div class="stat"><div class="lbl">Tickets</div><div class="big"></div></div><div class="stat"><div class="lbl">Comms</div><div class="big"></div></div></div>
+      <div class="card pad"><div class="lbl" style="margin-bottom:8px">Trading Activity (FXArtha)</div><div class="grid4"><div class="stat"><div class="lbl">Lots</div><div class="big"></div></div><div class="stat"><div class="lbl">Deposits</div><div class="big"></div></div><div class="stat"><div class="lbl">Withdrawals</div><div class="big"></div></div><div class="stat"><div class="lbl">Net AUM</div><div class="big"></div></div></div></div>
+      <div class="flex g6 wrapf"><div class="chip on">Overview</div><div class="chip">Products</div><div class="chip">Revenue</div><div class="chip">Tickets</div><div class="chip">Communications</div><div class="chip">Documents</div><div class="chip">Timeline</div></div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Reassign</span> Admin/Manager customer ko doosre RM ko de sakta hai — aage ka credit naye ko, past purane ke paas.</div>
+
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/lead-activities</div></div><div class="mb"><div class="mtitle">12 · Lead Activities</div><div class="toolbar"><div class="chip">Type ▾</div><div class="chip">Employee ▾</div></div><div class="trow"><div class="bar"></div><div class="chip">call</div></div><div class="trow"><div class="bar w60"></div><div class="chip">meeting</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/opportunities</div></div><div class="mb"><div class="mtitle">13 · Opportunities</div><div class="toolbar"><div class="chip">Stage ▾</div><div class="btn">+ New</div></div><div class="trow"><div class="bar"></div><div class="chip">won</div></div><div class="trow"><div class="bar w60"></div><div class="chip">negotiation</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/proposals</div></div><div class="mb"><div class="mtitle">14 · Proposals (list)</div><div class="toolbar"><div class="chip">Status ▾</div><div class="btn solid">+ New</div></div><div class="trow"><div class="bar"></div><div class="chip">sent</div></div><div class="trow"><div class="bar w60"></div><div class="chip">accepted</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/communications</div></div><div class="mb"><div class="mtitle">15 · Communications</div><div class="toolbar"><div class="chip">Channel ▾</div></div><div class="trow"><div class="sq" style="width:22px;height:22px">✉</div><div class="bar"></div></div><div class="trow"><div class="sq" style="width:22px;height:22px">💬</div><div class="bar w60"></div></div></div></div>
+  </div>
+
+  <h2 class="sec">16 · Proposal Builder</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/proposals — builder modal</div></div>
+    <div class="content col g14">
+      <div class="grid2"><div class="col g6"><div class="lbl">Title / Contact</div><div class="ph" style="height:28px"></div></div><div class="col g6"><div class="lbl">Business / Valid until</div><div class="ph" style="height:28px"></div></div></div>
+      <div class="card pad"><div class="lbl" style="margin-bottom:8px">Line items</div>
+        <div class="rowline lbl"><div class="f1">Product / Description</div><div style="width:60px">Qty</div><div style="width:70px">Price</div><div style="width:60px">Disc%</div><div style="width:70px">Amount</div></div>
+        <div class="rowline"><div class="f1"><div class="ph" style="height:24px"></div></div><div style="width:60px"><div class="ph" style="height:24px"></div></div><div style="width:70px"><div class="ph" style="height:24px"></div></div><div style="width:60px"><div class="ph" style="height:24px"></div></div><div style="width:70px"><div class="bar w80"></div></div></div>
+        <div class="btn" style="align-self:flex-start;margin-top:8px">+ Add item</div>
+      </div>
+      <div class="flex jb ac"><div class="col g6" style="align-items:flex-end;margin-left:auto"><div class="small mono">Subtotal / Tax / <b>Total</b> (auto)</div></div></div>
+      <div class="flex g8" style="justify-content:flex-end"><div class="btn">Save draft</div><div class="btn">Send</div><div class="btn solid">Accept</div></div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Accept cascade</span> "Accept" → Lead→Customer, Opportunity→Won, Revenue entry, Product active — ek click me sab. Item amount &amp; totals auto.</div>
+
+  <h2 class="sec">17 · Targets &amp; Assign Target</h2>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/targets — Target Board</div></div><div class="mb"><div class="mtitle">Targets (org tree)</div><div class="trow"><div class="bar w40"></div><div class="grow" style="height:8px;background:var(--line2);border-radius:4px"></div><div class="small mono">75%</div></div><div class="trow" style="padding-left:16px"><div class="bar w30"></div><div class="grow" style="height:8px;background:var(--fill);border-radius:4px"></div><div class="small mono">40%</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/assign-target</div></div><div class="mb"><div class="mtitle">Assign Target</div><div class="toolbar"><div class="chip">Scope: user/team/business ▾</div></div><div class="box" style="height:34px">CTC preview → suggested target</div><div class="btn solid" style="align-self:flex-start">Assign</div></div></div>
+  </div>
+  <div class="note"><span class="tag">Formula</span> Target = CTC × multiplier. "Assign" par notification + Target save hota hai.</div>
+
+  <h2 class="sec">18 · KPI &amp; Performance (tabbed)</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/kpi</div></div>
+    <div class="content col g14">
+      <div class="flex g6 wrapf"><div class="chip on">KPI Board</div><div class="chip">Auto Performance</div><div class="chip">KPI Entries</div><div class="chip">Performance</div></div>
+      <div class="card pad"><div class="rowline lbl"><div class="f1">Employee</div><div style="width:80px">Metric A</div><div style="width:80px">Metric B</div><div style="width:80px">Metric C</div></div>
+        <div class="rowline"><div class="f1"><div class="bar w40"></div></div><div style="width:80px"><div class="bar w60"></div></div><div style="width:80px"><div class="bar w40"></div></div><div style="width:80px"><div class="bar w50"></div></div></div>
+        <div class="rowline" style="padding-left:16px"><div class="f1"><div class="bar w30"></div></div><div style="width:80px"><div class="bar w40"></div></div><div style="width:80px"><div class="bar w60"></div></div><div style="width:80px"><div class="bar w30"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/kpi — KPI Entries</div></div><div class="mb"><div class="mtitle">KPI Entries</div><div class="toolbar"><div class="chip">Metric ▾</div><div class="chip">Employee ▾</div><div class="chip">Trader ▾</div><div class="btn">+ New</div></div><div class="trow"><div class="bar w40"></div><div class="bar w30"></div><div class="chip">value</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/kpi — Performance</div></div><div class="mb"><div class="mtitle">Performance (ranked)</div><div class="trow"><div class="small mono">#1</div><div class="bar w40"></div><div class="grow" style="height:8px;background:var(--line2);border-radius:4px"></div></div><div class="trow"><div class="small mono">#2</div><div class="bar w30"></div><div class="grow" style="height:8px;background:var(--fill);border-radius:4px"></div></div></div></div>
+  </div>
+
+  <h2 class="sec">19 · Traders &amp; Lots</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/traders-lots</div></div>
+    <div class="content col g14">
+      <div class="flex jb ac wrapf g10"><div class="bar w30" style="height:16px"></div><div class="flex g8"><div class="chip">All employees ▾</div><div class="chip">rate/lot</div><div class="chip">Month ▾</div></div></div>
+      <div class="grid4"><div class="stat"><div class="lbl">Traders</div><div class="big"></div></div><div class="stat"><div class="lbl">Lots (mo)</div><div class="big"></div></div><div class="stat"><div class="lbl">Comm (mo)</div><div class="big"></div></div><div class="stat"><div class="lbl">Comm total</div><div class="big"></div></div></div>
+      <div class="card pad col g8"><div class="rowline"><div class="sq" style="width:20px;height:20px">▸</div><div class="grow"><div class="bar w40"></div></div><div class="bar w20" style="width:50px"></div><div class="bar w20" style="width:50px"></div></div>
+        <div style="padding-left:32px" class="col g6"><div class="rowline lbl"><div class="f1">Trader</div><div style="width:60px">Lots</div><div style="width:80px">Commission</div></div><div class="rowline"><div class="f1"><div class="bar w60"></div></div><div style="width:60px"><div class="bar w40"></div></div><div style="width:80px"><div class="bar w50"></div></div></div></div></div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Per-lot commission</span> Employee → traders → lots × rate. Rate "Activity Incentives" se.</div>
+
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/revenues</div></div><div class="mb"><div class="mtitle">20 · Revenue</div><div class="toolbar"><div class="chip">Business ▾</div><div class="btn">+ New</div></div><div class="rowline lbl"><div class="f1">Customer</div><div style="width:50px">Gross</div><div style="width:50px">Net</div></div><div class="trow"><div class="bar"></div><div class="bar w30" style="width:50px"></div><div class="bar w30" style="width:50px"></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/reports</div></div><div class="mb"><div class="mtitle">21 · Reports hub</div><div class="grid2"><div class="box" style="height:44px">chart</div><div class="box" style="height:44px">chart</div><div class="box" style="height:44px">by status</div><div class="box" style="height:44px">by source</div></div></div></div>
+  </div>
+
+  <!-- ===================== D. SUPPORT ===================== -->
+  <h3 class="grouphdr">D · Support</h3>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/tickets</div></div><div class="mb"><div class="mtitle">22 · Support Desk</div><div class="toolbar"><div class="chip">Priority ▾</div><div class="chip">Status ▾</div><div class="btn solid">+ New</div></div><div class="trow"><div class="bar"></div><div class="chip">urgent</div><div class="chip">open</div></div><div class="trow"><div class="bar w60"></div><div class="chip">low</div><div class="chip">resolved</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/tickets/9</div></div><div class="mb"><div class="mtitle">23 · Ticket Detail</div><div class="trow"><div class="bar w40"></div><div class="chip">in_progress</div></div><div class="box" style="height:30px">description</div><div class="lbl">Comments</div><div class="ph" style="height:24px"></div></div></div>
+  </div>
+
+  <!-- ===================== E. HR & PEOPLE ===================== -->
+  <h3 class="grouphdr">E · HR &amp; People</h3>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/people</div></div><div class="mb"><div class="mtitle">24 · People</div><div class="toolbar"><div class="chip on">Employees</div><div class="chip">Departments</div><div class="chip">Hierarchy Levels</div></div><div class="rowline lbl"><div class="f1">Name</div><div style="width:60px">Salary</div><div style="width:60px">Level</div></div><div class="trow"><div class="bar"></div><div class="bar w30" style="width:50px"></div><div class="bar w30" style="width:40px"></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/attendance</div></div><div class="mb"><div class="mtitle">25 · Attendance &amp; Leave</div><div class="toolbar"><div class="chip on">Attendance</div><div class="chip">Activity</div><div class="chip">Leaves</div><div class="chip">Leave Types</div></div><div class="trow"><div class="bar"></div><div class="chip">present</div></div><div class="trow"><div class="bar w60"></div><div class="small mono">7.5h</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/costs</div></div><div class="mb"><div class="mtitle">26 · Cost &amp; CTC</div><div class="toolbar"><div class="chip on">Cost Categories</div><div class="chip">Employee Costs</div></div><div class="trow"><div class="bar"></div><div class="bar w30" style="width:50px"></div></div><div class="small">CTC = Salary + costs</div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/rules</div></div><div class="mb"><div class="mtitle">27 · Rules &amp; Config</div><div class="toolbar"><div class="chip on">Formula Builder</div><div class="chip">Formula Payouts</div><div class="chip">Target Multipliers</div><div class="chip">Perf. Weights</div></div><div class="box" style="height:34px">IF revenue &gt; cost×2 → 10%</div></div></div>
+  </div>
+
+  <h2 class="sec">28 · Payroll &amp; Incentives (tabbed) — Incentive Board</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/hr/payroll</div></div>
+    <div class="content col g14">
+      <div class="flex g6 wrapf"><div class="chip">Payroll</div><div class="chip">Incentives</div><div class="chip on">Incentive Board</div><div class="chip">Slabs</div><div class="chip">Activity Incentives</div><div class="chip">Incentive Rules</div></div>
+      <div class="flex jb ac wrapf g10"><div class="bar w30" style="height:16px"></div><div class="flex g8"><div class="chip">Month ▾</div><div class="btn solid">▶ Run payout</div></div></div>
+      <div class="grid2"><div class="stat"><div class="lbl">Total payout (month)</div><div class="big"></div></div><div class="card pad small">Preview. "Run" → writes into Payroll.</div></div>
+      <div class="card pad col g6"><div class="rowline lbl"><div class="f1">Employee</div><div style="width:56px">Attain%</div><div style="width:80px">Slab</div><div style="width:110px">Activity</div><div style="width:60px">Total</div></div>
+        <div class="rowline"><div class="f1"><div class="bar w40"></div></div><div style="width:56px"><div class="bar w60"></div></div><div style="width:80px"><div class="bar w50"></div></div><div style="width:110px"><div class="bar w60"></div></div><div style="width:60px"><div class="bar w40"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Manual run</span> "Run payout" → Payroll me incentive; Final salary auto = Basic + Incentive + Bonus − Deduction.</div>
+
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/payroll — Payroll</div></div><div class="mb"><div class="mtitle">29 · Payroll (payslips)</div><div class="rowline lbl"><div class="f1">Employee</div><div style="width:50px">Basic</div><div style="width:50px">Inc.</div><div style="width:55px">Final</div></div><div class="trow"><div class="bar"></div><div class="bar w30" style="width:40px"></div><div class="bar w30" style="width:36px"></div><div class="bar w30" style="width:44px"></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/payroll — Slabs</div></div><div class="mb"><div class="mtitle">30 · Incentive Slabs</div><div class="rowline lbl"><div class="f1">min–max %</div><div style="width:60px">Inc %</div><div style="width:70px">Basis</div></div><div class="trow"><div class="bar w40"></div><div class="bar w30" style="width:40px"></div><div class="chip">revenue</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/payroll — Activity Inc.</div></div><div class="mb"><div class="mtitle">31 · Activity Incentives</div><div class="small">per-KPI reward (₹/lot etc.)</div><div class="rowline lbl"><div class="f1">Metric</div><div style="width:50px">Rate</div><div style="width:50px">Min</div></div><div class="trow"><div class="bar">Lots</div><div class="bar w30" style="width:36px"></div><div class="bar w30" style="width:36px"></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/hr/rules — Formula Builder</div></div><div class="mb"><div class="mtitle">32 · Formula Builder</div><div class="box" style="height:30px">IF [var] [op] [value] → payout</div><div class="toolbar"><div class="chip">+ condition</div><div class="chip">AND/OR</div><div class="btn solid">Save rule</div></div></div></div>
+  </div>
+
+  <h2 class="sec">33 · Recruitment (admin)</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/recruitment/job/7</div></div>
+    <div class="content col g14">
+      <div class="card pad flex jb ac wrapf g10"><div class="col g6"><div class="bar w40" style="height:16px"></div><div class="flex g8"><span class="chip">Shortlist ≥ 60%</span><span class="chip">Open</span></div></div><div class="col g6" style="min-width:210px"><div class="lbl">Public apply link</div><div class="flex g6"><div class="ph" style="height:26px;flex:1"></div><div class="btn">Copy</div></div></div></div>
+      <div class="card pad col g6"><div class="rowline lbl"><div class="f1">Candidate</div><div style="width:130px">Match</div><div style="width:150px">Skills</div><div style="width:80px">Status</div><div style="width:70px">Actions</div></div>
+        <div class="rowline"><div class="f1"><div class="bar w50"></div></div><div style="width:130px"><div class="flex ac g6"><div class="grow" style="height:8px;background:var(--line2);border-radius:4px"></div><div class="mono small">92%</div></div></div><div style="width:150px"><div class="flex g6 wrapf"><span class="chip">React</span><span class="chip">Node</span></div></div><div style="width:80px"><span class="chip">shortlisted</span></div><div style="width:70px" class="mono small">⤓★✓✗</div></div>
+        <div class="rowline"><div class="f1"><div class="bar w40"></div></div><div style="width:130px"><div class="flex ac g6"><div class="grow" style="height:8px;background:var(--fill);border-radius:4px"></div><div class="mono small">28%</div></div></div><div style="width:150px"><span class="chip">HTML</span></div><div style="width:80px"><span class="chip">applied</span></div><div style="width:70px" class="mono small">⤓★✓✗</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Auto shortlist</span> Ad me apply-link → resume → auto % match → threshold ke upar auto-shortlist.</div>
+
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/recruitment (jobs)</div></div><div class="mb"><div class="mtitle">34 · Job list</div><div class="toolbar"><div class="btn solid">+ New Job</div></div><div class="grid2"><div class="box" style="height:44px">Job card</div><div class="box" style="height:44px">Job card</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/apply/abc123 (public)</div></div><div class="mb ac"><div class="mtitle">35 · Public Apply</div><div class="bar w60"></div><div class="ph" style="height:22px;width:80%"></div><div class="box" style="height:30px;width:80%">⤒ Resume (PDF)</div><div class="btn solid">Submit</div></div></div>
+  </div>
+
+  <!-- ===================== F. FINANCE ===================== -->
+  <h3 class="grouphdr">F · Finance</h3>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/finance — P&amp;L</div></div><div class="mb"><div class="mtitle">36 · Finance (P&amp;L)</div><div class="toolbar"><div class="chip on">P&amp;L</div><div class="chip">Expenses</div><div class="chip">Commissions</div></div><div class="rowline lbl"><div class="f1">Node</div><div style="width:50px">Rev</div><div style="width:50px">Cost</div><div style="width:55px">Profit</div></div><div class="trow"><div class="bar"></div><div class="bar w30" style="width:40px"></div><div class="bar w30" style="width:40px"></div><div class="bar w30" style="width:44px"></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/aum</div></div><div class="mb"><div class="mtitle">37 · AUM Board</div><div class="rowline lbl"><div class="f1">Employee</div><div style="width:50px">New</div><div style="width:50px">W/d</div><div style="width:55px">Closing</div></div><div class="trow"><div class="bar"></div><div class="bar w30" style="width:40px"></div><div class="bar w30" style="width:40px"></div><div class="bar w30" style="width:44px"></div></div><div class="small">Net = deposits − withdrawals</div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/contribution</div></div><div class="mb"><div class="mtitle">38 · Contribution Board</div><div class="rowline lbl"><div class="f1">Node</div><div style="width:60px">Components</div><div style="width:50px">Net</div></div><div class="trow"><div class="bar"></div><div class="bar w40" style="width:60px"></div><div class="bar w30" style="width:44px"></div></div><div class="small">Σ(component × weight)</div></div></div>
+  </div>
+
+  <!-- ===================== G. ADMINISTRATION ===================== -->
+  <h3 class="grouphdr">G · Administration</h3>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/users</div></div><div class="mb"><div class="mtitle">39 · Users</div><div class="toolbar"><div class="chip">Role ▾</div><div class="btn solid">+ New</div></div><div class="trow"><div class="bar"></div><div class="chip">RM</div></div><div class="trow"><div class="bar w60"></div><div class="chip">HR</div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/m/roles &amp; /m/teams</div></div><div class="mb"><div class="mtitle">40 · Roles &amp; Teams</div><div class="trow"><div class="bar w40"></div><div class="chip">role</div></div><div class="trow"><div class="bar w60"></div><div class="chip">team</div></div><div class="small">Team requests → approval flow</div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/permissions</div></div><div class="mb"><div class="mtitle">41 · Permission Matrix</div><div class="rowline lbl"><div class="f1">Module</div><div style="width:30px">V</div><div style="width:30px">C</div><div style="width:30px">E</div><div style="width:30px">D</div></div><div class="trow"><div class="bar"></div><div class="sq" style="width:16px;height:16px">✓</div><div class="sq" style="width:16px;height:16px">✓</div><div class="sq" style="width:16px;height:16px"></div><div class="sq" style="width:16px;height:16px"></div></div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/config</div></div><div class="mb"><div class="mtitle">42 · Configuration</div><div class="toolbar"><div class="chip on">Businesses</div><div class="chip">Products</div><div class="chip">KPI Definitions</div><div class="chip">Lead Sources</div></div><div class="trow"><div class="bar"></div><div class="chip">active</div></div></div></div>
+  </div>
+
+  <h2 class="sec">43 · Integration Hub</h2>
+  <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">dagcrm.com/integrations</div></div>
+    <div class="content col g14">
+      <div class="flex jb ac wrapf g10"><div class="bar w30" style="height:16px"></div><div class="btn solid">+ Add Integration</div></div>
+      <div class="grid3">
+        <div class="card col g8"><div class="flex jb"><div class="sq" style="width:34px;height:34px">f</div><span class="chip">Connected</span></div><div class="bar w60"></div><div class="small">Business: FX Artha</div><div class="btn">Manage</div></div>
+        <div class="card col g8"><div class="flex jb"><div class="sq" style="width:34px;height:34px">G</div><span class="chip">Off</span></div><div class="bar w60"></div><div class="small">Business: DAGChain</div><div class="btn solid">Connect</div></div>
+        <div class="card col g8"><div class="flex jb"><div class="sq" style="width:34px;height:34px">⚡</div><span class="chip">Connected</span></div><div class="bar w40"></div><div class="small">FXArtha · Sync now</div><div class="btn">Manage</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Per-business</span> Har business ka apna connector + webhook. FXArtha auto-sync (1 min). DAGChain pending (OTP-free token milne par).</div>
+
+  <!-- ===================== H. ACCOUNT ===================== -->
+  <h3 class="grouphdr">H · Account &amp; Settings</h3>
+  <div class="minigrid">
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/profile</div></div><div class="mb"><div class="mtitle">44 · Profile Settings</div><div class="toolbar"><div class="avatar" style="width:30px;height:30px">U</div><div class="bar w40"></div></div><div class="ph" style="height:22px"></div><div class="btn">Save changes</div></div></div>
+    <div class="mini"><div class="mc"><div class="du"><i></i><i></i><i></i></div><div class="murl">/profile — Email Accounts</div></div><div class="mb"><div class="mtitle">45 · Business Email Accounts</div><div class="toolbar"><div class="btn solid">+ Add</div></div><div class="trow"><div class="sq" style="width:22px;height:22px">✉</div><div class="bar"></div><div class="chip">default</div></div><div class="small">SMTP · send-from picker</div></div></div>
+  </div>
+
+  <footer style="margin-top:40px;padding-top:18px;border-top:1px dashed var(--line);color:var(--soft);font-size:13px;font-family:var(--mono)">
+    DAGOS CRM — full system wireframes (45 screens) · structure only, not final design · "Save as PDF" from the top bar to share.
+  </footer>
+</div>
+</body>
+</html>
