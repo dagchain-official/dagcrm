@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Wallet, TrendingUp, Layers, Gauge, ArrowLeft, Activity, ClipboardList,
-  BookOpen, Users, RefreshCcw,
+  BookOpen, Users, RefreshCcw, Search,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -24,13 +24,14 @@ function Tile({ icon: Icon, label, value, tint, sub }) {
   );
 }
 
-function Section({ icon: Icon, title, count, children }) {
+function Section({ icon: Icon, title, count, actions, children }) {
   return (
     <div className="card p-0 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-ink-100">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-ink-100">
         <Icon size={16} className="text-brand-600" />
         <h3 className="font-bold text-ink-900">{title}</h3>
         {count != null && <span className="badge bg-ink-100 text-ink-500">{count}</span>}
+        {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
       {children}
     </div>
@@ -41,6 +42,11 @@ export default function FxArthaAccount() {
   const { id } = useParams();
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
+  const [psym, setPsym] = useState("");   // position symbol filter
+  const [lq, setLq] = useState("");       // ledger search
+  const [ltype, setLtype] = useState(""); // ledger type filter
+  const [lfrom, setLfrom] = useState(""); // ledger date from
+  const [lto, setLto] = useState("");     // ledger date to
 
   usePolling(() => {
     api.get(`/reports/fxartha-account/`, { params: { customer: id } })
@@ -56,6 +62,18 @@ export default function FxArthaAccount() {
   const orders = d.orders || [];
   const ledger = d.ledger || [];
   const ib = d.ib || {};
+
+  const symbols = [...new Set(pos.map((p) => p.symbol))].sort();
+  const posShown = psym ? pos.filter((p) => p.symbol === psym) : pos;
+  const ledTypes = [...new Set(ledger.map((l) => l.type))].sort();
+  const ledShown = ledger.filter((l) => {
+    if (ltype && l.type !== ltype) return false;
+    if (lq && !`${l.description || ""} ${l.type || ""}`.toLowerCase().includes(lq.toLowerCase())) return false;
+    const day = (l.created_at || "").slice(0, 10);
+    if (lfrom && day < lfrom) return false;
+    if (lto && day > lto) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-5">
@@ -84,7 +102,13 @@ export default function FxArthaAccount() {
       </div>
 
       {/* live positions */}
-      <Section icon={Activity} title="Live Positions" count={pos.length}>
+      <Section icon={Activity} title="Live Positions" count={posShown.length}
+        actions={pos.length > 0 && (
+          <select className="input !py-1.5 !text-xs w-auto" value={psym} onChange={(e) => setPsym(e.target.value)}>
+            <option value="">All symbols</option>
+            {symbols.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}>
         {pos.length === 0 ? (
           <EmptyState title="No open positions" hint="Trader ke koi live trade nahi." />
         ) : (
@@ -99,7 +123,7 @@ export default function FxArthaAccount() {
                 </tr>
               </thead>
               <tbody>
-                {pos.map((p) => (
+                {posShown.map((p) => (
                   <tr key={p.position_id} className="border-t border-ink-100 hover:bg-ink-50/60">
                     <td className="py-2 px-4 font-medium">{p.symbol}</td>
                     <td className="py-2 px-4"><span className={`badge ${p.side === "buy" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"}`}>{p.side}</span></td>
@@ -172,9 +196,20 @@ export default function FxArthaAccount() {
       </div>
 
       {/* ledger */}
-      <Section icon={BookOpen} title="Ledger — balance movements" count={ledger.length}>
-        {ledger.length === 0 ? (
-          <EmptyState title="No ledger entries" hint="Koi balance movement nahi." />
+      <Section icon={BookOpen} title="Ledger — balance movements" count={ledShown.length}
+        actions={ledger.length > 0 && (
+          <>
+            <div className="chip !py-1.5"><Search size={13} className="text-ink-400" /><input className="bg-transparent outline-none text-xs w-28" placeholder="Search…" value={lq} onChange={(e) => setLq(e.target.value)} /></div>
+            <select className="input !py-1.5 !text-xs w-auto" value={ltype} onChange={(e) => setLtype(e.target.value)}>
+              <option value="">All types</option>
+              {ledTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <label className="chip !py-1.5 text-xs flex items-center gap-1">From <input type="date" className="bg-transparent outline-none text-xs" value={lfrom} onChange={(e) => setLfrom(e.target.value)} /></label>
+            <label className="chip !py-1.5 text-xs flex items-center gap-1">To <input type="date" className="bg-transparent outline-none text-xs" value={lto} onChange={(e) => setLto(e.target.value)} /></label>
+          </>
+        )}>
+        {ledShown.length === 0 ? (
+          <EmptyState title={ledger.length ? "No match" : "No ledger entries"} hint={ledger.length ? "Filter/search badlo." : "Koi balance movement nahi."} />
         ) : (
           <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
             <table className="w-full text-sm min-w-[640px]">
@@ -186,7 +221,7 @@ export default function FxArthaAccount() {
                 </tr>
               </thead>
               <tbody>
-                {ledger.map((l) => (
+                {ledShown.map((l) => (
                   <tr key={l.ledger_id} className="border-t border-ink-100 hover:bg-ink-50/60">
                     <td className="py-2 px-4 text-ink-500 whitespace-nowrap">{dt(l.created_at)}</td>
                     <td className="py-2 px-4"><span className="badge bg-ink-100 text-ink-600">{l.type}</span></td>
