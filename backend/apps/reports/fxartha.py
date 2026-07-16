@@ -109,6 +109,9 @@ def fxartha_account_detail(customer):
         accounts = mine("/customers")
         positions = mine("/positions")
         orders = mine("/orders")
+        trades = mine("/trades")            # now open + closed (each row has a status)
+        trades.sort(key=lambda r: r.get("opened_at") or "", reverse=True)
+        trades = trades[:200]
         ledger = mine("/ledger")
         ledger.sort(key=lambda r: r.get("created_at") or "", reverse=True)
         ledger = ledger[:100]
@@ -148,6 +151,7 @@ def fxartha_account_detail(customer):
         "positions": positions,
         "floating_pnl": round(sum(float(p.get("floating_pnl") or 0) for p in positions), 2),
         "orders": orders,
+        "trades": trades,
         "ledger": ledger,
         "ib": ib,
     }

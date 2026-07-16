@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Wallet, TrendingUp, Layers, Gauge, ArrowLeft, Activity, ClipboardList,
-  BookOpen, Users, RefreshCcw, Search,
+  BookOpen, Users, RefreshCcw, Search, CandlestickChart,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -47,6 +47,7 @@ export default function FxArthaAccount() {
   const [ltype, setLtype] = useState(""); // ledger type filter
   const [lfrom, setLfrom] = useState(""); // ledger date from
   const [lto, setLto] = useState("");     // ledger date to
+  const [tst, setTst] = useState("");     // trades status filter: ""=all|open|closed
 
   usePolling(() => {
     api.get(`/reports/fxartha-account/`, { params: { customer: id } })
@@ -61,8 +62,10 @@ export default function FxArthaAccount() {
   const pos = d.positions || [];
   const orders = d.orders || [];
   const ledger = d.ledger || [];
+  const trades = d.trades || [];
   const ib = d.ib || {};
 
+  const tradesShown = tst ? trades.filter((t) => (t.status || "").toLowerCase() === tst) : trades;
   const symbols = [...new Set(pos.map((p) => p.symbol))].sort();
   const posShown = psym ? pos.filter((p) => p.symbol === psym) : pos;
   const ledTypes = [...new Set(ledger.map((l) => l.type))].sort();
@@ -135,6 +138,55 @@ export default function FxArthaAccount() {
                     <td className="py-2 px-4 text-right tabular-nums text-ink-500">{money(p.commission)}</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+
+      {/* trades — open + closed, with a status filter */}
+      <Section icon={CandlestickChart} title="Trades" count={tradesShown.length}
+        actions={trades.length > 0 && (
+          <div className="flex items-center rounded-lg bg-ink-100 p-0.5 text-xs">
+            {[["", "All"], ["open", "Open"], ["closed", "Closed"]].map(([v, label]) => (
+              <button key={v} onClick={() => setTst(v)}
+                className={`px-2.5 py-1 rounded-md font-semibold ${tst === v ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}>
+        {tradesShown.length === 0 ? (
+          <EmptyState title={trades.length ? "No match" : "No trades"} hint={trades.length ? "Filter badlo." : "Koi trade nahi."} />
+        ) : (
+          <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+            <table className="w-full text-sm min-w-[860px]">
+              <thead className="sticky top-0">
+                <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
+                  <th className="py-2.5 px-4">Status</th><th className="py-2.5 px-4">Symbol</th>
+                  <th className="py-2.5 px-4">Side</th><th className="py-2.5 px-4 text-right">Lots</th>
+                  <th className="py-2.5 px-4 text-right">Open</th><th className="py-2.5 px-4 text-right">Close</th>
+                  <th className="py-2.5 px-4 text-right">Net P&L</th><th className="py-2.5 px-4 text-right">Brokerage</th>
+                  <th className="py-2.5 px-4">Opened</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tradesShown.map((tr) => {
+                  const open = (tr.status || "").toLowerCase() === "open";
+                  return (
+                    <tr key={tr.trade_id} className="border-t border-ink-100 hover:bg-ink-50/60">
+                      <td className="py-2 px-4"><span className={`badge ${open ? "bg-sky-50 text-sky-700" : "bg-ink-100 text-ink-500"}`}>{tr.status || "—"}</span></td>
+                      <td className="py-2 px-4 font-medium">{tr.symbol}</td>
+                      <td className="py-2 px-4"><span className={`badge ${tr.side === "buy" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"}`}>{tr.side}</span></td>
+                      <td className="py-2 px-4 text-right tabular-nums">{num(tr.lots)}</td>
+                      <td className="py-2 px-4 text-right tabular-nums">{num(tr.open_price)}</td>
+                      <td className="py-2 px-4 text-right tabular-nums text-ink-500">{open ? "—" : num(tr.close_price)}</td>
+                      <td className={`py-2 px-4 text-right tabular-nums font-semibold ${open ? "text-ink-400" : pnlColor(tr.net_pnl)}`}>{open ? "—" : money(tr.net_pnl)}</td>
+                      <td className="py-2 px-4 text-right tabular-nums text-ink-500">{money(tr.brokerage)}</td>
+                      <td className="py-2 px-4 text-ink-500 whitespace-nowrap">{dt(tr.opened_at)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
