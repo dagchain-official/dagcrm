@@ -76,7 +76,6 @@ export default function FxArthaAccount() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <Tile icon={Wallet} label="Balance" value={money(a.balance)} tint="bg-brand-100 text-brand-600" />
         <Tile icon={TrendingUp} label="Equity" value={money(a.equity)} tint="bg-emerald-100 text-emerald-600" />
-        <Tile icon={Activity} label="Floating P&L" value={money(d.floating_pnl)} tint="bg-violet-100 text-violet-600" />
         <Tile icon={Wallet} label="Credit" value={money(a.credit)} tint="bg-amber-100 text-amber-600" />
         <Tile icon={Layers} label="Free Margin" value={money(a.free_margin)} tint="bg-sky-100 text-sky-600" />
         <Tile icon={Layers} label="Margin Used" value={money(a.margin_used)} tint="bg-rose-100 text-rose-500" />
@@ -97,7 +96,6 @@ export default function FxArthaAccount() {
                   <th className="py-2.5 px-4 text-right">Lots</th><th className="py-2.5 px-4 text-right">Open</th>
                   <th className="py-2.5 px-4 text-right">SL</th><th className="py-2.5 px-4 text-right">TP</th>
                   <th className="py-2.5 px-4 text-right">Swap</th><th className="py-2.5 px-4 text-right">Comm.</th>
-                  <th className="py-2.5 px-4 text-right">Floating P&L</th>
                 </tr>
               </thead>
               <tbody>
@@ -111,7 +109,6 @@ export default function FxArthaAccount() {
                     <td className="py-2 px-4 text-right tabular-nums text-ink-400">{p.take_profit ? num(p.take_profit) : "—"}</td>
                     <td className="py-2 px-4 text-right tabular-nums text-ink-500">{num(p.swap)}</td>
                     <td className="py-2 px-4 text-right tabular-nums text-ink-500">{money(p.commission)}</td>
-                    <td className={`py-2 px-4 text-right tabular-nums font-semibold ${pnlColor(p.floating_pnl)}`}>{money(p.floating_pnl)}</td>
                   </tr>
                 ))}
               </tbody>
