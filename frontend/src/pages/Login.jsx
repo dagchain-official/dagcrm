@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Hexagon, LogIn } from "lucide-react";
+import { Eye, EyeOff, Hexagon, LogIn } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/client";
 
@@ -13,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [forgot, setForgot] = useState(false);
   const [forgotMsg, setForgotMsg] = useState("");
+  const [showPw, setShowPw] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -93,7 +94,23 @@ export default function Login() {
                   Forgot password?
                 </button>
               </div>
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type={showPw ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-3 grid place-items-center text-ink-400 hover:text-ink-600"
+                >
+                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
 

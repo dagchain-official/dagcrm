@@ -21,3 +21,6 @@ dist/
 
 # production secrets
 .env.prod
+.env.local
+.env.*.local
+.claude/
