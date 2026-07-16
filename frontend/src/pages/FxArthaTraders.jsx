@@ -95,7 +95,7 @@ export default function FxArthaTraders() {
               {rows.map((r) => (
                 <tr key={r.customer_id} className="border-t border-ink-100 hover:bg-ink-50/60">
                   <td className="py-2.5 px-4">
-                    <Link to={`/customers/${r.customer_id}`} className="font-medium text-brand-700 hover:underline">{r.name}</Link>
+                    <Link to={`/fxartha-account/${r.customer_id}`} className="font-medium text-brand-700 hover:underline">{r.name}</Link>
                     <div className="text-[11px] text-ink-400">{r.email || "—"}</div>
                   </td>
                   <td className="py-2.5 px-4 text-ink-500">{r.country || "—"}</td>

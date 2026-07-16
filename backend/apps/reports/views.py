@@ -14,7 +14,7 @@ from .performance import compute_performance, scoped_performance
 from .pnl import compute_pnl, scoped_for
 from .targets import compute_targets, scoped_targets
 from .traders import compute_traders_lots, scoped_traders_lots
-from .fxartha import compute_fxartha_traders, scoped_fxartha_traders
+from .fxartha import compute_fxartha_traders, fxartha_account_detail, scoped_fxartha_traders
 
 from django.contrib.auth import get_user_model
 
@@ -324,6 +324,21 @@ def fxartha_traders(request):
         q=request.query_params.get("q"),
     )
     return Response(scoped_fxartha_traders(request.user, data))
+
+
+@api_view(["GET"])
+def fxartha_account(request):
+    """Live FXArtha account for one synced trader (?customer=<crm id>): account
+    metrics, live positions + floating P&L, working orders, ledger, and IB info."""
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
+    cust = Customer.objects.filter(id=request.query_params.get("customer")).first()
+    if not cust or not cust.external_id:
+        return Response({"error": "Not a synced FXArtha trader."}, status=404)
+    role = getattr(getattr(request.user, "role", None), "name", "")
+    if not (is_admin_view(request.user) or role in ("Finance", "HR")):
+        if cust.assigned_to_id not in subordinate_user_ids(request.user, include_self=True):
+            return Response({"error": "No access to this trader."}, status=403)
+    return Response(fxartha_account_detail(cust))
 
 
 @api_view(["GET"])
