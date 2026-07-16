@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LineChart, Users, CandlestickChart, Coins, Download, Search } from "lucide-react";
+import { LineChart, Users, CandlestickChart, Coins, Download, Search, Repeat } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Spinner, EmptyState } from "../components/ui";
 
 const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const int = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const date = (v) => (v ? new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 function Stat({ icon: Icon, label, value, tint }) {
@@ -38,8 +39,8 @@ export default function FxArthaTraders() {
 
   const exportCsv = () => {
     const rows = d?.rows || [];
-    const head = ["Trader", "Email", "Phone", "Country", "RM", "Date", "Lots", "Brokerage", "Commission", "Net Revenue", "Deposits", "Withdrawals", "Net AUM", "Insurance", "Staking", "Trading Loss"];
-    const body = rows.map((r) => [r.name, r.email, r.phone, r.country, r.rm || "", r.date || "", r.lots, r.brokerage, r.commission, r.net_revenue, r.deposits, r.withdrawals, r.net_aum, r.insurance, r.staking, r.trading_loss]);
+    const head = ["Trader", "Email", "Phone", "Country", "RM", "Date", "Lots", "Trades", "Brokerage", "Commission", "Net Revenue", "Deposits", "Withdrawals", "Net AUM", "Insurance", "Staking", "Trading Loss"];
+    const body = rows.map((r) => [r.name, r.email, r.phone, r.country, r.rm || "", r.date || "", r.lots, r.trades, r.brokerage, r.commission, r.net_revenue, r.deposits, r.withdrawals, r.net_aum, r.insurance, r.staking, r.trading_loss]);
     const csv = [head, ...body].map((line) => line.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "fxartha-traders.csv"; a.click(); URL.revokeObjectURL(url);
@@ -66,9 +67,10 @@ export default function FxArthaTraders() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         <Stat icon={Users} label="Traders" value={t.traders || 0} tint="bg-brand-100 text-brand-600" />
         <Stat icon={CandlestickChart} label="Total Lots" value={num(t.lots)} tint="bg-violet-100 text-violet-600" />
+        <Stat icon={Repeat} label="Total Trades" value={int(t.trades)} tint="bg-amber-100 text-amber-600" />
         <Stat icon={Coins} label="Brokerage" value={money(t.brokerage)} tint="bg-emerald-100 text-emerald-600" />
         <Stat icon={Coins} label="Deposits" value={money(t.deposits)} tint="bg-sky-100 text-sky-600" />
         <Stat icon={Coins} label="Withdrawals" value={money(t.withdrawals)} tint="bg-rose-100 text-rose-500" />
@@ -76,7 +78,7 @@ export default function FxArthaTraders() {
 
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[900px]">
+          <table className="w-full text-sm min-w-[1000px]">
             <thead>
               <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
                 <th className="py-3 px-4 font-semibold">Trader</th>
@@ -84,6 +86,7 @@ export default function FxArthaTraders() {
                 <th className="py-3 px-4 font-semibold">RM</th>
                 <th className="py-3 px-4 font-semibold">Date</th>
                 <th className="py-3 px-4 font-semibold text-right">Lots</th>
+                <th className="py-3 px-4 font-semibold text-right">Trades</th>
                 <th className="py-3 px-4 font-semibold text-right">Brokerage</th>
                 <th className="py-3 px-4 font-semibold text-right">Deposits</th>
                 <th className="py-3 px-4 font-semibold text-right">Withdrawals</th>
@@ -102,6 +105,7 @@ export default function FxArthaTraders() {
                   <td className="py-2.5 px-4">{r.rm || <span className="text-rose-500 text-xs">Unassigned</span>}</td>
                   <td className="py-2.5 px-4 text-ink-500 whitespace-nowrap">{date(r.date)}</td>
                   <td className="py-2.5 px-4 text-right tabular-nums font-semibold text-violet-600">{num(r.lots)}</td>
+                  <td className="py-2.5 px-4 text-right tabular-nums text-amber-600">{int(r.trades)}</td>
                   <td className="py-2.5 px-4 text-right tabular-nums text-emerald-600">{money(r.brokerage)}</td>
                   <td className="py-2.5 px-4 text-right tabular-nums text-ink-600">{money(r.deposits)}</td>
                   <td className="py-2.5 px-4 text-right tabular-nums text-rose-500">{money(r.withdrawals)}</td>
@@ -115,6 +119,7 @@ export default function FxArthaTraders() {
                 <tr className="border-t-2 border-ink-200 font-bold bg-ink-50">
                   <td className="py-3 px-4" colSpan={4}>Total ({t.traders})</td>
                   <td className="py-3 px-4 text-right tabular-nums text-violet-700">{num(t.lots)}</td>
+                  <td className="py-3 px-4 text-right tabular-nums text-amber-700">{int(t.trades)}</td>
                   <td className="py-3 px-4 text-right tabular-nums text-emerald-700">{money(t.brokerage)}</td>
                   <td className="py-3 px-4 text-right tabular-nums">{money(t.deposits)}</td>
                   <td className="py-3 px-4 text-right tabular-nums text-rose-600">{money(t.withdrawals)}</td>

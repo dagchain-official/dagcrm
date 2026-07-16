@@ -89,7 +89,8 @@ def _upsert_lead(conn, item, source, next_rm):
     return lead, True
 
 
-def _sync_customer(conn, item, business, tx_map=None, trade_map=None, lots_metric=None):
+def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
+                   lots_metric=None, trades_metric=None):
     from apps.crm.models import (AumEntry, ContributionEntry, Customer, Lead,
                                  MetricDefinition, MetricEntry)
     from apps.hr.models import Employee
@@ -166,9 +167,15 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None, lots_metri
                       "insurance": insurance, "staking": staking, "other": 0, "date": when})
 
     # KPI (PART 10) — per-trader figures, keyed by user_id.
-    # Lots: the /trades aggregate is per user; fall back to the customer field.
-    _lots = (trade_map or {}).get(uid)
-    lots = float(_lots) if _lots is not None else float(item.get("lots_traded") or 0)
+    # Lots + trade count: the /trades aggregate is per user (see _aggregate_trades);
+    # fall back to the per-customer fields when the trades feed is absent.
+    _tr = (trade_map or {}).get(uid)
+    if _tr is not None:
+        lots = float(_tr.get("lots") or 0)
+        trades = int(_tr.get("count") or 0)
+    else:
+        lots = float(item.get("lots_traded") or 0)
+        trades = int(item.get("trades_count") or 0)
     if emp and lots:
         md = lots_metric or MetricDefinition.objects.filter(name__icontains="lot").first()
         if md:
@@ -176,6 +183,12 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None, lots_metri
                 external_id=f"fxa-lots:{uid}",
                 defaults={"metric": md, "employee": emp, "customer": cust,
                           "value": lots, "date": when, "note": "FXArtha sync"})
+    # Trades Taken KPI — total number of trades the trader placed (count)
+    if emp and trades and trades_metric:
+        MetricEntry.objects.update_or_create(
+            external_id=f"fxa-trades:{uid}",
+            defaults={"metric": trades_metric, "employee": emp, "customer": cust,
+                      "value": trades, "date": when, "note": "FXArtha sync"})
     # New Deposits KPI — the trader's deposit total
     if emp and dep:
         mdd = MetricDefinition.objects.filter(name__icontains="deposit").first()
@@ -221,20 +234,23 @@ def _aggregate_transactions(client):
 
 
 def _aggregate_trades(client):
-    """Roll up /trades into {user_id: total_lots}."""
+    """Roll up /trades into {user_id: {"lots": total_lots, "count": n_trades}}.
+    `count` is how many trades the trader placed; `lots` their summed volume."""
     out = {}
     try:
         for tr in client.paginate("/trades"):
             uid = tr.get("user_id")
             if uid:
-                out[uid] = out.get(uid, 0.0) + float(tr.get("lots") or 0)
+                row = out.setdefault(uid, {"lots": 0.0, "count": 0})
+                row["lots"] += float(tr.get("lots") or 0)
+                row["count"] += 1
     except (RuntimeError, requests.RequestException):
         pass
     return out
 
 
 def sync_fxartha(conn):
-    from apps.crm.models import Business, LeadSource
+    from apps.crm.models import Business, Lead, LeadSource
     from .models import IntegrationLog
     from .services import _next_rm
 
@@ -253,6 +269,11 @@ def sync_fxartha(conn):
             name="Lots Traded",
             defaults={"unit": "lots", "aggregation": "sum",
                       "category": "activity", "source": "manual"})
+        # "Trades Taken" KPI — per-trader count of trades placed.
+        trades_metric, _ = MetricDefinition.objects.get_or_create(
+            name="Trades Taken",
+            defaults={"unit": "count", "aggregation": "sum",
+                      "category": "activity", "source": "manual"})
 
         # Deposits/withdrawals live in /transactions and per-trade lots in /trades
         # (the /customers rows report 0 deposits). Roll both up per user_id.
@@ -266,9 +287,37 @@ def sync_fxartha(conn):
             lead_updated += int(not created)
 
         cust_synced = 0
+        synced_uids = set()
         for item in client.paginate("/customers"):
-            _sync_customer(conn, item, business, tx_map, trade_map, lots_metric)
+            _sync_customer(conn, item, business, tx_map, trade_map,
+                           lots_metric, trades_metric)
+            synced_uids.add(item.get("user_id"))
             cust_synced += 1
+
+        # Sync EVERY transacting/trading user — not just those the /customers feed
+        # exposes. FXArtha's /customers feed returns only a subset, so deposits,
+        # withdrawals, lots and trades for users that appear only in /transactions
+        # or /trades were being dropped (the platform deposit total never
+        # reconciled). Materialise a customer for each remaining user from their
+        # already-synced lead so their figures roll up too. Idempotent
+        # (update_or_create on external_id), so re-syncing never duplicates.
+        extra_synced = extra_unowned = 0
+        for uid in (set(tx_map) | set(trade_map)) - synced_uids:
+            if not uid:
+                continue
+            lead = Lead.objects.filter(external_id=uid).first()
+            syn = {"user_id": uid}
+            if lead:
+                syn.update(name=lead.name, email=lead.email,
+                           phone=lead.phone, country=lead.country)
+            cust = _sync_customer(conn, syn, business, tx_map, trade_map,
+                                  lots_metric, trades_metric)
+            extra_synced += 1
+            # Deposits need an owning RM (AumEntry.employee is non-null). Count any
+            # user we still couldn't attribute so nothing is silently lost.
+            if cust and not (cust.assigned_to_id or (lead and lead.assigned_to_id)):
+                extra_unowned += 1
+        cust_synced += extra_synced
     except (RuntimeError, requests.RequestException) as e:
         IntegrationLog.objects.create(connection=conn, status="error", message=str(e)[:300])
         return {"error": str(e)}
@@ -281,8 +330,11 @@ def sync_fxartha(conn):
     conn.save()
 
     summary = {"leads_created": lead_created, "leads_updated": lead_updated,
-               "customers_synced": cust_synced, "dashboard": dashboard}
-    IntegrationLog.objects.create(
-        connection=conn, status="success",
-        message=f"{lead_created} new + {lead_updated} updated leads, {cust_synced} customers")
+               "customers_synced": cust_synced, "extra_users_synced": extra_synced,
+               "unowned_users": extra_unowned, "dashboard": dashboard}
+    msg = (f"{lead_created} new + {lead_updated} updated leads, {cust_synced} customers "
+           f"({extra_synced} beyond the /customers feed)")
+    if extra_unowned:
+        msg += f"; {extra_unowned} users had no RM — their deposits could not be attributed"
+    IntegrationLog.objects.create(connection=conn, status="success", message=msg)
     return summary

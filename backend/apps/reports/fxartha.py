@@ -14,6 +14,11 @@ def _lots_metric_ids():
     return list(MetricDefinition.objects.filter(name__icontains="lot").values_list("id", flat=True))
 
 
+def _trades_metric_ids():
+    from apps.crm.models import MetricDefinition
+    return list(MetricDefinition.objects.filter(name__iexact="Trades Taken").values_list("id", flat=True))
+
+
 def compute_fxartha_traders(date_from=None, date_to=None, q=None):
     from apps.crm.models import AumEntry, ContributionEntry, Customer, MetricEntry
     from apps.sales.models import Revenue
@@ -24,6 +29,7 @@ def compute_fxartha_traders(date_from=None, date_to=None, q=None):
         custs = custs.filter(Q(name__icontains=q) | Q(email__icontains=q) | Q(phone__icontains=q))
 
     lot_ids = _lots_metric_ids()
+    trade_ids = _trades_metric_ids()
     rows = []
     for c in custs:
         rev = Revenue.objects.filter(customer=c).aggregate(
@@ -35,6 +41,8 @@ def compute_fxartha_traders(date_from=None, date_to=None, q=None):
             b=Sum("brokerage"), i=Sum("insurance"), s=Sum("staking"), tl=Sum("trading_loss"))
         lots = (MetricEntry.objects.filter(customer=c, metric_id__in=lot_ids)
                 .aggregate(s=Sum("value"))["s"] or 0) if lot_ids else 0
+        trades = (MetricEntry.objects.filter(customer=c, metric_id__in=trade_ids)
+                  .aggregate(s=Sum("value"))["s"] or 0) if trade_ids else 0
 
         # representative date = latest entry date across the trader's synced rows
         dts = []
@@ -56,6 +64,7 @@ def compute_fxartha_traders(date_from=None, date_to=None, q=None):
             "country": c.country, "rm": getattr(c.assigned_to, "name", None),
             "date": acct_date.isoformat() if acct_date else None,
             "lots": round(float(lots), 2),
+            "trades": int(trades),
             "brokerage": round(float(rev["g"] or 0), 2),
             "commission": round(float(rev["cm"] or 0), 2),
             "net_revenue": round(float(rev["n"] or 0), 2),
@@ -68,7 +77,7 @@ def compute_fxartha_traders(date_from=None, date_to=None, q=None):
         })
 
     rows.sort(key=lambda r: r["lots"], reverse=True)
-    keys = ["lots", "brokerage", "commission", "net_revenue", "deposits",
+    keys = ["lots", "trades", "brokerage", "commission", "net_revenue", "deposits",
             "withdrawals", "net_aum", "trading_loss"]
     totals = {k: round(sum(r[k] for r in rows), 2) for k in keys}
     totals["traders"] = len(rows)
@@ -156,7 +165,7 @@ def scoped_fxartha_traders(user, data):
     allowed = set(Customer.objects.exclude(external_id="")
                   .filter(assigned_to_id__in=keep_ids).values_list("id", flat=True))
     rows = [r for r in data["rows"] if r["customer_id"] in allowed]
-    keys = ["lots", "brokerage", "commission", "net_revenue", "deposits",
+    keys = ["lots", "trades", "brokerage", "commission", "net_revenue", "deposits",
             "withdrawals", "net_aum", "trading_loss"]
     totals = {k: round(sum(r[k] for r in rows), 2) for k in keys}
     totals["traders"] = len(rows)
