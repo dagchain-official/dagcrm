@@ -128,7 +128,7 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
     owner_uid = cust.assigned_to_id or (lead.assigned_to_id if lead else None)
     emp = Employee.objects.filter(user_id=owner_uid).first() if owner_uid else None
     when = _date(item.get("account_opened_at"))
-    # Deposits/withdrawals are per-USER in /transactions (the /customers rows report
+    # Deposits/withdrawals are per-USER in the /ledger (the /customers rows report
     # them as 0). A trader can hold several accounts (several /customers rows), so
     # these — and lots — are keyed by user_id with the rolled-up per-user figure;
     # re-running per account-row just rewrites the same row (no double-counting).
@@ -212,24 +212,23 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
 
 
 def _aggregate_transactions(client):
-    """Roll up /transactions into {user_id: {deposit, withdrawal}} — SETTLED only.
-    Deposits/withdrawals are not on the /customers rows — they live here. Only
-    APPROVED transactions are counted: a pending deposit isn't real money yet, so
-    totalling it as AUM/deposits would overstate the figure (FXArtha confirmed the
-    pending deposits should NOT be included)."""
-    skip = {"pending", "rejected", "failed", "cancelled", "canceled", "declined",
-            "processing", "on_hold", "unconfirmed"}
+    """Roll up the /ledger into {user_id: {deposit, withdrawal}} per trader.
+    The LEDGER is the settled, authoritative record of money movement — real
+    deposits post here and reconcile with FXArtha's own dashboard total. (The
+    /transactions feed only carries still-pending requests, which aren't real
+    money yet.) Withdrawals are recorded as negative ledger amounts, so we take
+    the magnitude."""
     out = {}
     try:
-        for t in client.paginate("/transactions"):
-            uid = t.get("user_id")
-            if not uid or str(t.get("status") or "approved").lower() in skip:
+        for l in client.paginate("/ledger"):
+            uid = l.get("user_id")
+            if not uid:
                 continue
-            ty = (t.get("type") or "").lower()
+            ty = (l.get("type") or "").lower()
             if ty not in ("deposit", "withdrawal"):
                 continue
             row = out.setdefault(uid, {"deposit": 0.0, "withdrawal": 0.0})
-            row[ty] += float(t.get("amount") or 0)
+            row[ty] += abs(float(l.get("amount") or 0))
     except (RuntimeError, requests.RequestException):
         pass  # endpoint optional — fall back to per-customer fields
     return out
