@@ -212,11 +212,13 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
 
 
 def _aggregate_transactions(client):
-    """Roll up /transactions into {user_id: {deposit, withdrawal}}.
-    Deposits/withdrawals are not on the /customers rows — they live here. We count
-    every transaction that wasn't explicitly rejected (FXArtha keeps most deposits
-    in a 'pending' state, so excluding those would hide almost all deposits)."""
-    skip = {"rejected", "failed", "cancelled", "canceled", "declined"}
+    """Roll up /transactions into {user_id: {deposit, withdrawal}} — SETTLED only.
+    Deposits/withdrawals are not on the /customers rows — they live here. Only
+    APPROVED transactions are counted: a pending deposit isn't real money yet, so
+    totalling it as AUM/deposits would overstate the figure (FXArtha confirmed the
+    pending deposits should NOT be included)."""
+    skip = {"pending", "rejected", "failed", "cancelled", "canceled", "declined",
+            "processing", "on_hold", "unconfirmed"}
     out = {}
     try:
         for t in client.paginate("/transactions"):
