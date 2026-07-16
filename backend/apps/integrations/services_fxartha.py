@@ -127,45 +127,53 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None, lots_metri
     owner_uid = cust.assigned_to_id or (lead.assigned_to_id if lead else None)
     emp = Employee.objects.filter(user_id=owner_uid).first() if owner_uid else None
     when = _date(item.get("account_opened_at"))
-    # Money movement lives in the /transactions feed — the /customers row reports
-    # total_deposit/withdrawal as 0. Use the rolled-up tx figures, falling back to
-    # the customer field only when a tx map wasn't built.
-    _txu = (tx_map or {}).get(uid) or {}
-    dep = float(_txu.get("deposit") or 0) or float(item.get("total_deposit") or 0)
-    wd = float(_txu.get("withdrawal") or 0) or float(item.get("total_withdrawal") or 0)
+    # Deposits/withdrawals are per-USER in /transactions (the /customers rows report
+    # them as 0). A trader can hold several accounts (several /customers rows), so
+    # these — and lots — are keyed by user_id with the rolled-up per-user figure;
+    # re-running per account-row just rewrites the same row (no double-counting).
+    # Fall back to the per-account customer field only if the tx feed was absent.
+    _txu = (tx_map or {}).get(uid)
+    if _txu is not None:
+        dep = float(_txu.get("deposit") or 0)
+        wd = float(_txu.get("withdrawal") or 0)
+    else:
+        dep = float(item.get("total_deposit") or 0)
+        wd = float(item.get("total_withdrawal") or 0)
+    dep_acct = float(item.get("total_deposit") or 0)  # per-account (for contribution)
 
-    # AUM (PART 11) — deposits / withdrawals -> Net New AUM
+    # AUM (PART 11) — deposits / withdrawals -> Net New AUM (per trader)
     if emp and dep:
         AumEntry.objects.update_or_create(
-            external_id=f"fxa-dep:{acct}",
+            external_id=f"fxa-dep:{uid}",
             defaults={"employee": emp, "customer": cust, "business": business,
                       "entry_type": "deposit", "amount": dep, "date": when, "note": "FXArtha sync"})
     if emp and wd:
         AumEntry.objects.update_or_create(
-            external_id=f"fxa-wd:{acct}",
+            external_id=f"fxa-wd:{uid}",
             defaults={"employee": emp, "customer": cust, "business": business,
                       "entry_type": "withdrawal", "amount": wd, "date": when, "note": "FXArtha sync"})
 
-    # Contribution (PART 12) — client business-contribution components
+    # Contribution (PART 12) — per-account components (brokerage/loss are per account)
     brokerage = float(item.get("brokerage") or item.get("gross_brokerage") or 0)
     insurance = float(item.get("insurance") or 0)
     staking = float(item.get("staking") or 0)
     trading_loss = float(item.get("trading_loss") or 0)
-    if emp and (brokerage or insurance or staking or trading_loss or dep):
+    if emp and (brokerage or insurance or staking or trading_loss or dep_acct):
         ContributionEntry.objects.update_or_create(
             external_id=f"fxa-contrib:{acct}",
             defaults={"employee": emp, "customer": cust, "business": business,
-                      "deposit": dep, "trading_loss": trading_loss, "brokerage": brokerage,
+                      "deposit": dep_acct, "trading_loss": trading_loss, "brokerage": brokerage,
                       "insurance": insurance, "staking": staking, "other": 0, "date": when})
 
-    # KPI (PART 10) — feed the business's FXArtha metrics from the synced totals.
-    # Lots: prefer the granular /trades aggregate, else the cumulative customer field.
-    lots = float((trade_map or {}).get(uid) or 0) or float(item.get("lots_traded") or 0)
+    # KPI (PART 10) — per-trader figures, keyed by user_id.
+    # Lots: the /trades aggregate is per user; fall back to the customer field.
+    _lots = (trade_map or {}).get(uid)
+    lots = float(_lots) if _lots is not None else float(item.get("lots_traded") or 0)
     if emp and lots:
         md = lots_metric or MetricDefinition.objects.filter(name__icontains="lot").first()
         if md:
             MetricEntry.objects.update_or_create(
-                external_id=f"fxa-lots:{acct}",
+                external_id=f"fxa-lots:{uid}",
                 defaults={"metric": md, "employee": emp, "customer": cust,
                           "value": lots, "date": when, "note": "FXArtha sync"})
     # New Deposits KPI — the trader's deposit total
@@ -173,10 +181,10 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None, lots_metri
         mdd = MetricDefinition.objects.filter(name__icontains="deposit").first()
         if mdd:
             MetricEntry.objects.update_or_create(
-                external_id=f"fxa-newdep:{acct}",
+                external_id=f"fxa-newdep:{uid}",
                 defaults={"metric": mdd, "employee": emp, "customer": cust,
                           "value": dep, "date": when, "note": "FXArtha sync"})
-    # Active Traders KPI — one per synced trader; the metric counts them per RM
+    # Active Traders KPI — one per synced trader (per user_id)
     if emp:
         mda = MetricDefinition.objects.filter(name__icontains="active").first()
         if mda:
@@ -184,16 +192,18 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None, lots_metri
                 mda.aggregation = "count"
                 mda.save(update_fields=["aggregation"])
             MetricEntry.objects.update_or_create(
-                external_id=f"fxa-active:{acct}",
+                external_id=f"fxa-active:{uid}",
                 defaults={"metric": mda, "employee": emp, "customer": cust,
                           "value": 1, "date": when, "note": "FXArtha sync"})
     return cust
 
 
 def _aggregate_transactions(client):
-    """Roll up /transactions into {user_id: {deposit, withdrawal}} (settled only).
-    Deposits/withdrawals are not on the /customers rows — they live here."""
-    skip = {"rejected", "failed", "cancelled", "canceled", "declined", "pending"}
+    """Roll up /transactions into {user_id: {deposit, withdrawal}}.
+    Deposits/withdrawals are not on the /customers rows — they live here. We count
+    every transaction that wasn't explicitly rejected (FXArtha keeps most deposits
+    in a 'pending' state, so excluding those would hide almost all deposits)."""
+    skip = {"rejected", "failed", "cancelled", "canceled", "declined"}
     out = {}
     try:
         for t in client.paginate("/transactions"):
