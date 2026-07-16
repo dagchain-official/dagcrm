@@ -4,7 +4,7 @@ import {
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Package, LifeBuoy,
   MessageSquare, Calendar, Ticket as TicketIcon, Activity, UserPlus, Clock,
   Plus, Upload, FileText, Download, Paperclip, FileSignature, UserCog,
-  CandlestickChart, ArrowDownToLine, ArrowUpFromLine, Wallet,
+  CandlestickChart, ArrowDownToLine, ArrowUpFromLine, Wallet, Coins, TrendingDown,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -250,7 +250,25 @@ export default function Customer360() {
             <div className="flex items-center gap-2 text-ink-600"><Wallet size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Net AUM</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.net_aum)}</p>
           </div>
+          <div className="rounded-2xl bg-violet-50 border border-violet-100 p-4">
+            <div className="flex items-center gap-2 text-violet-600"><DollarSign size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Gross Brokerage</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.gross_brokerage)}</p>
+          </div>
+          <div className="rounded-2xl bg-sky-50 border border-sky-100 p-4">
+            <div className="flex items-center gap-2 text-sky-600"><Coins size={16} /><span className="text-xs font-semibold uppercase tracking-wide">IB Commission</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.ib_commission)}</p>
+          </div>
+          <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+            <div className="flex items-center gap-2 text-amber-600"><TrendingDown size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Trading Loss</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.trading_loss)}</p>
+          </div>
         </div>
+        {(tr.insurance || tr.staking) ? (
+          <div className="flex flex-wrap gap-4 mt-4 text-sm text-ink-500">
+            <span>Insurance: <b className="text-ink-800">${num(tr.insurance)}</b></span>
+            <span>Staking: <b className="text-ink-800">${num(tr.staking)}</b></span>
+          </div>
+        ) : null}
       </div>
 
       {/* tabs */}

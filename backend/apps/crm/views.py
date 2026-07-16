@@ -503,12 +503,15 @@ class CustomerViewSet(viewsets.ModelViewSet):
         total_gross = revenues.aggregate(s=Sum("gross_revenue"))["s"] or 0
         open_tickets = tickets.exclude(status__in=["resolved", "closed"]).count()
 
-        # Trading activity for this specific trader (from FXArtha sync): lots + AUM.
+        # Trading activity for this specific trader (from FXArtha sync).
         lots_traded = (MetricEntry.objects.filter(customer=customer, metric__name__icontains="lot")
                        .aggregate(s=Sum("value"))["s"] or 0)
         aum = AumEntry.objects.filter(customer=customer)
         deposits = aum.filter(entry_type="deposit").aggregate(s=Sum("amount"))["s"] or 0
         withdrawals = aum.filter(entry_type="withdrawal").aggregate(s=Sum("amount"))["s"] or 0
+        ib_commission = revenues.aggregate(s=Sum("commission"))["s"] or 0
+        con = ContributionEntry.objects.filter(customer=customer).aggregate(
+            b=Sum("brokerage"), i=Sum("insurance"), s=Sum("staking"), tl=Sum("trading_loss"))
 
         # unified timeline (newest first)
         timeline = []
@@ -543,9 +546,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
             },
             "trading": {
                 "lots_traded": lots_traded,
+                "gross_brokerage": total_gross,
+                "ib_commission": ib_commission,
                 "deposits": deposits,
                 "withdrawals": withdrawals,
                 "net_aum": deposits - withdrawals,
+                "insurance": con["i"] or 0,
+                "staking": con["s"] or 0,
+                "trading_loss": con["tl"] or 0,
             },
             "products": CustomerProductSerializer(products, many=True).data,
             "revenues": RevenueSerializer(revenues, many=True).data,
