@@ -4,14 +4,14 @@ import {
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
   TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
-  Landmark, PiggyBank, Scale, CandlestickChart,
+  Landmark, PiggyBank, Scale, CandlestickChart, LineChart,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders"].includes(to)) return "reports";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders", "/fxartha"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
@@ -55,9 +55,15 @@ export const NAV = [
       { to: "/targets", label: "Targets", icon: Crosshair },
       { to: "/team-requests", label: "Team Requests", icon: UserPlus },
       { to: "/kpi", label: "KPI & Performance", icon: BarChart4 },
-      { to: "/traders-lots", label: "Traders & Lots", icon: CandlestickChart },
-      { to: "/fxartha-traders", label: "FXArtha Traders", icon: TrendingUp },
       { to: "/m/revenues", label: "Revenue", icon: DollarSign },
+    ],
+  },
+  {
+    group: "FX Artha",
+    items: [
+      { to: "/fxartha", label: "Overview", icon: LineChart },
+      { to: "/fxartha-traders", label: "Traders", icon: Users },
+      { to: "/traders-lots", label: "Lots & Commission", icon: CandlestickChart },
     ],
   },
   {

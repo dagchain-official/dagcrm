@@ -300,6 +300,21 @@ def target_board(request):
 
 
 @api_view(["GET"])
+def fxartha_overview(request):
+    """FX Artha platform snapshot — the last-synced dashboard totals + counts."""
+    from apps.integrations.models import IntegrationConnection
+    from apps.crm.models import Customer
+    conn = IntegrationConnection.objects.filter(platform="fxartha").first()
+    cfg = (conn.config or {}) if conn else {}
+    return Response({
+        "dashboard": cfg.get("dashboard", {}),
+        "last_sync": cfg.get("last_sync"),
+        "status": conn.status if conn else "disconnected",
+        "synced_traders": Customer.objects.exclude(external_id="").count(),
+    })
+
+
+@api_view(["GET"])
 def fxartha_traders(request):
     """Full FXArtha trader detail: per trader — lots, brokerage, deposits,
     withdrawals, net AUM, contribution, date, RM. Filters: ?q= ?from= ?to=."""
