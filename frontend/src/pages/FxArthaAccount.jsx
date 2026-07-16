@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  Wallet, TrendingUp, Layers, Gauge, ArrowLeft, Activity, ClipboardList,
+  Wallet, TrendingUp, Layers, Gauge, ArrowLeft, ClipboardList,
   BookOpen, Users, RefreshCcw, Search, CandlestickChart,
 } from "lucide-react";
 import api from "../api/client";
@@ -42,7 +42,7 @@ export default function FxArthaAccount() {
   const { id } = useParams();
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
-  const [psym, setPsym] = useState("");   // position symbol filter
+  const [tsym, setTsym] = useState("");   // trades symbol filter
   const [lq, setLq] = useState("");       // ledger search
   const [ltype, setLtype] = useState(""); // ledger type filter
   const [lfrom, setLfrom] = useState(""); // ledger date from
@@ -59,15 +59,14 @@ export default function FxArthaAccount() {
   if (!d) return <Spinner label="Loading FX Artha account…" />;
 
   const a = d.account || {};
-  const pos = d.positions || [];
   const orders = d.orders || [];
   const ledger = d.ledger || [];
   const trades = d.trades || [];
   const ib = d.ib || {};
 
-  const tradesShown = tst ? trades.filter((t) => (t.status || "").toLowerCase() === tst) : trades;
-  const symbols = [...new Set(pos.map((p) => p.symbol))].sort();
-  const posShown = psym ? pos.filter((p) => p.symbol === psym) : pos;
+  const tsymbols = [...new Set(trades.map((t) => t.symbol))].sort();
+  const tradesShown = trades.filter((t) =>
+    (!tst || (t.status || "").toLowerCase() === tst) && (!tsym || t.symbol === tsym));
   const ledTypes = [...new Set(ledger.map((l) => l.type))].sort();
   const ledShown = ledger.filter((l) => {
     if (ltype && l.type !== ltype) return false;
@@ -104,57 +103,23 @@ export default function FxArthaAccount() {
         <Tile icon={Gauge} label="Leverage" value={a.leverage ? `1:${a.leverage}` : "—"} tint="bg-ink-100 text-ink-600" sub={a.swap_free ? "swap-free" : null} />
       </div>
 
-      {/* live positions */}
-      <Section icon={Activity} title="Live Positions" count={posShown.length}
-        actions={pos.length > 0 && (
-          <select className="input !py-1.5 !text-xs w-auto" value={psym} onChange={(e) => setPsym(e.target.value)}>
-            <option value="">All symbols</option>
-            {symbols.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}>
-        {pos.length === 0 ? (
-          <EmptyState title="No open positions" hint="Trader ke koi live trade nahi." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[760px]">
-              <thead>
-                <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
-                  <th className="py-2.5 px-4">Symbol</th><th className="py-2.5 px-4">Side</th>
-                  <th className="py-2.5 px-4 text-right">Lots</th><th className="py-2.5 px-4 text-right">Open</th>
-                  <th className="py-2.5 px-4 text-right">SL</th><th className="py-2.5 px-4 text-right">TP</th>
-                  <th className="py-2.5 px-4 text-right">Swap</th><th className="py-2.5 px-4 text-right">Comm.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {posShown.map((p) => (
-                  <tr key={p.position_id} className="border-t border-ink-100 hover:bg-ink-50/60">
-                    <td className="py-2 px-4 font-medium">{p.symbol}</td>
-                    <td className="py-2 px-4"><span className={`badge ${p.side === "buy" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"}`}>{p.side}</span></td>
-                    <td className="py-2 px-4 text-right tabular-nums">{num(p.lots)}</td>
-                    <td className="py-2 px-4 text-right tabular-nums">{num(p.open_price)}</td>
-                    <td className="py-2 px-4 text-right tabular-nums text-ink-400">{p.stop_loss ? num(p.stop_loss) : "—"}</td>
-                    <td className="py-2 px-4 text-right tabular-nums text-ink-400">{p.take_profit ? num(p.take_profit) : "—"}</td>
-                    <td className="py-2 px-4 text-right tabular-nums text-ink-500">{num(p.swap)}</td>
-                    <td className="py-2 px-4 text-right tabular-nums text-ink-500">{money(p.commission)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
-
-      {/* trades — open + closed, with a status filter */}
+      {/* trades — open + closed, with symbol + status filters */}
       <Section icon={CandlestickChart} title="Trades" count={tradesShown.length}
         actions={trades.length > 0 && (
-          <div className="flex items-center rounded-lg bg-ink-100 p-0.5 text-xs">
-            {[["", "All"], ["open", "Open"], ["closed", "Closed"]].map(([v, label]) => (
-              <button key={v} onClick={() => setTst(v)}
-                className={`px-2.5 py-1 rounded-md font-semibold ${tst === v ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>
-                {label}
-              </button>
-            ))}
-          </div>
+          <>
+            <select className="input !py-1.5 !text-xs w-auto" value={tsym} onChange={(e) => setTsym(e.target.value)}>
+              <option value="">All symbols</option>
+              {tsymbols.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <div className="flex items-center rounded-lg bg-ink-100 p-0.5 text-xs">
+              {[["", "All"], ["open", "Open"], ["closed", "Closed"]].map(([v, label]) => (
+                <button key={v} onClick={() => setTst(v)}
+                  className={`px-2.5 py-1 rounded-md font-semibold ${tst === v ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
         )}>
         {tradesShown.length === 0 ? (
           <EmptyState title={trades.length ? "No match" : "No trades"} hint={trades.length ? "Filter badlo." : "Koi trade nahi."} />
@@ -166,7 +131,7 @@ export default function FxArthaAccount() {
                   <th className="py-2.5 px-4">Status</th><th className="py-2.5 px-4">Symbol</th>
                   <th className="py-2.5 px-4">Side</th><th className="py-2.5 px-4 text-right">Lots</th>
                   <th className="py-2.5 px-4 text-right">Open</th><th className="py-2.5 px-4 text-right">Close</th>
-                  <th className="py-2.5 px-4 text-right">Net P&L</th><th className="py-2.5 px-4 text-right">Brokerage</th>
+                  <th className="py-2.5 px-4 text-right">Brokerage</th>
                   <th className="py-2.5 px-4">Opened</th>
                 </tr>
               </thead>
@@ -181,7 +146,6 @@ export default function FxArthaAccount() {
                       <td className="py-2 px-4 text-right tabular-nums">{num(tr.lots)}</td>
                       <td className="py-2 px-4 text-right tabular-nums">{num(tr.open_price)}</td>
                       <td className="py-2 px-4 text-right tabular-nums text-ink-500">{open ? "—" : num(tr.close_price)}</td>
-                      <td className={`py-2 px-4 text-right tabular-nums font-semibold ${open ? "text-ink-400" : pnlColor(tr.net_pnl)}`}>{open ? "—" : money(tr.net_pnl)}</td>
                       <td className="py-2 px-4 text-right tabular-nums text-ink-500">{money(tr.brokerage)}</td>
                       <td className="py-2 px-4 text-ink-500 whitespace-nowrap">{dt(tr.opened_at)}</td>
                     </tr>
