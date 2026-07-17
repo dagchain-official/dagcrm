@@ -79,6 +79,8 @@ export default function BusinessDashboard({ businessId }) {
   const kpis = d.kpis || [];
   // KPIs that share a unit make a meaningful mini bar chart (else just cards)
   const chartable = kpis.filter((k) => Number(k.value) > 0);
+  const pstats = d.platform_stats || [];
+  const fmtStat = (s) => (s.kind === "money" ? money(s.value) : num(s.value));
 
   return (
     <div className="space-y-5">
@@ -98,6 +100,22 @@ export default function BusinessDashboard({ businessId }) {
           ? <Stat icon={Landmark} label="Net New AUM" value={money(aum.net_new)} sub={`Closing ${money(aum.closing)}`} color="bg-amber-100 text-amber-600" positive={(aum.net_new || 0) >= 0} />
           : <Stat icon={Activity} label="Key Metrics" value={kpis.length} sub="tracked KPIs" color="bg-violet-100 text-violet-600" />}
       </div>
+
+      {/* platform's own dashboard fields (FXArtha / DAGChain snapshot) */}
+      {pstats.length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900 capitalize">{d.platform} — platform snapshot</h3>
+          <p className="text-xs text-ink-400 mb-4">Seedha {d.platform} ke apne dashboard se (last sync)</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {pstats.map((s) => (
+              <div key={s.label} className="p-3 rounded-2xl border border-ink-100">
+                <p className="text-lg font-extrabold text-ink-900 tabular-nums">{fmtStat(s)}</p>
+                <p className="text-[11px] text-ink-400 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* charts row */}
       <div className="grid lg:grid-cols-3 gap-5">

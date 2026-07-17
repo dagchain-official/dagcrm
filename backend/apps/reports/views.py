@@ -434,13 +434,27 @@ def business_dashboard(request):
     month = int(request.query_params.get("month", today.month))
     year = int(request.query_params.get("year", today.year))
 
+    # A business fed by an integration (FXArtha / DAGChain) carries its own synced
+    # platform snapshot — use it for the headline stats instead of the CRM rows.
+    from apps.integrations.models import IntegrationConnection
+    _conn = IntegrationConnection.objects.filter(business=biz).first()
+    platform = _conn.platform if _conn else None
+    snap = ((_conn.config or {}).get("dashboard") or {}) if _conn else {}
+
     rev = Revenue.objects.filter(business=biz)
     month_rev = rev.filter(created_at__year=year, created_at__month=month)
 
-    trend = list(rev.annotate(m=TruncMonth("created_at")).values("m")
-                 .annotate(net=Sum("net_revenue")).order_by("m"))
-    trend = [{"month": t["m"].strftime("%b %Y") if t["m"] else "", "net": float(t["net"] or 0)}
-             for t in trend][-6:]
+    if platform == "fxartha":
+        # FXArtha publishes real per-month figures; the synced rows all carry the
+        # sync date, so grouping them by created_at would pile onto one month.
+        trend = [{"month": m["label"], "net": float(m["brokerage_total"])}
+                 for m in ((_conn.config or {}).get("revenue_by_month") or [])
+                 if m.get("brokerage_total")][-6:]
+    else:
+        trend = list(rev.annotate(m=TruncMonth("created_at")).values("m")
+                     .annotate(net=Sum("net_revenue")).order_by("m"))
+        trend = [{"month": t["m"].strftime("%b %Y") if t["m"] else "", "net": float(t["net"] or 0)}
+                 for t in trend][-6:]
 
     # KPI cards = this business's OWN metrics (drop cross-business globals).
     # Period: cumulative (default) | month | year | range (?period=&from=&to=).
@@ -469,13 +483,35 @@ def business_dashboard(request):
                  "revenue": float(r["net"] or 0)}
                 for r in rows if r["customer__lead__assigned_to"]][:6]
 
+    # Customer count: a synced platform's whole user base, not just node/order buyers.
+    if platform == "dagchain":
+        customer_count = Customer.objects.filter(dagchain__isnull=False).count()
+    elif platform == "fxartha":
+        customer_count = Customer.objects.exclude(external_id="").filter(dagchain__isnull=True).count()
+    else:
+        customer_count = Customer.objects.filter(revenues__business=biz).distinct().count()
+
+    # Platform's own dashboard fields, surfaced as labelled cards.
+    _STAT_MAP = {
+        "dagchain": [("Total Users", "totalUsers", "num"), ("Total Volume", "totalVolume", "money"),
+                     ("Validator Nodes", "totalValidatorNodes", "num"), ("Storage Nodes", "totalStorageNodes", "num"),
+                     ("Transactions", "totalTransactions", "num"), ("Referrals", "totalReferrals", "num")],
+        "fxartha": [("Total Traders", "total_traders", "num"), ("Active Accounts", "active_accounts", "num"),
+                    ("Lots Traded", "lots_traded", "num"), ("Total Deposits", "total_deposits", "money"),
+                    ("Total Withdrawals", "total_withdrawals", "money")],
+    }
+    platform_stats = [{"label": lbl, "value": snap.get(key), "kind": kind}
+                      for lbl, key, kind in _STAT_MAP.get(platform, []) if snap.get(key) is not None]
+
     return Response({
         "business": {"id": biz.id, "name": biz.name},
         "month": month, "year": year,
+        "platform": platform,
+        "platform_stats": platform_stats,
         "gross_revenue": _money(rev, "gross_revenue"),
         "net_revenue": _money(rev, "net_revenue"),
         "month_net_revenue": _money(month_rev, "net_revenue"),
-        "customers": Customer.objects.filter(revenues__business=biz).distinct().count(),
+        "customers": customer_count,
         "revenue_trend": trend,
         "kpis": kpi_cards,
         "aum": aum if has_aum else None,
