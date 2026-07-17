@@ -17,4 +17,9 @@ class Revenue(models.Model):
 
     def save(self, *args, **kwargs):
         self.net_revenue = self.gross_revenue - self.commission
+        # A partial save (update_or_create passes update_fields=the defaults it set)
+        # would drop the recomputed net_revenue, leaving it stale — always write it.
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            kwargs["update_fields"] = set(update_fields) | {"net_revenue"}
         super().save(*args, **kwargs)

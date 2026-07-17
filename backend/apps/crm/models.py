@@ -88,6 +88,11 @@ class Lead(models.Model):
         if self.status == "converted" and not self.converted_at:
             from django.utils import timezone
             self.converted_at = timezone.now()
+            # callers convert with save(update_fields=["status"]) — without adding
+            # the stamp here it would be silently dropped and the KPI would miss it.
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = set(update_fields) | {"converted_at"}
         super().save(*args, **kwargs)
 
     def __str__(self):
