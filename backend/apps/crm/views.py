@@ -473,6 +473,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
     filterset_fields = ["country"]
     search_fields = ["name", "email", "phone"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # The Customers list is the CRM's own book — platform accounts (FXArtha
+        # traders, DAGChain users) are listed by their own modules instead. Only
+        # the list is scoped: Customer 360 and RM reassignment are detail routes
+        # and must keep working for a synced trader.
+        return qs.pipeline() if self.action == "list" else qs
+
     @action(detail=True, methods=["get"])
     def overview(self, request, pk=None):
         """Customer 360 — everything about one customer in one payload."""
