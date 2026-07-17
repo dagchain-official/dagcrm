@@ -50,6 +50,17 @@ class LeadSource(models.Model):
         return self.name
 
 
+class LeadQuerySet(models.QuerySet):
+    def pipeline(self):
+        """The leads the CRM actually works — WhatsApp, Google, other social /
+        marketing sources and manual entries. Poll-connector (FXArtha) rows are
+        synced platform users that live as Customers, so they must never count as
+        pipeline leads anywhere. Matched on external_id (only the sync sets it) —
+        matching on the source name breaks if that LeadSource row is deleted.
+        """
+        return self.filter(external_id="")
+
+
 class Lead(models.Model):
     STATUS = [
         ("new", "New"), ("contacted", "Contacted"), ("qualified", "Qualified"),
@@ -69,6 +80,8 @@ class Lead(models.Model):
     score = models.PositiveIntegerField(default=0)  # AI lead score (0-100)
     converted_at = models.DateTimeField(null=True, blank=True)  # set when status -> converted
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = LeadQuerySet.as_manager()
 
     def save(self, *args, **kwargs):
         # stamp the moment of conversion so KPIs credit the right month

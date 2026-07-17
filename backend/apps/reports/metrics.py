@@ -102,7 +102,7 @@ def _leaf_stats(mdefs, month, year, date_from=None, date_to=None):
                         stats[(eid, m.id)] = (float(r["c"]), r["c"])
             elif m.derived_key == "lead:converted":
                 # credit the month the lead was CONVERTED (not created)
-                rows = (Lead.objects
+                rows = (Lead.objects.pipeline()
                         .filter(status="converted", **_flt("converted_at", True))
                         .values("assigned_to").annotate(c=Count("id")))
                 for r in rows:

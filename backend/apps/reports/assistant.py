@@ -41,7 +41,7 @@ def answer_question(user, question):
     can_hr = admin or role in ("HR", "Finance")
 
     # sales entities are scoped to the asker unless they see company-wide data
-    leads = Lead.objects.all() if admin else Lead.objects.filter(assigned_to=user)
+    leads = Lead.objects.pipeline() if admin else Lead.objects.pipeline().filter(assigned_to=user)
     opps = Opportunity.objects.all() if admin else Opportunity.objects.filter(assigned_to=user)
     scope_note = "" if admin else " (your assigned records)"
 
@@ -62,7 +62,7 @@ def answer_question(user, question):
             rate = (won / total * 100) if total else 0
             return f"Conversion rate{scope_note}: {won}/{total} leads converted = {rate:.1f}%."
         if has("unassigned", "not assigned", "without owner"):
-            n = Lead.objects.filter(assigned_to__isnull=True).count()
+            n = Lead.objects.pipeline().filter(assigned_to__isnull=True).count()
             return f"There are {n} unassigned leads waiting to be distributed."
         if has("source", "channel", "come from", "kaha se"):
             rows = leads.values("source__name").annotate(c=Count("id")).order_by("-c")
@@ -199,7 +199,7 @@ def answer_question(user, question):
 
 
 def _snapshot(user, admin, can_finance):
-    leads = Lead.objects.all() if admin else Lead.objects.filter(assigned_to=user)
+    leads = Lead.objects.pipeline() if admin else Lead.objects.pipeline().filter(assigned_to=user)
     lines = [
         f"📊 Leads: {leads.count()} ({leads.filter(status='converted').count()} converted)",
         f"👥 Customers: {Customer.objects.count()}",
@@ -285,7 +285,7 @@ def _lookup_record(user, raw, q, admin, role, can_hr):
         return None
 
     can_customers = admin or role in ("Sales Manager", "Team Leader", "Sales Executive", "Support")
-    leads_qs = Lead.objects.all() if admin else Lead.objects.filter(assigned_to=user)
+    leads_qs = Lead.objects.pipeline() if admin else Lead.objects.pipeline().filter(assigned_to=user)
 
     matches = []  # (kind, obj, label)
     if typ in (None, "lead"):

@@ -43,7 +43,7 @@ def my_dashboard(request):
     """Personal KPIs scoped to the logged-in user."""
     user = request.user
     today = timezone.localdate()
-    my_leads = Lead.objects.filter(assigned_to=user)
+    my_leads = Lead.objects.pipeline().filter(assigned_to=user)
     my_opps = Opportunity.objects.filter(assigned_to=user)
     my_acts = LeadActivity.objects.filter(user=user)
 
@@ -86,7 +86,7 @@ def dashboard_summary(request):
     net = _money(Revenue.objects.all(), "net_revenue")
     reps = []
     for u in User.objects.all():
-        leads = Lead.objects.filter(assigned_to=u).count()
+        leads = Lead.objects.pipeline().filter(assigned_to=u).count()
         if not leads:
             continue
         reps.append({
@@ -99,9 +99,9 @@ def dashboard_summary(request):
     reps.sort(key=lambda r: -r["revenue"])
     return Response({
         "top_reps": reps[:6],
-        "total_leads": Lead.objects.count(),
-        "new_leads": Lead.objects.filter(status="new").count(),
-        "converted_leads": Lead.objects.filter(status="converted").count(),
+        "total_leads": Lead.objects.pipeline().count(),
+        "new_leads": Lead.objects.pipeline().filter(status="new").count(),
+        "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "total_customers": Customer.objects.count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),
         "pipeline_value": _money(Opportunity.objects.filter(status="open"), "expected_revenue"),
@@ -118,12 +118,12 @@ def team_dashboard(request):
     """Team Leader — data for the leader's direct reports."""
     team = User.objects.filter(manager=request.user)
     team_ids = list(team.values_list("id", flat=True)) + [request.user.id]
-    leads = Lead.objects.filter(assigned_to_id__in=team_ids)
+    leads = Lead.objects.pipeline().filter(assigned_to_id__in=team_ids)
     opps = Opportunity.objects.filter(assigned_to_id__in=team_ids)
     members = [
         {
             "id": u.id, "name": u.name, "role": getattr(u.role, "name", ""),
-            "leads": Lead.objects.filter(assigned_to=u).count(),
+            "leads": Lead.objects.pipeline().filter(assigned_to=u).count(),
             "won": Opportunity.objects.filter(assigned_to=u, stage="won").count(),
         }
         for u in team
@@ -212,8 +212,8 @@ def sales_dashboard(request):
     targets = TargetSerializer(Target.objects.all().order_by("end_date")[:6], many=True).data
     return Response({
         "targets": targets,
-        "total_leads": Lead.objects.count(),
-        "converted_leads": Lead.objects.filter(status="converted").count(),
+        "total_leads": Lead.objects.pipeline().count(),
+        "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),
         "pipeline_value": _money(Opportunity.objects.filter(status="open"), "expected_revenue"),
         "won_deals": Opportunity.objects.filter(stage="won").count(),
@@ -221,10 +221,10 @@ def sales_dashboard(request):
         "by_stage": list(Opportunity.objects.values("stage").annotate(count=Count("id"), value=Sum("expected_revenue")).order_by("stage")),
         "leads_by_source": [
             {"source": d["source__name"] or "Unknown", "count": d["count"]}
-            for d in Lead.objects.values("source__name").annotate(count=Count("id")).order_by("-count")
+            for d in Lead.objects.pipeline().values("source__name").annotate(count=Count("id")).order_by("-count")
         ],
         "top_reps": [
-            {"name": u.name, "leads": Lead.objects.filter(assigned_to=u).count(),
+            {"name": u.name, "leads": Lead.objects.pipeline().filter(assigned_to=u).count(),
              "won": Opportunity.objects.filter(assigned_to=u, stage="won").count()}
             for u in User.objects.all()[:8]
         ],
@@ -233,13 +233,13 @@ def sales_dashboard(request):
 
 @api_view(["GET"])
 def leads_by_status(request):
-    data = Lead.objects.values("status").annotate(count=Count("id")).order_by("status")
+    data = Lead.objects.pipeline().values("status").annotate(count=Count("id")).order_by("status")
     return Response(list(data))
 
 
 @api_view(["GET"])
 def leads_by_source(request):
-    data = (Lead.objects.values("source__name")
+    data = (Lead.objects.pipeline().values("source__name")
             .annotate(count=Count("id")).order_by("-count"))
     return Response([{"source": d["source__name"] or "Unknown", "count": d["count"]} for d in data])
 

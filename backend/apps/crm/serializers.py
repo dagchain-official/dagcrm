@@ -269,12 +269,12 @@ class TargetSerializer(serializers.ModelSerializer):
                 qs = qs.filter(business_id=obj.business_id)
             return float(qs.aggregate(s=Sum("net_revenue"))["s"] or 0)
         if obj.target_type == "leads":
-            return Lead.objects.filter(created_at__date__gte=obj.start_date,
-                                       created_at__date__lte=obj.end_date).count()
+            return Lead.objects.pipeline().filter(created_at__date__gte=obj.start_date,
+                                                  created_at__date__lte=obj.end_date).count()
         if obj.target_type == "conversions":
-            return Lead.objects.filter(status="converted",
-                                       created_at__date__gte=obj.start_date,
-                                       created_at__date__lte=obj.end_date).count()
+            return Lead.objects.pipeline().filter(status="converted",
+                                                  created_at__date__gte=obj.start_date,
+                                                  created_at__date__lte=obj.end_date).count()
         return 0
 
     def get_progress_pct(self, obj):

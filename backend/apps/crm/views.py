@@ -76,7 +76,7 @@ class MetricEntryViewSet(viewsets.ModelViewSet):
             val = LeadActivity.objects.filter(user_id=uid, activity_type=atype,
                                               created_at__year=y, created_at__month=m).count()
         elif key == "lead:converted":
-            qs = Lead.objects.filter(assigned_to_id=uid, status="converted")
+            qs = Lead.objects.pipeline().filter(assigned_to_id=uid, status="converted")
             val = (qs.filter(converted_at__year=y, converted_at__month=m).count()
                    or qs.filter(converted_at__isnull=True).count())
         return Response({"value": val, "derived": True, "metric": md.name, "period": f"{m:02d}/{y}"})
@@ -126,13 +126,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "email", "phone", "lead_code"]
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        # The Leads pipeline carries every CRM-worked lead — manual entries, CSV
-        # imports and social/marketing-platform leads. Poll-connector records
-        # (FXArtha) are excluded; they live as Customers instead. They're matched
-        # on external_id, which only the poll sync sets — matching on the source
-        # name silently breaks the moment that LeadSource row is deleted.
-        qs = qs.filter(external_id="")
+        qs = super().get_queryset().pipeline()
         if not is_admin_view(self.request.user):
             qs = qs.filter(assigned_to=self.request.user)
         return qs
@@ -287,7 +281,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         lead_ids = request.data.get("lead_ids")
         target_user = request.data.get("user_id")
 
-        leads = Lead.objects.all()
+        leads = Lead.objects.pipeline()
         leads = leads.filter(id__in=lead_ids) if lead_ids else leads.filter(assigned_to__isnull=True)
         leads = list(leads)
         if not leads:
@@ -315,8 +309,8 @@ class LeadViewSet(viewsets.ModelViewSet):
                 # top performers (higher conversion rate) get proportionally more
                 weighted = []
                 for rm in rms:
-                    total = Lead.objects.filter(assigned_to=rm).count()
-                    conv = Lead.objects.filter(assigned_to=rm, status="converted").count()
+                    total = Lead.objects.pipeline().filter(assigned_to=rm).count()
+                    conv = Lead.objects.pipeline().filter(assigned_to=rm, status="converted").count()
                     rate = (conv / total) if total else 0
                     weighted += [rm] * (1 + round(rate * 4))  # 1..5 slots
                 for i, l in enumerate(leads):
@@ -325,7 +319,7 @@ class LeadViewSet(viewsets.ModelViewSet):
                     counts[rm.name] += 1
                     rm_by_name[rm.name] = rm
             else:  # round_robin — load-balanced (fewest current leads first)
-                load = {rm.id: Lead.objects.filter(assigned_to=rm).count() for rm in rms}
+                load = {rm.id: Lead.objects.pipeline().filter(assigned_to=rm).count() for rm in rms}
                 for l in leads:
                     rm = min(rms, key=lambda r: load[r.id])
                     l.assigned_to = rm

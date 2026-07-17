@@ -14,7 +14,7 @@ def global_search(request):
         return Response({"results": []})
 
     results = []
-    for l in Lead.objects.filter(
+    for l in Lead.objects.pipeline().filter(
         Q(name__icontains=q) | Q(email__icontains=q) | Q(phone__icontains=q) | Q(lead_code__icontains=q)
     )[:5]:
         results.append({"type": "Lead", "id": l.id, "title": f"{l.lead_code} · {l.name}",
