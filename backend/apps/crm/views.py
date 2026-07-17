@@ -129,15 +129,12 @@ class LeadViewSet(viewsets.ModelViewSet):
         from django.db.models import Q
         from apps.integrations.models import PLATFORMS
         qs = super().get_queryset()
-        # Leads pipeline shows ONLY social/marketing-platform leads (Meta, Google,
-        # WhatsApp, LinkedIn, TikTok, Website, Telegram). FXArtha (poll) and manual
-        # leads are excluded — they live as Customers / synced records elsewhere.
-        social = [m["source"] for m in PLATFORMS.values() if not m.get("poll")]
-        if social:
-            q = Q()
-            for s in social:                       # base name, or per-business "Base · Biz"
-                q |= Q(source__name=s) | Q(source__name__startswith=f"{s} · ")
-            qs = qs.filter(q)
+        # The Leads pipeline carries every CRM-worked lead — manual entries, CSV
+        # imports and social/marketing-platform leads. Only poll-connector
+        # (FXArtha) records are excluded: those live as Customers / synced records.
+        for s in [m["source"] for m in PLATFORMS.values() if m.get("poll")]:
+            # base name, or per-business "Base · Biz"
+            qs = qs.exclude(Q(source__name=s) | Q(source__name__startswith=f"{s} · "))
         if not is_admin_view(self.request.user):
             qs = qs.filter(assigned_to=self.request.user)
         return qs
