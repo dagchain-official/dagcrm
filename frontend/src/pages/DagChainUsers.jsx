@@ -30,7 +30,7 @@ export default function DagChainUsers() {
     const { data } = await api.get("/dagchain-profiles/", { params: { page_size: 5000 } });
     const rows = data?.results || data || [];
     const head = ["Name", "Email", "Wallet", "Status", "KYC", "DGC Balance", "Fuel USD", "Referral Code", "Referrals", "Referral Earnings", "Validator Nodes", "Storage Nodes", "Logins", "Joined", "RM"];
-    const body = rows.map((r) => [r.display_name, r.email, r.wallet_address, r.status, r.kyc_status, r.dgc_balance, r.fuel_wallet_usd, r.referral_code, r.referral_count, r.total_referral_earnings, r.validator_nodes_count, r.storage_nodes_count, r.login_count, r.joined_at, r.rm]);
+    const body = rows.map((r) => [r.display_name || r.customer_name, r.email, r.wallet_address, r.status, r.kyc_status, r.dgc_balance, r.fuel_wallet_usd, r.referral_code, r.referral_count, r.total_referral_earnings, r.validator_nodes_count, r.storage_nodes_count, r.login_count, r.joined_at, r.rm]);
     const csv = [head, ...body].map((l) => l.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "dagchain-users.csv"; a.click(); URL.revokeObjectURL(url);
@@ -87,8 +87,8 @@ export default function DagChainUsers() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-ink-100 hover:bg-ink-50/60">
                   <td className="py-2.5 px-4">
-                    <Link to={`/customers/${r.customer}`} className="font-medium text-brand-700 hover:underline">{r.display_name || r.email}</Link>
-                    <div className="text-[11px] text-ink-400">{r.email}</div>
+                    <Link to={`/customers/${r.customer}`} className="font-medium text-brand-700 hover:underline">{r.display_name || r.email || r.customer_name || short(r.wallet_address) || "—"}</Link>
+                    <div className="text-[11px] text-ink-400">{r.email || short(r.wallet_address)}</div>
                   </td>
                   <td className="py-2.5 px-4 font-mono text-xs text-ink-500" title={r.wallet_address}>{short(r.wallet_address)}</td>
                   <td className="py-2.5 px-4"><span className={`badge ${r.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-500"}`}>{r.status}</span></td>
