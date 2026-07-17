@@ -174,7 +174,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {revenue.map((r, i) => (
+                {revenue.slice(0, 10).map((r, i) => (
                   <tr key={r.id} className="border-t border-ink-100">
                     <td className="py-3 text-ink-400">{String(i + 1).padStart(2, "0")}</td>
                     <td className="py-3 font-medium text-ink-800">{r.customer_name || "—"}</td>
