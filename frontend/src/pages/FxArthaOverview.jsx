@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
 import {
+  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from "recharts";
+import {
   LineChart, Users, CandlestickChart, ArrowDownToLine, ArrowUpFromLine,
   DollarSign, Activity, RefreshCcw, ArrowRight,
 } from "lucide-react";
@@ -44,6 +47,9 @@ export default function FxArthaOverview() {
 
   const dash = d.dashboard || {};
   const connected = d.status === "connected";
+  // Revenue comes straight from FXArtha's own dashboard — never recomputed here.
+  const rev = dash.revenue || null;
+  const byMonth = (dash.revenue_by_month || []).filter((m) => m.brokerage_total);
 
   return (
     <div className="space-y-5">
@@ -70,7 +76,47 @@ export default function FxArthaOverview() {
           <Tile icon={CandlestickChart} label="Lots Traded" value={num(dash.lots_traded)} tint="bg-violet-100 text-violet-600" />
           <Tile icon={ArrowDownToLine} label="Total Deposits" value={money(dash.total_deposits)} tint="bg-sky-100 text-sky-600" />
           <Tile icon={ArrowUpFromLine} label="Total Withdrawals" value={money(dash.total_withdrawals)} tint="bg-rose-100 text-rose-500" />
-          <Tile icon={DollarSign} label="Monthly Revenue" value={money(dash.monthly_revenue)} tint="bg-amber-100 text-amber-600" />
+          <Tile icon={DollarSign} label="Total Revenue (all time)" value={money(dash.total_revenue)} tint="bg-amber-100 text-amber-600" />
+        </div>
+      )}
+
+      {/* Revenue — FXArtha's own authoritative figures (commission + swap) */}
+      {rev && (
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900">Revenue</h3>
+          <p className="text-xs text-ink-400 mb-4">FXArtha platform ke apne numbers — seedha unke dashboard se</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[["Today", "today"], ["This Week", "this_week"], ["This Month", "this_month"], ["All Time", "all_time"]].map(([label, k]) => {
+              const r = rev[k] || {};
+              return (
+                <div key={k} className={`p-4 rounded-2xl border ${k === "all_time" ? "border-amber-300 bg-amber-50/40" : "border-ink-100"}`}>
+                  <p className="text-[11px] text-ink-400 uppercase tracking-wide">{label}</p>
+                  <p className="text-xl font-extrabold text-ink-900 mt-1 tabular-nums">{money(r.brokerage_total)}</p>
+                  <div className="mt-2 space-y-0.5 text-[11px] text-ink-400">
+                    <p>Commission <span className="font-semibold text-ink-600">{money(r.commission)}</span></p>
+                    <p>Swap <span className="font-semibold text-ink-600">{money(r.swap)}</span></p>
+                    <p>Net P&L <span className={`font-semibold ${Number(r.net_total) < 0 ? "text-rose-500" : "text-emerald-600"}`}>{money(r.net_total)}</span></p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {byMonth.length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900">Revenue by Month</h3>
+          <p className="text-xs text-ink-400 mb-4">Commission + swap, har mahine</p>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={byMonth} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v) => money(v)} cursor={{ fill: "#6366f10d" }} />
+              <Bar dataKey="brokerage_total" name="Revenue" fill="#6366f1" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 
