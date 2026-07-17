@@ -3,13 +3,15 @@ import secrets
 from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.api_permissions import IsAdminView
 
-from .models import PLATFORMS, IntegrationConnection
-from .serializers import IntegrationConnectionSerializer
+from .models import PLATFORMS, DagChainNode, DagChainProfile, IntegrationConnection
+from .serializers import (
+    DagChainNodeSerializer, DagChainProfileSerializer, IntegrationConnectionSerializer,
+)
 from .services import process_webhook
 
 
@@ -108,8 +110,12 @@ class IntegrationConnectionViewSet(viewsets.ModelViewSet):
         if "auto_assign" in request.data:
             conn.auto_assign = bool(request.data["auto_assign"])
             conn.save(update_fields=["auto_assign"])
-        from .services_fxartha import sync_fxartha
-        result = sync_fxartha(conn)
+        if conn.platform == "dagchain":
+            from .services_dagchain import sync_dagchain
+            result = sync_dagchain(conn)
+        else:
+            from .services_fxartha import sync_fxartha
+            result = sync_fxartha(conn)
         status_code = 400 if result.get("error") else 200
         return Response({**result, **self.get_serializer(conn).data}, status=status_code)
 
@@ -123,3 +129,21 @@ class IntegrationConnectionViewSet(viewsets.ModelViewSet):
                   "country": "India", "campaign": "Test Campaign"}
         result = process_webhook(conn, sample)
         return Response({"test": True, **result, **self.get_serializer(conn).data})
+
+
+class DagChainProfileViewSet(viewsets.ReadOnlyModelViewSet):
+    """DAGChain users (read-only mirror of the platform's user list)."""
+    queryset = DagChainProfile.objects.select_related("customer", "customer__assigned_to").all()
+    serializer_class = DagChainProfileSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["status", "kyc_status", "user_type", "social_provider"]
+    search_fields = ["display_name", "email", "wallet_address", "referral_code"]
+
+
+class DagChainNodeViewSet(viewsets.ReadOnlyModelViewSet):
+    """DAGChain validator / storage nodes."""
+    queryset = DagChainNode.objects.select_related("customer", "customer__assigned_to").all()
+    serializer_class = DagChainNodeSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["kind", "status", "payment_status", "is_staked"]
+    search_fields = ["node_key", "package", "customer__name"]

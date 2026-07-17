@@ -1,6 +1,33 @@
 from rest_framework import serializers
 
-from .models import PLATFORMS, IntegrationConnection, IntegrationLog
+from .models import PLATFORMS, DagChainNode, DagChainProfile, IntegrationConnection, IntegrationLog
+
+
+class DagChainProfileSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    rm = serializers.CharField(source="customer.assigned_to.name", read_only=True)
+
+    class Meta:
+        model = DagChainProfile
+        fields = ["id", "customer", "customer_name", "rm", "external_id", "display_name",
+                  "email", "wallet_address", "user_type", "status", "email_verified",
+                  "kyc_status", "social_provider", "dgc_balance", "fuel_wallet_usd",
+                  "referral_code", "referral_count", "total_referral_earnings",
+                  "validator_nodes_count", "storage_nodes_count", "login_count",
+                  "joined_at", "synced_at"]
+
+
+class DagChainNodeSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    rm = serializers.CharField(source="customer.assigned_to.name", read_only=True)
+
+    class Meta:
+        model = DagChainNode
+        fields = ["id", "customer", "customer_name", "rm", "external_id", "kind", "node_key",
+                  "package", "purchase_price", "currency", "status", "payment_status",
+                  "uptime", "blocks_validated", "rewards_earned", "pending_rewards",
+                  "claimed_rewards", "effective_apy", "capacity", "is_staked",
+                  "opened_at", "synced_at"]
 
 
 class IntegrationLogSerializer(serializers.ModelSerializer):
