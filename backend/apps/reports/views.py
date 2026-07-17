@@ -1,7 +1,8 @@
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from apps.accounts.api_permissions import module_required
 from rest_framework.response import Response
 
 from .assistant import answer_question
@@ -329,6 +330,7 @@ def target_board(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("dagchain")])
 def dagchain_overview(request):
     """DAGChain platform snapshot — synced dashboard + node stats + CRM counts."""
     from django.db.models import Sum
@@ -353,6 +355,7 @@ def dagchain_overview(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("fxartha")])
 def fxartha_overview(request):
     """FX Artha platform snapshot — the last-synced dashboard totals + counts."""
     from apps.integrations.models import IntegrationConnection
@@ -368,6 +371,7 @@ def fxartha_overview(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("fxartha")])
 def fxartha_traders(request):
     """Full FXArtha trader detail: per trader — lots, brokerage, deposits,
     withdrawals, net AUM, contribution, date, RM. Filters: ?q= ?from= ?to=."""
@@ -380,6 +384,7 @@ def fxartha_traders(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("fxartha")])
 def fxartha_account(request):
     """Live FXArtha account for one synced trader (?customer=<crm id>): account
     metrics, live positions + floating P&L, working orders, ledger, and IB info."""

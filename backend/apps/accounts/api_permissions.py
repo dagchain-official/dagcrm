@@ -42,3 +42,20 @@ class ModuleAccess(BasePermission):
         action = METHOD_ACTION.get(request.method, "view")
         perms = role_permissions(user).get(module, {})
         return bool(perms.get(action, False))
+
+
+def module_required(module):
+    """Permission class factory for function-based @api_view endpoints (reports),
+    which VIEWSET_MODULE can't reach. Gates on the role's `view` right for one
+    module — e.g. permission_classes([module_required("fxartha")])."""
+    class _Perm(BasePermission):
+        message = "You don't have permission for this section."
+
+        def has_permission(self, request, view):
+            user = request.user
+            if not user or not user.is_authenticated:
+                return False
+            if user.is_superuser:
+                return True
+            return bool(role_permissions(user).get(module, {}).get("view", False))
+    return _Perm

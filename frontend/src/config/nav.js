@@ -11,8 +11,9 @@ import {
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders", "/fxartha",
-       "/dagchain", "/dagchain-users", "/dagchain-nodes"].includes(to)) return "reports";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots"].includes(to)) return "reports";
+  if (to === "/fxartha" || to === "/fxartha-traders" || to.startsWith("/fxartha-account")) return "fxartha";
+  if (to === "/dagchain" || to === "/dagchain-users" || to === "/dagchain-nodes") return "dagchain";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";

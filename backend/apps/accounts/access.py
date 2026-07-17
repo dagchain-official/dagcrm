@@ -54,6 +54,7 @@ MODULES = [
     "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
     "target-multipliers", "performance-weights", "incentive-slabs", "activity-incentives",
     "formula-rules", "expenses", "commissions", "users", "roles", "teams", "reports",
+    "fxartha", "dagchain",
 ]
 
 
@@ -78,27 +79,28 @@ ROLE_MATRIX = {
         **_full(_split("leads lead-activities opportunities proposals customers communications targets "
                        "metric-entries aum-entries contribution-entries teams")),
         **_view(_split("revenues products businesses lead-sources tickets reports users "
-                       "metric-definitions employees")),
+                       "metric-definitions employees fxartha dagchain")),
         "leaves": "vce", "leave-types": "v",
     },
     "Sales Manager": {
         **_full(_split("leads lead-activities opportunities proposals customers communications targets "
                        "metric-entries aum-entries contribution-entries")),
-        **_view(_split("revenues products businesses lead-sources tickets reports teams users metric-definitions")),
+        **_view(_split("revenues products businesses lead-sources tickets reports teams users "
+                       "metric-definitions fxartha dagchain")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Team Leader": {
         **_full(_split("leads lead-activities opportunities proposals customers communications "
                        "metric-entries aum-entries contribution-entries")),
-        **_view(_split("targets tickets reports metric-definitions")),
+        **_view(_split("targets tickets reports metric-definitions fxartha dagchain")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
     },
     "Sales Executive": {
         **_full(_split("leads lead-activities opportunities proposals customers communications "
                        "metric-entries aum-entries contribution-entries")),
-        **_view(_split("tickets businesses products metric-definitions")),
+        **_view(_split("tickets businesses products metric-definitions fxartha dagchain")),
     },
     "Support": {
         **_full(_split("tickets")),
@@ -115,7 +117,7 @@ ROLE_MATRIX = {
     "Finance": {
         **_full(_split("revenues expenses commissions payrolls cost-categories employee-costs "
                        "target-multipliers aum-entries contribution-entries contribution-weights")),
-        **_view(_split("reports businesses employees")),
+        **_view(_split("reports businesses employees fxartha dagchain")),
     },
 }
 
@@ -166,6 +168,8 @@ VIEWSET_MODULE = {
     "TeamViewSet": "teams",
     "TeamMemberViewSet": "teams",
     "UserPermissionViewSet": "users",
+    "DagChainProfileViewSet": "dagchain",
+    "DagChainNodeViewSet": "dagchain",
 }
 
 
