@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Joyride, { STATUS } from "react-joyride";
+import Joyride, { STATUS, EVENTS } from "react-joyride";
 import { HelpCircle, X } from "lucide-react";
 import { TOUR } from "../config/tourSteps";
 import { useAuth } from "../context/AuthContext";
@@ -67,7 +67,13 @@ export default function Tour() {
   }, []);
 
   const onJoyride = useCallback((data) => {
-    const { status } = data;
+    const { status, type, step } = data;
+    // The sidebar nav scrolls independently, so bring the target into view
+    // before Joyride positions the spotlight (else it lands on a blank area).
+    if (type === EVENTS.STEP_BEFORE && step?.target) {
+      const el = document.querySelector(step.target);
+      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRun(false);
       if (!user?.onboarded) persist(steps.map((s) => s.target));
@@ -104,7 +110,8 @@ export default function Tour() {
         showProgress
         showSkipButton
         scrollToFirstStep
-        disableScrolling
+        disableScrollParentFix
+        spotlightPadding={6}
         callback={onJoyride}
         locale={{ back: "Back", close: "Close", last: "Finish", next: "Next", skip: "Skip Tour" }}
         styles={{
