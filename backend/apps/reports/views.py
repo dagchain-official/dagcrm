@@ -328,6 +328,30 @@ def target_board(request):
 
 
 @api_view(["GET"])
+def dagchain_overview(request):
+    """DAGChain platform snapshot — synced dashboard + node stats + CRM counts."""
+    from django.db.models import Sum
+    from apps.integrations.models import DagChainNode, DagChainProfile, IntegrationConnection
+    conn = IntegrationConnection.objects.filter(platform="dagchain").first()
+    cfg = (conn.config or {}) if conn else {}
+    nodes = DagChainNode.objects.values("kind").annotate(
+        count=Count("id"), revenue=Sum("purchase_price"),
+        rewards=Sum("rewards_earned"), blocks=Sum("blocks_validated"))
+    prof = DagChainProfile.objects.aggregate(
+        users=Count("id"), dgc=Sum("dgc_balance"),
+        refs=Sum("referral_count"), earn=Sum("total_referral_earnings"))
+    return Response({
+        "dashboard": cfg.get("dashboard", {}),
+        "node_stats": cfg.get("node_stats", {}),
+        "last_sync": cfg.get("last_sync"),
+        "status": conn.status if conn else "disconnected",
+        "nodes_by_kind": list(nodes),
+        "profiles": prof,
+        "node_revenue": float(DagChainNode.objects.aggregate(s=Sum("purchase_price"))["s"] or 0),
+    })
+
+
+@api_view(["GET"])
 def fxartha_overview(request):
     """FX Artha platform snapshot — the last-synced dashboard totals + counts."""
     from apps.integrations.models import IntegrationConnection

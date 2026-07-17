@@ -18,6 +18,9 @@ import TradersLots from "./pages/TradersLots";
 import FxArthaTraders from "./pages/FxArthaTraders";
 import FxArthaOverview from "./pages/FxArthaOverview";
 import FxArthaAccount from "./pages/FxArthaAccount";
+import DagChainOverview from "./pages/DagChainOverview";
+import DagChainUsers from "./pages/DagChainUsers";
+import DagChainNodes from "./pages/DagChainNodes";
 import Recruitment from "./pages/Recruitment";
 import ApplyPage from "./pages/ApplyPage";
 import Performance from "./pages/Performance";
@@ -90,6 +93,9 @@ export default function App() {
         <Route path="fxartha" element={<FxArthaOverview />} />
         <Route path="fxartha-traders" element={<FxArthaTraders />} />
         <Route path="fxartha-account/:id" element={<FxArthaAccount />} />
+        <Route path="dagchain" element={<DagChainOverview />} />
+        <Route path="dagchain-users" element={<DagChainUsers />} />
+        <Route path="dagchain-nodes" element={<DagChainNodes />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="formula-builder" element={<FormulaBuilder />} />

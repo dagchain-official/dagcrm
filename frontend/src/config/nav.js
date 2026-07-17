@@ -4,14 +4,15 @@ import {
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
   TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
-  Landmark, PiggyBank, Scale, CandlestickChart, LineChart,
+  Landmark, PiggyBank, Scale, CandlestickChart, LineChart, Boxes, Server,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders", "/fxartha"].includes(to)) return "reports";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots", "/fxartha-traders", "/fxartha",
+       "/dagchain", "/dagchain-users", "/dagchain-nodes"].includes(to)) return "reports";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
@@ -64,6 +65,14 @@ export const NAV = [
       { to: "/fxartha", label: "Overview", icon: LineChart },
       { to: "/fxartha-traders", label: "Traders", icon: Users },
       { to: "/traders-lots", label: "Lots & Commission", icon: CandlestickChart },
+    ],
+  },
+  {
+    group: "DAGChain",
+    items: [
+      { to: "/dagchain", label: "Overview", icon: Boxes },
+      { to: "/dagchain-users", label: "Users", icon: Users },
+      { to: "/dagchain-nodes", label: "Nodes", icon: Server },
     ],
   },
   {
