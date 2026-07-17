@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Joyride, { STATUS, EVENTS } from "react-joyride";
+import { useLocation, useNavigate } from "react-router-dom";
+import Joyride, { ACTIONS, EVENTS, STATUS } from "react-joyride";
 import { HelpCircle, X } from "lucide-react";
 import { TOUR } from "../config/tourSteps";
 import { useAuth } from "../context/AuthContext";
@@ -10,18 +11,38 @@ import api from "../api/client";
 const availableEntries = () =>
   TOUR.filter((t) => document.querySelector(`[data-tour="${t.route}"]`));
 
-const toSteps = (entries) =>
-  entries.map((t) => ({
-    target: `[data-tour="${t.route}"]`,
-    title: t.label,
-    content: t.content,
-    placement: "right",
-    disableBeacon: true,
-  }));
+// Flatten entries into Joyride steps. Each module contributes one sidebar step
+// plus any in-page steps. In-page steps carry `_route` so the tour can navigate
+// into that module's page before showing them.
+const buildSteps = (entries) => {
+  const out = [];
+  entries.forEach((e) => {
+    out.push({
+      target: `[data-tour="${e.route}"]`, title: e.label, content: e.content,
+      placement: "right", disableBeacon: true, _route: null,
+    });
+    (e.inPage || []).forEach((s) => {
+      out.push({
+        target: s.selector, title: s.title, content: s.content,
+        placement: "auto", disableBeacon: true, _route: e.route,
+      });
+    });
+  });
+  return out;
+};
+
+// Poll for an element (a page may still be loading its data), then continue.
+const waitForEl = (selector, cb, tries = 0) => {
+  if (document.querySelector(selector) || tries > 50) return cb();
+  setTimeout(() => waitForEl(selector, cb, tries + 1), 100);
+};
 
 export default function Tour() {
   const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const loc = useLocation();
   const [run, setRun] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
   const [steps, setSteps] = useState([]);
   const [picker, setPicker] = useState(null); // { mode: "first" | "guide", entries, selected:Set }
   const started = useRef(false);
@@ -33,9 +54,16 @@ export default function Tour() {
     refreshUser?.();
   }, [refreshUser]);
 
+  const finish = useCallback(() => {
+    setRun(false);
+    setStepIndex(0);
+    if (!user?.onboarded) persist(steps.filter((s) => !s._route).map((s) => s.target));
+  }, [user, steps, persist]);
+
   const startTour = useCallback((entries) => {
     const list = entries.length ? entries : availableEntries();
-    setSteps(toSteps(list));
+    setSteps(buildSteps(list));
+    setStepIndex(0);
     setRun(true);
   }, []);
 
@@ -43,15 +71,11 @@ export default function Tour() {
   useEffect(() => {
     if (!user || user.onboarded || started.current) return;
     started.current = true;
-    // let the sidebar paint first
     const t = setTimeout(() => {
       const entries = availableEntries();
       if (!entries.length) return;
-      if (isAdmin) {
-        setPicker({ mode: "first", entries, selected: new Set(entries.map((e) => e.route)) });
-      } else {
-        startTour(entries);
-      }
+      if (isAdmin) setPicker({ mode: "first", entries, selected: new Set(entries.map((e) => e.route)) });
+      else startTour(entries);
     }, 900);
     return () => clearTimeout(t);
   }, [user, isAdmin, startTour]);
@@ -67,25 +91,40 @@ export default function Tour() {
   }, []);
 
   const onJoyride = useCallback((data) => {
-    const { status, type, step } = data;
-    // The sidebar nav scrolls independently, so bring the target into view
-    // before Joyride positions the spotlight (else it lands on a blank area).
+    const { action, index, type, step, status } = data;
+
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status) || action === ACTIONS.CLOSE) {
+      finish();
+      return;
+    }
+
+    // Bring the current target into view (the sidebar scrolls independently).
     if (type === EVENTS.STEP_BEFORE && step?.target) {
       const el = document.querySelector(step.target);
       if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
     }
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
-      setRun(false);
-      if (!user?.onboarded) persist(steps.map((s) => s.target));
+
+    // Advance / go back — navigate into the page first if the next step lives there.
+    if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
+      const nextIndex = index + (action === ACTIONS.PREV ? -1 : 1);
+      const next = steps[nextIndex];
+      if (!next) { finish(); return; }
+      if (next._route && loc.pathname !== next._route) {
+        setRun(false);
+        navigate(next._route);
+        waitForEl(next.target, () => { setStepIndex(nextIndex); setRun(true); });
+      } else {
+        setStepIndex(nextIndex);
+      }
     }
-  }, [user, steps, persist]);
+  }, [steps, loc.pathname, navigate, finish]);
 
   const confirmPicker = () => {
     const chosen = picker.entries.filter((e) => picker.selected.has(e.route));
     const wasFirst = picker.mode === "first";
     setPicker(null);
     if (chosen.length) startTour(chosen);
-    else if (wasFirst) persist([]); // admin skipped everything -> still mark done
+    else if (wasFirst) persist([]);
   };
 
   const skipAll = () => {
@@ -106,6 +145,7 @@ export default function Tour() {
       <Joyride
         steps={steps}
         run={run}
+        stepIndex={stepIndex}
         continuous
         showProgress
         showSkipButton
@@ -127,10 +167,10 @@ export default function Tour() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-extrabold text-ink-900">
-                  {picker.mode === "first" ? "Welcome! 👋 Let's take a tour" : "Guided Tour"}
+                  {picker.mode === "first" ? "Welcome! 👋 Let's take a quick tour" : "Guided Tour"}
                 </h2>
                 <p className="text-sm text-ink-400 mt-0.5">
-                  Which modules would you like a walkthrough of? Select them, then the tour will begin.
+                  Choose the modules you'd like a walkthrough of, then start the tour.
                 </p>
               </div>
               <button className="btn-ghost p-1.5" onClick={skipAll}><X size={18} /></button>

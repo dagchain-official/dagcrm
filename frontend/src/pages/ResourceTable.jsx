@@ -307,14 +307,14 @@ export default function ResourceTable({ resource: propResource }) {
             )
           ))}
           {cfg.search && (
-            <div className="chip !py-2">
+            <div className="chip !py-2" data-tour="rt-search">
               <Search size={16} className="text-ink-400" />
               <input className="text-sm outline-none bg-transparent w-36 text-ink-700"
                 placeholder="Search…" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
             </div>
           )}
           {rows.length > 0 && (
-            <div className="relative">
+            <div className="relative" data-tour="rt-export">
               <button className="chip !py-2" onClick={() => setExportOpen((o) => !o)} onBlur={() => setTimeout(() => setExportOpen(false), 150)} title="Export">
                 <Download size={15} /> Export
               </button>
@@ -344,7 +344,7 @@ export default function ResourceTable({ resource: propResource }) {
             </button>
           )}
           {canCreate && (resource !== "leads" || user?.can_assign_leads) && (
-            <button className="btn-primary" onClick={() => setModal({ mode: "create", row: blank })}>
+            <button className="btn-primary" data-tour="rt-new" onClick={() => setModal({ mode: "create", row: blank })}>
               <Plus size={16} /> New
             </button>
           )}
