@@ -12,6 +12,7 @@ import useActivityTracker from "../hooks/useActivityTracker";
 import GlobalSearch from "./GlobalSearch";
 import NotificationBell from "./NotificationBell";
 import ErrorBoundary from "./ErrorBoundary";
+import Tour, { GuideButton } from "./Tour";
 
 const today = new Date().toLocaleDateString("en-GB", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -58,6 +59,7 @@ function Sidebar({ open }) {
                 <NavLink
                   key={it.to}
                   to={it.to}
+                  data-tour={it.to}
                   end={it.exact}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition
@@ -102,6 +104,7 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <Tour />
       <Sidebar open={open} />
       {open && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setOpen(false)} />}
 
@@ -122,6 +125,7 @@ export default function Layout() {
           <GlobalSearch />
           <div className="flex-1" />
 
+          <GuideButton />
           <button onClick={toggle} className="btn-ghost p-2" title={isDark ? "Light mode" : "Dark mode"}>
             {isDark ? <Sun size={19} /> : <Moon size={19} />}
           </button>

@@ -43,6 +43,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Product tour / onboarding
+    onboarded = models.BooleanField(default=False)          # completed the first-run tour
+    onboarding_modules = models.JSONField(default=list, blank=True)  # admin's chosen modules
 
     objects = UserManager()
 

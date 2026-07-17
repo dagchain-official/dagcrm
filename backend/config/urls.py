@@ -9,8 +9,8 @@ from drf_spectacular.views import (
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts.views import (
-    ChangePasswordView, ForgotPasswordView, LoginView, MeView, ProfileView,
-    ResetPasswordView,
+    ChangePasswordView, ForgotPasswordView, LoginView, MeView, OnboardingView,
+    ProfileView, ResetPasswordView,
 )
 
 urlpatterns = [
@@ -20,6 +20,7 @@ urlpatterns = [
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/me/", MeView.as_view(), name="me"),
     path("api/auth/profile/", ProfileView.as_view(), name="profile"),
+    path("api/auth/onboarding/", OnboardingView.as_view(), name="onboarding"),
     path("api/auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("api/auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
     path("api/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),

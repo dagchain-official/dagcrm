@@ -44,6 +44,8 @@ def me_payload(user):
     data["can_assign_leads"] = can_assign_leads(user)
     data["business_ids"] = ids  # null = all
     data["businesses"] = [{"id": b.id, "name": b.name} for b in businesses]
+    data["onboarded"] = user.onboarded
+    data["onboarding_modules"] = user.onboarding_modules or []
     return data
 
 
@@ -80,6 +82,22 @@ class ProfileView(APIView):
                 setattr(user, field, request.data[field])
         user.save()
         return Response(me_payload(user))
+
+
+class OnboardingView(APIView):
+    """Save the product-tour state: mark it done and (for admins) remember which
+    modules they chose to be walked through."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if "modules" in request.data:
+            mods = request.data.get("modules") or []
+            user.onboarding_modules = mods if isinstance(mods, list) else []
+        user.onboarded = bool(request.data.get("onboarded", True))
+        user.save(update_fields=["onboarded", "onboarding_modules"])
+        return Response({"onboarded": user.onboarded,
+                         "onboarding_modules": user.onboarding_modules})
 
 
 class ChangePasswordView(APIView):
