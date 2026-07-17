@@ -19,12 +19,19 @@ def _trades_metric_ids():
     return list(MetricDefinition.objects.filter(name__iexact="Trades Taken").values_list("id", flat=True))
 
 
+def _fxartha_customers():
+    """FXArtha traders only. `exclude(external_id="")` alone also catches DAGChain
+    users (they carry an external_id too), so drop anyone with a linked DAGChain
+    profile — an FXArtha trader has none."""
+    from apps.crm.models import Customer
+    return (Customer.objects.exclude(external_id="").filter(dagchain__isnull=True))
+
+
 def compute_fxartha_traders(date_from=None, date_to=None, q=None):
-    from apps.crm.models import AumEntry, ContributionEntry, Customer, MetricEntry
+    from apps.crm.models import AumEntry, ContributionEntry, MetricEntry
     from apps.sales.models import Revenue
 
-    custs = (Customer.objects.exclude(external_id="")
-             .select_related("assigned_to").order_by("name"))
+    custs = _fxartha_customers().select_related("assigned_to").order_by("name")
     if q:
         custs = custs.filter(Q(name__icontains=q) | Q(email__icontains=q) | Q(phone__icontains=q))
 
@@ -161,9 +168,8 @@ def scoped_fxartha_traders(user, data):
     if is_admin_view(user) or role in ("Finance", "HR"):
         return data
     # scope by the trader's owning RM (customer.assigned_to) within the subtree
-    from apps.crm.models import Customer
     keep_ids = set(subordinate_user_ids(user, include_self=True))
-    allowed = set(Customer.objects.exclude(external_id="")
+    allowed = set(_fxartha_customers()
                   .filter(assigned_to_id__in=keep_ids).values_list("id", flat=True))
     rows = [r for r in data["rows"] if r["customer_id"] in allowed]
     keys = ["lots", "trades", "brokerage", "commission", "net_revenue", "deposits",
