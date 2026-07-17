@@ -126,15 +126,13 @@ class LeadViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "email", "phone", "lead_code"]
 
     def get_queryset(self):
-        from django.db.models import Q
-        from apps.integrations.models import PLATFORMS
         qs = super().get_queryset()
         # The Leads pipeline carries every CRM-worked lead — manual entries, CSV
-        # imports and social/marketing-platform leads. Only poll-connector
-        # (FXArtha) records are excluded: those live as Customers / synced records.
-        for s in [m["source"] for m in PLATFORMS.values() if m.get("poll")]:
-            # base name, or per-business "Base · Biz"
-            qs = qs.exclude(Q(source__name=s) | Q(source__name__startswith=f"{s} · "))
+        # imports and social/marketing-platform leads. Poll-connector records
+        # (FXArtha) are excluded; they live as Customers instead. They're matched
+        # on external_id, which only the poll sync sets — matching on the source
+        # name silently breaks the moment that LeadSource row is deleted.
+        qs = qs.filter(external_id="")
         if not is_admin_view(self.request.user):
             qs = qs.filter(assigned_to=self.request.user)
         return qs
