@@ -1,50 +1,45 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Joyride, { ACTIONS, EVENTS, STATUS } from "react-joyride";
 import { HelpCircle, X } from "lucide-react";
-import { TOUR } from "../config/tourSteps";
+import { TOUR, pageTour } from "../config/tourSteps";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/client";
 
-// Only walk through modules whose sidebar item is actually rendered (i.e. this
-// user has permission to see it).
+// The sidebar overview: only walk through modules whose sidebar item is
+// actually rendered (i.e. this user has permission to see it).
 const availableEntries = () =>
   TOUR.filter((t) => document.querySelector(`[data-tour="${t.route}"]`));
 
-// Flatten entries into Joyride steps. Each module contributes one sidebar step
-// plus any in-page steps. In-page steps carry `_route` so the tour can navigate
-// into that module's page before showing them.
-const buildSteps = (entries) => {
-  const out = [];
-  entries.forEach((e) => {
-    out.push({
-      target: `[data-tour="${e.route}"]`, title: e.label, content: e.content,
-      placement: "right", disableBeacon: true, _route: null,
-    });
-    (e.inPage || []).forEach((s) => {
-      out.push({
-        target: s.selector, title: s.title, content: s.content,
-        placement: "auto", disableBeacon: true, _route: e.route,
-      });
-    });
-  });
-  return out;
-};
+const sidebarSteps = (entries) =>
+  entries.map((t) => ({
+    target: `[data-tour="${t.route}"]`, title: t.label, content: t.content,
+    placement: "right", disableBeacon: true,
+  }));
 
-// Poll for an element (a page may still be loading its data), then continue.
-const waitForEl = (selector, cb, tries = 0) => {
-  if (document.querySelector(selector) || tries > 50) return cb();
-  setTimeout(() => waitForEl(selector, cb, tries + 1), 100);
+// A page's own feature tour: its in-page steps + a "what's next" pointer.
+const pageSteps = (pt) => {
+  const steps = pt.steps.map((s) => ({
+    target: s.selector, title: s.title, content: s.content,
+    placement: "auto", disableBeacon: true,
+  }));
+  if (pt.next) {
+    steps.push({
+      target: "body", placement: "center", disableBeacon: true,
+      title: "What's next?",
+      content: `You're all set on this page. Next, head to ${pt.next.label} — open it from the sidebar.`,
+    });
+  }
+  return steps;
 };
 
 export default function Tour() {
   const { user, refreshUser } = useAuth();
-  const navigate = useNavigate();
   const loc = useLocation();
   const [run, setRun] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
   const [steps, setSteps] = useState([]);
-  const [picker, setPicker] = useState(null); // { mode: "first" | "guide", entries, selected:Set }
+  const [picker, setPicker] = useState(null); // { mode, entries, selected:Set }
+  const firstRun = useRef(false);             // is the active tour the one-time onboarding?
   const started = useRef(false);
 
   const isAdmin = user?.dashboard === "admin";
@@ -54,20 +49,20 @@ export default function Tour() {
     refreshUser?.();
   }, [refreshUser]);
 
-  const finish = useCallback(() => {
-    setRun(false);
-    setStepIndex(0);
-    if (!user?.onboarded) persist(steps.filter((s) => !s._route).map((s) => s.target));
-  }, [user, steps, persist]);
-
-  const startTour = useCallback((entries) => {
+  const startOverview = useCallback((entries, isFirst = false) => {
     const list = entries.length ? entries : availableEntries();
-    setSteps(buildSteps(list));
-    setStepIndex(0);
+    firstRun.current = isFirst;
+    setSteps(sidebarSteps(list));
     setRun(true);
   }, []);
 
-  // First-run: once per user. Admin picks modules first; everyone else auto-runs.
+  const startPage = useCallback((pt) => {
+    firstRun.current = false;
+    setSteps(pageSteps(pt));
+    setRun(true);
+  }, []);
+
+  // First-run onboarding: once per user. Admins pick modules first.
   useEffect(() => {
     if (!user || user.onboarded || started.current) return;
     started.current = true;
@@ -75,55 +70,42 @@ export default function Tour() {
       const entries = availableEntries();
       if (!entries.length) return;
       if (isAdmin) setPicker({ mode: "first", entries, selected: new Set(entries.map((e) => e.route)) });
-      else startTour(entries);
+      else startOverview(entries, true);
     }, 900);
     return () => clearTimeout(t);
-  }, [user, isAdmin, startTour]);
+  }, [user, isAdmin, startOverview]);
 
-  // Manual re-trigger from the "Guide" button (top bar).
+  // "?" Help button: tour the CURRENT page if it has one, else the overview.
   useEffect(() => {
     const open = () => {
-      const entries = availableEntries();
-      setPicker({ mode: "guide", entries, selected: new Set(entries.map((e) => e.route)) });
+      const pt = pageTour(loc.pathname);
+      if (pt) startPage(pt);
+      else setPicker({ mode: "guide", entries: availableEntries(), selected: new Set(availableEntries().map((e) => e.route)) });
     };
     window.addEventListener("dagos:open-guide", open);
     return () => window.removeEventListener("dagos:open-guide", open);
-  }, []);
+  }, [loc.pathname, startPage]);
 
   const onJoyride = useCallback((data) => {
-    const { action, index, type, step, status } = data;
-
+    const { action, type, step, status } = data;
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status) || action === ACTIONS.CLOSE) {
-      finish();
+      setRun(false);
+      if (firstRun.current && !user?.onboarded) persist(steps.map((s) => s.target));
+      firstRun.current = false;
       return;
     }
-
-    // Bring the current target into view (the sidebar scrolls independently).
-    if (type === EVENTS.STEP_BEFORE && step?.target) {
+    // Bring the target into view (the sidebar scrolls independently).
+    if (type === EVENTS.STEP_BEFORE && step?.target && step.target !== "body") {
       const el = document.querySelector(step.target);
       if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
     }
-
-    // Advance / go back — navigate into the page first if the next step lives there.
-    if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
-      const nextIndex = index + (action === ACTIONS.PREV ? -1 : 1);
-      const next = steps[nextIndex];
-      if (!next) { finish(); return; }
-      if (next._route && loc.pathname !== next._route) {
-        setRun(false);
-        navigate(next._route);
-        waitForEl(next.target, () => { setStepIndex(nextIndex); setRun(true); });
-      } else {
-        setStepIndex(nextIndex);
-      }
-    }
-  }, [steps, loc.pathname, navigate, finish]);
+  }, [user, steps, persist]);
 
   const confirmPicker = () => {
     const chosen = picker.entries.filter((e) => picker.selected.has(e.route));
     const wasFirst = picker.mode === "first";
     setPicker(null);
-    if (chosen.length) startTour(chosen);
+    if (chosen.length) startOverview(chosen, wasFirst);
     else if (wasFirst) persist([]);
   };
 
@@ -145,7 +127,6 @@ export default function Tour() {
       <Joyride
         steps={steps}
         run={run}
-        stepIndex={stepIndex}
         continuous
         showProgress
         showSkipButton
@@ -205,12 +186,12 @@ export default function Tour() {
   );
 }
 
-// Top-bar button that re-opens the guide any time.
+// Top-bar Help button — tours the current page (or opens the overview).
 export function GuideButton() {
   return (
     <button
       className="btn-ghost p-2"
-      title="Guided tour"
+      title="Help & tour this page"
       onClick={() => window.dispatchEvent(new CustomEvent("dagos:open-guide"))}
     >
       <HelpCircle size={19} />

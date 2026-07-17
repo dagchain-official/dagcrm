@@ -35,11 +35,6 @@ export const TOUR = [
     label: "Leads",
     content:
       "New leads land here (WhatsApp / Google / manual). Add, search/filter, assign an RM, import from CSV — all in one place. Click any lead to see its full history.",
-    inPage: [
-      { selector: '[data-tour="rt-search"]', title: "Search", content: "Search this list by name, email, phone or code." },
-      { selector: '[data-tour="rt-new"]', title: "Add a record", content: "Create a new lead here — or use Import to bring many in from a CSV." },
-      { selector: '[data-tour="rt-export"]', title: "Export", content: "Download the current view as CSV or PDF." },
-    ],
   },
   {
     route: "/m/lead-activities",
@@ -241,3 +236,36 @@ export const TOUR = [
     content: "Cross-business analytics and detailed reports.",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Per-page feature tours — opened by the "?" (Help) button on each page. These
+// are self-contained (every step is on the current page) and end with a pointer
+// to a sensible next page. Add a page here (or extend the generic resource tour)
+// to give any screen its own walkthrough.
+// ---------------------------------------------------------------------------
+
+// Generic tour for any list screen (/m/*), driven by ResourceTable's toolbar.
+const RESOURCE_STEPS = [
+  { selector: '[data-tour="rt-search"]', title: "Search", content: "Search this list by name, email, phone or code." },
+  { selector: '[data-tour="rt-new"]', title: "Add a record", content: "Create a new entry here — or use Import to bring many in from a CSV." },
+  { selector: '[data-tour="rt-export"]', title: "Export", content: "Download exactly what you're viewing as CSV or PDF." },
+];
+
+// "What's next" suggestion shown as the final step of a page tour.
+const NEXT = {
+  "/m/leads": { label: "Opportunities", route: "/m/opportunities" },
+  "/m/opportunities": { label: "Proposals", route: "/proposals" },
+  "/m/customers": { label: "Communications", route: "/m/communications" },
+  "/m/revenues": { label: "Finance (P&L)", route: "/finance" },
+  "/m/tickets": { label: "Customers", route: "/m/customers" },
+};
+
+// Returns { steps, next } for a page, or null if that page has no tour yet.
+export function pageTour(pathname) {
+  let steps = null;
+  if (pathname.startsWith("/m/")) steps = RESOURCE_STEPS;
+  // (custom page tours can be registered here by exact route)
+  if (!steps || !steps.length) return null;
+  return { steps, next: NEXT[pathname] || null };
+}
+
