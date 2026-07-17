@@ -105,7 +105,7 @@ export default function BusinessDashboard({ businessId }) {
       {pstats.length > 0 && (
         <div className="card p-5">
           <h3 className="font-bold text-ink-900 capitalize">{d.platform} — platform snapshot</h3>
-          <p className="text-xs text-ink-400 mb-4">Seedha {d.platform} ke apne dashboard se (last sync)</p>
+          <p className="text-xs text-ink-400 mb-4">Straight from {d.platform}'s own dashboard (last sync)</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {pstats.map((s) => (
               <div key={s.label} className="p-3 rounded-2xl border border-ink-100">

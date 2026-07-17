@@ -136,7 +136,7 @@ export default function LeadDetail() {
       {/* action buttons */}
       <div className="card p-5">
         <h3 className="font-bold text-ink-900 mb-1">Engage</h3>
-        <p className="text-xs text-ink-400 mb-4">Har action lead activity me log hota hai aur status apne aap aage badhta hai.</p>
+        <p className="text-xs text-ink-400 mb-4">Every action is logged in the lead activity and the status advances automatically.</p>
         <div className="flex flex-wrap gap-2">
           <ActionBtn type="call" icon={Phone} label="Call" cls="bg-emerald-50 text-emerald-700 hover:bg-emerald-100" />
           <ActionBtn type="whatsapp" icon={MessageCircle} label="WhatsApp" cls="bg-green-50 text-green-700 hover:bg-green-100" />
@@ -207,8 +207,8 @@ export default function LeadDetail() {
 
             <textarea className="input min-h-[110px]" placeholder="Type your message…" value={msg} onChange={(e) => setMsg(e.target.value)} />
             {msgModal.type === "whatsapp"
-              ? <p className="text-xs text-ink-400">Twilio configured ho to live bhejega, warna activity me log hoga.</p>
-              : <p className="text-xs text-ink-400">Selected account ke SMTP se real email jaayega; warna activity me log hoga.</p>}
+              ? <p className="text-xs text-ink-400">If Twilio is configured this sends live, otherwise it's logged in the activity.</p>
+              : <p className="text-xs text-ink-400">A real email is sent via the selected account's SMTP; otherwise it's logged in the activity.</p>}
           </div>
         )}
       </Modal>

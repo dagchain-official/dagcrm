@@ -572,7 +572,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         from django.contrib.auth import get_user_model
 
         if not can_assign_leads(request.user):
-            return Response({"detail": "Sirf admin/manager customer reassign kar sakte hain."}, status=403)
+            return Response({"detail": "Only an admin or manager can reassign a customer."}, status=403)
         new_id = request.data.get("user")
         if not new_id:
             return Response({"detail": "Select an employee to reassign to."}, status=400)
@@ -592,7 +592,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
             lead.save(update_fields=["assigned_to"])
 
         notify(new_user, title="Customer assigned to you",
-               body=f"{customer.name} ab aapke paas hai.", kind="info",
+               body=f"{customer.name} is now assigned to you.", kind="info",
                link=f"/customers/{customer.id}")
         return Response(CustomerSerializer(customer).data)
 

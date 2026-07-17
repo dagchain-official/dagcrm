@@ -8,90 +8,90 @@ export const TOUR = [
     route: "/",
     label: "Dashboard",
     content:
-      "Yahi tumhaara home hai — leads, customers, revenue aur pipeline ka overview. Har role ko apne hisaab se dashboard dikhta hai.",
+      "This is your home base — an overview of leads, customers, revenue and pipeline. Each role sees a dashboard tailored to them.",
   },
   {
     route: "/ai",
     label: "AI Assistant",
     content:
-      "Apne CRM data se seedha sawaal poochho — 'is mahine kitne leads aaye?', 'top RM kaun?' — AI live jawab deta hai.",
+      "Ask questions about your CRM data directly — 'How many leads came in this month?', 'Who's the top RM?' — and the AI answers in real time.",
   },
   {
     route: "/m/leads",
     label: "Leads",
     content:
-      "Naye leads yahan aate hain (WhatsApp/Google/manual). Add, search/filter, RM ko assign, CSV import — sab yahin. Kisi lead pe click karke uski poori history dekho.",
+      "New leads land here (WhatsApp/Google/manual). Add, search/filter, assign an RM, CSV import — all in one place. Click any lead to see its full history.",
   },
   {
     route: "/m/opportunities",
     label: "Opportunities",
     content:
-      "Jo leads deal me badle — unki opportunities. Stage (proposal → negotiation → won) aur expected revenue yahan track karo.",
+      "Leads that have turned into deals — their opportunities. Track the stage (proposal → negotiation → won) and expected revenue here.",
   },
   {
     route: "/proposals",
     label: "Proposals",
     content:
-      "Customer ke liye quotation/proposal banao — line items, tax/discount, aur PDF. Accept hone pe customer + revenue auto ban jaata hai.",
+      "Build a quotation/proposal for a customer — line items, tax/discount, and PDF. Once accepted, the customer and revenue are created automatically.",
   },
   {
     route: "/m/customers",
     label: "Customers",
     content:
-      "Tumhaare apne (converted) customers ka book. Kisi customer pe click → Customer 360 (poori detail + RM reassign).",
+      "Your own (converted) customer book. Click any customer → Customer 360 (full details + RM reassignment).",
   },
   {
     route: "/targets",
     label: "Targets",
     content:
-      "Har RM/team ka revenue target set aur track karo. Target = CTC × multiplier (Rules me configure hota hai).",
+      "Set and track the revenue target for each RM/team. Target = CTC × multiplier (configured in Rules).",
   },
   {
     route: "/kpi",
     label: "KPI & Performance",
     content:
-      "Har employee ke KPIs (calls, meetings, lots…) aur performance score. Sab admin-configurable hai, koi cheez hardcoded nahi.",
+      "Each employee's KPIs (calls, meetings, lots…) and performance score. Everything is admin-configurable — nothing is hardcoded.",
   },
   {
     route: "/fxartha",
     label: "FX Artha",
     content:
-      "FX Artha trading platform ka live data — traders, deposits, lots, revenue. 'Traders' me kisi trader pe click → uska live account (positions, trades, ledger).",
+      "Live data from the FX Artha trading platform — traders, deposits, lots, revenue. In 'Traders', click any trader → their live account (positions, trades, ledger).",
   },
   {
     route: "/dagchain",
     label: "DAGChain",
     content:
-      "DAGChain platform ka live data — users, wallet/DGC balance, validator & storage nodes, aur node-purchase revenue.",
+      "Live data from the DAGChain platform — users, wallet/DGC balance, validator & storage nodes, and node-purchase revenue.",
   },
   {
     route: "/hr/people",
     label: "HR — People",
     content:
-      "Employees, departments, hierarchy. Attendance, Leave, Payroll aur Recruitment ke saare HR tools isi group me hain.",
+      "Employees, departments, hierarchy. All HR tools — Attendance, Leave, Payroll and Recruitment — live in this group.",
   },
   {
     route: "/finance",
     label: "Finance (P&L)",
     content:
-      "Business ka P&L — revenue vs expenses vs commissions. AUM aur Contribution bhi isi Finance group me.",
+      "The business P&L — revenue vs expenses vs commissions. AUM and Contribution are also in this Finance group.",
   },
   {
     route: "/integrations",
     label: "Integration Hub",
     content:
-      "Har platform (Meta/Google/WhatsApp/FXArtha/DAGChain) yahan se jodo. Webhook URL us platform pe daalo → leads/data seedhe CRM me.",
+      "Connect every platform (Meta/Google/WhatsApp/FXArtha/DAGChain) from here. Add the webhook URL on that platform → leads/data flow straight into the CRM.",
   },
   {
     route: "/permissions",
     label: "Permission Matrix",
     content:
-      "Kaunsa role kaunsa module dekh/edit kar sake (Layer 3), aur kaunsa user kaunse business ka data dekhe (Layer 2) — sab yahan control hota hai.",
+      "Which role can view/edit which module (Layer 3), and which user can see which business's data (Layer 2) — it's all controlled here.",
   },
   {
     route: "/config",
     label: "Configuration",
     content:
-      "Businesses, products, lead sources aur baaki setup — nayi cheezein yahan se add karo.",
+      "Businesses, products, lead sources and the rest of the setup — add new items from here.",
   },
 ];

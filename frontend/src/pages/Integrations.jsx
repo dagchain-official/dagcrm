@@ -61,14 +61,14 @@ export default function Integrations() {
       setAdding(null);
       await load();
       open(data);   // jump straight into the manage modal
-      toast.success(`${data.label} added — ab connect karo`);
+      toast.success(`${data.label} added — now connect it`);
     } catch (e) {
       const d = e.response?.data;
-      toast.error(d?.non_field_errors?.[0] || d?.detail || "Is business ke liye ye platform pehle se hai");
+      toast.error(d?.non_field_errors?.[0] || d?.detail || "This platform already exists for this business");
     }
   };
   const removeConn = async () => {
-    if (!window.confirm(`Delete "${active.label}"? Iske leads reh jaayenge, sirf connection hatega.`)) return;
+    if (!window.confirm(`Delete "${active.label}"? Its leads are kept; only the connection is removed.`)) return;
     await api.delete(`/integrations/connections/${active.id}/`);
     setActive(null); load(); toast.info("Integration removed");
   };
@@ -114,7 +114,7 @@ export default function Integrations() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2"><Plug className="text-brand-600" /> Integration Hub</h1>
-          <p className="text-sm text-ink-400">Har business ka apna Instagram / Google Ads etc. jodo → uska webhook URL us platform pe daalo → leads seedhe us business me aayenge.</p>
+          <p className="text-sm text-ink-400">Connect each business's own Instagram / Google Ads etc. → add its webhook URL on that platform → leads flow straight into that business.</p>
         </div>
         <button className="btn-primary shrink-0" onClick={openAdd}><Plus size={16} /> Add Integration</button>
       </div>
@@ -127,8 +127,8 @@ export default function Integrations() {
 
       {list.length === 0 && (
         <div className="card p-10 text-center">
-          <p className="text-ink-500 font-semibold">Abhi koi integration nahi hai.</p>
-          <p className="text-sm text-ink-400 mt-1">“Add Integration” dabao, business + platform chuno, aur webhook URL us platform pe daalo.</p>
+          <p className="text-ink-500 font-semibold">No integrations yet.</p>
+          <p className="text-sm text-ink-400 mt-1">Press “Add Integration”, choose a business and platform, and add the webhook URL on that platform.</p>
           <button className="btn-primary mt-4 mx-auto" onClick={openAdd}><Plus size={16} /> Add Integration</button>
         </div>
       )}
@@ -147,7 +147,7 @@ export default function Integrations() {
               </div>
               <h3 className="font-bold text-ink-900 mt-3">{c.label}</h3>
               <p className="text-xs mt-0.5 inline-flex items-center gap-1 text-ink-500">
-                <Building2 size={12} /> {c.business_name || "Global (koi business nahi)"}
+                <Building2 size={12} /> {c.business_name || "Global (no business)"}
               </p>
               <div className="flex gap-4 mt-3 text-sm">
                 <div><span className="font-extrabold text-ink-900">{c.total_leads}</span> <span className="text-ink-400">{c.is_poll ? "users" : "leads"}</span></div>
@@ -179,10 +179,10 @@ export default function Integrations() {
             <div>
               <label className="label">Business</label>
               <select className="input" value={adding.business} onChange={(e) => setAdding({ ...adding, business: e.target.value })}>
-                <option value="">Global (kisi business se nahi)</option>
+                <option value="">Global (not tied to a business)</option>
                 {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
-              <p className="text-xs text-ink-400 mt-1">Is integration ke leads isi business me jaayenge aur isi business ke RMs ko assign honge.</p>
+              <p className="text-xs text-ink-400 mt-1">Leads from this integration go to this business and are assigned to its RMs.</p>
             </div>
             <div>
               <label className="label">Custom name <span className="text-ink-400 font-normal">(optional)</span></label>
@@ -207,7 +207,7 @@ export default function Integrations() {
             {/* webhook URL (webhook connectors only) */}
             {active.platform !== "fxartha" && (
               <div>
-                <label className="label">Webhook URL (ye platform ke settings me daalo)</label>
+                <label className="label">Webhook URL (add this in the platform's settings)</label>
                 <div className="flex gap-2">
                   <input readOnly value={active.webhook_url} className="input font-mono text-xs" onFocus={(e) => e.target.select()} />
                   <button className="chip !py-2" onClick={() => copy(active.webhook_url)}><Copy size={14} /></button>

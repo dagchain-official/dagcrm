@@ -106,7 +106,7 @@ export default function Tour() {
         scrollToFirstStep
         disableScrolling
         callback={onJoyride}
-        locale={{ back: "Peeche", close: "Band", last: "Ho gaya", next: "Aage", skip: "Skip Tour" }}
+        locale={{ back: "Back", close: "Close", last: "Finish", next: "Next", skip: "Skip Tour" }}
         styles={{
           options: { primaryColor: "#6366f1", zIndex: 10000, arrowColor: "#fff", width: 340 },
           tooltipTitle: { fontWeight: 800, fontSize: 16 },
@@ -120,10 +120,10 @@ export default function Tour() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-extrabold text-ink-900">
-                  {picker.mode === "first" ? "Welcome! 👋 Chalo tour karein" : "Guided Tour"}
+                  {picker.mode === "first" ? "Welcome! 👋 Let's take a tour" : "Guided Tour"}
                 </h2>
                 <p className="text-sm text-ink-400 mt-0.5">
-                  Kaunse modules ka walkthrough dekhna hai? Select karo, phir tour chalega.
+                  Which modules would you like a walkthrough of? Select them, then the tour will begin.
                 </p>
               </div>
               <button className="btn-ghost p-1.5" onClick={skipAll}><X size={18} /></button>

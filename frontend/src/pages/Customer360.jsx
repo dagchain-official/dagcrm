@@ -101,13 +101,13 @@ export default function Customer360() {
     api.get("/users/assignable/").then((r) => setAssignables(r.data)).catch(() => setAssignables([]));
   };
   const submitReassign = async () => {
-    if (!newOwner) return toast.error("Kisi employee ko chuno");
+    if (!newOwner) return toast.error("Please select an employee");
     setSaving(true);
     try {
       const { data } = await api.post(`/customers/${id}/reassign/`, { user: newOwner });
       setReassign(false);
       load();
-      toast.success(`Customer ab ${data.assigned_name} ke paas hai`);
+      toast.success(`Customer is now assigned to ${data.assigned_name}`);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Reassign failed");
     } finally {
@@ -465,12 +465,12 @@ export default function Customer360() {
           <div>
             <label className="label">Naya RM</label>
             <select className="input" value={newOwner} onChange={(e) => setNewOwner(e.target.value)}>
-              <option value="">Employee chuno…</option>
+              <option value="">Select an employee…</option>
               {assignables.map((u) => <option key={u.id} value={u.id}>{u.name} — {u.role_name}</option>)}
             </select>
           </div>
           <p className="text-xs text-ink-400">
-            Aage ki revenue, AUM aur KPI naye RM ko milegi. Pichhla (jo pehle record ho chuka hai) purane RM ke paas hi rahega.
+            Future revenue, AUM and KPIs will go to the new RM. Past records (already logged) stay with the previous RM.
           </p>
         </div>
       </Modal>

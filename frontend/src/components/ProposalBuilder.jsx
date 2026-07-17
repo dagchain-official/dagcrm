@@ -137,7 +137,7 @@ export default function ProposalBuilder({ initial, onClose, onSaved }) {
                 onChange={(v) => { set("business", v); setF((s) => ({ ...s, items: s.items.map((it) => ({ ...it, description: "" })) })); }} />
             </div>
           </div>
-          {f.contactType === "lead" && f.lead && f.business && <p className="text-xs text-emerald-600 -mt-1">Lead ke interest se business auto-detect hua</p>}
+          {f.contactType === "lead" && f.lead && f.business && <p className="text-xs text-emerald-600 -mt-1">Business auto-detected from the lead's interest</p>}
         </div>
 
         <div className="rounded-xl border border-ink-100 p-4">
@@ -168,7 +168,7 @@ export default function ProposalBuilder({ initial, onClose, onSaved }) {
                     {products.map((p) => <option key={p.id} value={p.name}>{p.name}{p.price ? ` — $${p.price}` : ""}</option>)}
                   </select>
                 ) : (
-                  <input className="input flex-1 !bg-ink-100 cursor-not-allowed" placeholder="Pehle business select karo" disabled />
+                  <input className="input flex-1 !bg-ink-100 cursor-not-allowed" placeholder="Select a business first" disabled />
                 )}
                 <input className="input w-20 text-center" type="number" value={it.quantity} onChange={(e) => setItem(i, "quantity", e.target.value)} />
                 <input className="input w-28 text-right" type="number" value={it.unit_price} onChange={(e) => setItem(i, "unit_price", e.target.value)} />

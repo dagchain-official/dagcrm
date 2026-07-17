@@ -45,7 +45,7 @@ export default function ApplyPage() {
   );
 
   if (job === undefined) return <Shell><div className="grid place-items-center py-20 text-ink-400"><Loader2 className="animate-spin" /></div></Shell>;
-  if (job === null) return <Shell><div className="card p-10 text-center"><p className="text-lg font-bold text-ink-800">Job not available</p><p className="text-sm text-ink-400 mt-1">Ye position band ho gayi hai ya link galat hai.</p></div></Shell>;
+  if (job === null) return <Shell><div className="card p-10 text-center"><p className="text-lg font-bold text-ink-800">Job not available</p><p className="text-sm text-ink-400 mt-1">This position has closed, or the link is incorrect.</p></div></Shell>;
 
   if (done) return (
     <Shell>
@@ -53,7 +53,7 @@ export default function ApplyPage() {
         <div className="grid place-items-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto"><CheckCircle2 size={30} /></div>
         <h1 className="text-xl font-extrabold text-ink-900 mt-4">Application received 🎉</h1>
         <p className="text-sm text-ink-500 mt-2">{done}</p>
-        <p className="text-xs text-ink-400 mt-4">Hamari team aapki profile review karke aapse sampark karegi.</p>
+        <p className="text-xs text-ink-400 mt-4">Our team will review your profile and get in touch with you.</p>
       </div>
     </Shell>
   );
@@ -89,7 +89,7 @@ export default function ApplyPage() {
           </div>
           <div>
             <label className="label">Or paste your resume / skills <span className="text-ink-400 font-normal">(optional)</span></label>
-            <textarea className="input min-h-[90px]" placeholder="Apni skills, experience yahaँ paste kar sakte ho…" value={form.resume_text} onChange={set("resume_text")} />
+            <textarea className="input min-h-[90px]" placeholder="Paste your skills and experience here…" value={form.resume_text} onChange={set("resume_text")} />
           </div>
           {err && <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{err}</p>}
           <button type="submit" disabled={submitting} className="btn-primary w-full justify-center">

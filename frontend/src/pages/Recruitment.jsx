@@ -57,7 +57,7 @@ export default function Recruitment() {
   const set = (k) => (e) => setEditing((f) => ({ ...f, [k]: e.target.value }));
 
   const saveJob = async () => {
-    if (!editing.title) return toast.error("Title zaroori hai");
+    if (!editing.title) return toast.error("Title is required");
     setSaving(true);
     try {
       const body = { ...editing, business: editing.business || null, department: editing.department || null };
@@ -111,7 +111,7 @@ export default function Recruitment() {
               </div>
             </div>
             <div className="min-w-[240px]">
-              <label className="label">Public apply link (ad me daalo)</label>
+              <label className="label">Public apply link (add it to your ad)</label>
               <div className="flex gap-2">
                 <input readOnly value={applyUrl(job)} onFocus={(e) => e.target.select()} className="input font-mono text-xs" />
                 <button className="chip !py-2" onClick={() => copyLink(job)}><Copy size={14} /></button>
@@ -133,10 +133,10 @@ export default function Recruitment() {
         <div className="card p-0 overflow-hidden">
           <div className="p-4 border-b border-ink-100 flex items-center justify-between">
             <h3 className="font-bold text-ink-900">Candidates ({cands.length})</h3>
-            <p className="text-xs text-ink-400">Match % ke hisaab se sorted</p>
+            <p className="text-xs text-ink-400">Sorted by match %</p>
           </div>
           {cands.length === 0 ? (
-            <EmptyState title="Abhi koi candidate nahi" hint="Apply link share karo — applications yahaँ auto-score hokar aayengi." />
+            <EmptyState title="No candidates yet" hint="Share the apply link — applications arrive here and are auto-scored." />
           ) : (
             <div className="divide-y divide-ink-100">
               {cands.map((c) => (
@@ -179,14 +179,14 @@ export default function Recruitment() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2"><Users2 className="text-brand-600" /> Recruitment</h1>
-          <p className="text-sm text-ink-400">Job ad chalao → candidate resume daale → system auto match % nikaal ke shortlist kare</p>
+          <p className="text-sm text-ink-400">Run a job ad → candidate submits a resume → the system auto-calculates a match % and shortlists</p>
         </div>
         <button className="btn-primary" onClick={openNew}><Plus size={16} /> New Job</button>
       </div>
 
       {jobs.length === 0 && (
         <div className="card p-10 text-center">
-          <p className="text-ink-500 font-semibold">Abhi koi job posting nahi.</p>
+          <p className="text-ink-500 font-semibold">No job postings yet.</p>
           <button className="btn-primary mt-4 mx-auto" onClick={openNew}><Plus size={16} /> New Job</button>
         </div>
       )}
@@ -241,10 +241,10 @@ function JobModal({ editing, setEditing, set, saveJob, saving, refs }) {
           <div><label className="label">Experience</label><input className="input" placeholder="2-4 years" value={editing.experience} onChange={set("experience")} /></div>
           <div><label className="label">Shortlist threshold (%)</label><input className="input" type="number" min="0" max="100" value={editing.min_match_pct} onChange={set("min_match_pct")} /></div>
           <div className="sm:col-span-2">
-            <label className="label">Required skills <span className="text-ink-400 font-normal">(comma se alag — inhi se match hoga)</span></label>
+            <label className="label">Required skills <span className="text-ink-400 font-normal">(comma-separated — used for matching)</span></label>
             <textarea className="input min-h-[70px]" placeholder="React, Node.js, MongoDB, 3 years, English" value={editing.required_skills} onChange={set("required_skills")} />
           </div>
-          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input min-h-[80px]" placeholder="Role ke baare me…" value={editing.description} onChange={set("description")} /></div>
+          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input min-h-[80px]" placeholder="About the role…" value={editing.description} onChange={set("description")} /></div>
           <div><label className="label">Status</label>
             <select className="input" value={editing.status} onChange={set("status")}>
               <option value="open">Open</option><option value="closed">Closed</option>

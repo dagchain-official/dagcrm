@@ -57,7 +57,7 @@ export default function FxArthaTraders() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2"><LineChart className="text-brand-600" /> FXArtha Traders</h1>
-          <p className="text-sm text-ink-400">Har trader ki poori detail — lots, brokerage, deposits/withdrawals, date, RM</p>
+          <p className="text-sm text-ink-400">Full details for every trader — lots, brokerage, deposits/withdrawals, date, RM</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 chip !py-2"><Search size={14} className="text-ink-400" /><input className="bg-transparent outline-none text-sm w-36" placeholder="Search trader…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -130,7 +130,7 @@ export default function FxArthaTraders() {
             )}
           </table>
         </div>
-        {rows.length === 0 && <EmptyState title="Koi trader nahi mila" hint="Filter badlo, ya FXArtha sync karo." />}
+        {rows.length === 0 && <EmptyState title="No traders found" hint="Try adjusting your filters, or sync FXArtha." />}
       </div>
     </div>
   );

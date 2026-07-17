@@ -66,8 +66,8 @@ export default function FxArthaOverview() {
 
       {Object.keys(dash).length === 0 ? (
         <div className="card p-10 text-center">
-          <p className="text-ink-500 font-semibold">Abhi koi snapshot nahi.</p>
-          <p className="text-sm text-ink-400 mt-1">Integration Hub → FX Artha me valid API key daal ke <b>Sync now</b> dabao.</p>
+          <p className="text-ink-500 font-semibold">No snapshot yet.</p>
+          <p className="text-sm text-ink-400 mt-1">Enter a valid API key under Integration Hub → FX Artha, then press <b>Sync now</b>.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
@@ -84,7 +84,7 @@ export default function FxArthaOverview() {
       {rev && (
         <div className="card p-5">
           <h3 className="font-bold text-ink-900">Revenue</h3>
-          <p className="text-xs text-ink-400 mb-4">FXArtha platform ke apne numbers — seedha unke dashboard se</p>
+          <p className="text-xs text-ink-400 mb-4">FXArtha platform's own numbers — straight from their dashboard</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[["Today", "today"], ["This Week", "this_week"], ["This Month", "this_month"], ["All Time", "all_time"]].map(([label, k]) => {
               const r = rev[k] || {};
@@ -107,7 +107,7 @@ export default function FxArthaOverview() {
       {byMonth.length > 0 && (
         <div className="card p-5">
           <h3 className="font-bold text-ink-900">Revenue by Month</h3>
-          <p className="text-xs text-ink-400 mb-4">Commission + swap, har mahine</p>
+          <p className="text-xs text-ink-400 mb-4">Commission + swap, every month</p>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={byMonth} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -122,7 +122,7 @@ export default function FxArthaOverview() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Link to="/fxartha-traders" className="card p-5 flex items-center justify-between hover:shadow-soft transition">
-          <div><p className="font-bold text-ink-900">All Traders</p><p className="text-sm text-ink-400">Har trader ki poori detail — lots, brokerage, deposits, RM</p></div>
+          <div><p className="font-bold text-ink-900">All Traders</p><p className="text-sm text-ink-400">Full details for every trader — lots, brokerage, deposits, RM</p></div>
           <ArrowRight className="text-brand-600" />
         </Link>
         <Link to="/traders-lots" className="card p-5 flex items-center justify-between hover:shadow-soft transition">

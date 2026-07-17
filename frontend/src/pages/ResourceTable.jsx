@@ -446,7 +446,7 @@ export default function ResourceTable({ resource: propResource }) {
         onClose={() => setConfirmRow(null)}
         onConfirm={remove}
         title={`Delete ${cfg.title.replace(/s$/, "")}?`}
-        message="Ye record permanently delete ho jayega. Confirm karein."
+        message="This record will be permanently deleted. Are you sure?"
       />
 
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title={`Import ${cfg.title} from CSV`}>

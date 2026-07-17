@@ -126,7 +126,7 @@ export default function DagChainNodes() {
             </tbody>
           </table>
         </div>
-        {rows.length === 0 && <EmptyState title="Koi node nahi mila" hint="Filter badlo ya DAGChain sync karo." />}
+        {rows.length === 0 && <EmptyState title="No nodes found" hint="Try adjusting your filters, or sync DAGChain." />}
       </div>
     </div>
   );

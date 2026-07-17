@@ -155,7 +155,7 @@ export default function Proposals() {
 
       {builder && <ProposalBuilder initial={builder} onClose={() => setBuilder(null)} onSaved={() => { setBuilder(null); load(); }} />}
       <ConfirmModal open={!!confirmRow} busy={deleting} onClose={() => setConfirmRow(null)} onConfirm={del}
-        title="Delete Proposal?" message="Ye proposal permanently delete ho jayega." />
+        title="Delete Proposal?" message="This proposal will be permanently deleted." />
     </div>
   );
 }

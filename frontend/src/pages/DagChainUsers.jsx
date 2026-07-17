@@ -110,7 +110,7 @@ export default function DagChainUsers() {
             </tbody>
           </table>
         </div>
-        {rows.length === 0 && <EmptyState title="Koi user nahi mila" hint="Filter badlo ya DAGChain sync karo." />}
+        {rows.length === 0 && <EmptyState title="No users found" hint="Try adjusting your filters, or sync DAGChain." />}
         {rows.length > 0 && (
           <div className="flex items-center justify-between p-4 border-t border-ink-100">
             <span className="text-xs text-ink-400 font-mono">Page {page} of {pages} · {total} users</span>

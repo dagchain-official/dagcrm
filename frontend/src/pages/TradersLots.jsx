@@ -60,7 +60,7 @@ export default function TradersLots() {
           <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2">
             <CandlestickChart className="text-brand-600" /> Traders &amp; Lots
           </h1>
-          <p className="text-sm text-ink-400">Har employee ke traders ne kitne lots trade kiye + estimated per-lot commission</p>
+          <p className="text-sm text-ink-400">How many lots each employee's traders traded + estimated per-lot commission</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select className="input !w-auto" value={employee} onChange={(e) => setEmployee(e.target.value)}>
@@ -90,15 +90,15 @@ export default function TradersLots() {
         <Stat icon={Coins} label="Commission (all-time)" value={money(g.commission_total)} tint="bg-amber-100 text-amber-600" />
       </div>
       <p className="text-xs text-ink-400 -mt-2 flex flex-wrap items-center gap-1">
-        Rate = <b className="text-ink-600">{money(d.rate)}</b> per lot — ye
+        Rate = <b className="text-ink-600">{money(d.rate)}</b> per lot — set in
         <Link to="/hr/payroll" className="inline-flex items-center gap-1 text-brand-600 font-medium hover:underline">
           <Settings2 size={12} /> Activity Incentives
         </Link>
-        me set hoti hai (metric “Lots Traded”). Upar box me apni rate daal ke sirf preview badal sakte ho · Month = {MONTHS[month - 1]} {year}.
+        (metric “Lots Traded”). Enter a rate in the box above to change the preview only · Month = {MONTHS[month - 1]} {year}.
       </p>
 
       {/* employee → traders */}
-      {emps.length === 0 && <EmptyState title="Koi lots data nahi" hint="FXArtha sync se lots aate hi yahaँ dikhega." />}
+      {emps.length === 0 && <EmptyState title="No lots data" hint="Lots will appear here as soon as they arrive from an FXArtha sync." />}
       <div className="space-y-3">
         {emps.map((e) => (
           <div key={e.employee_id} className="card overflow-hidden">

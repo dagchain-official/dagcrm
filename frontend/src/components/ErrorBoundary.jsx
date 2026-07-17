@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component {
             </div>
             <h2 className="text-xl font-extrabold text-ink-900 mt-4">Something went wrong</h2>
             <p className="text-sm text-ink-500 mt-1">
-              Is page me ek error aaya. Reload karke dobara try karo.
+              Something went wrong on this page. Please reload and try again.
             </p>
             <button className="btn-primary mt-5 mx-auto" onClick={() => window.location.reload()}>
               <RefreshCw size={16} /> Reload

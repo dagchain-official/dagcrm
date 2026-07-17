@@ -122,7 +122,7 @@ export default function FxArthaAccount() {
           </>
         )}>
         {tradesShown.length === 0 ? (
-          <EmptyState title={trades.length ? "No match" : "No trades"} hint={trades.length ? "Filter badlo." : "Koi trade nahi."} />
+          <EmptyState title={trades.length ? "No match" : "No trades"} hint={trades.length ? "Try adjusting your filters." : "No trades yet."} />
         ) : (
           <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
             <table className="w-full text-sm min-w-[860px]">
@@ -161,7 +161,7 @@ export default function FxArthaAccount() {
         {/* orders */}
         <Section icon={ClipboardList} title="Working Orders" count={orders.length}>
           {orders.length === 0 ? (
-            <EmptyState title="No pending orders" hint="Koi working/pending order nahi." />
+            <EmptyState title="No pending orders" hint="No working or pending orders." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -225,7 +225,7 @@ export default function FxArthaAccount() {
           </>
         )}>
         {ledShown.length === 0 ? (
-          <EmptyState title={ledger.length ? "No match" : "No ledger entries"} hint={ledger.length ? "Filter/search badlo." : "Koi balance movement nahi."} />
+          <EmptyState title={ledger.length ? "No match" : "No ledger entries"} hint={ledger.length ? "Try adjusting your filters." : "No balance movements."} />
         ) : (
           <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
             <table className="w-full text-sm min-w-[640px]">
