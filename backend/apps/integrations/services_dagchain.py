@@ -95,10 +95,16 @@ def _sync_user(item, rm_user):
     uid = item.get("_id")
     if not uid:
         return None
+    # Many DAGChain users are wallet-connect only (no display name or email), so
+    # fall back to a shortened wallet address rather than a blank/"Unknown" row.
+    wallet = item.get("walletAddress") or ""
+    short_wallet = f"{wallet[:6]}…{wallet[-4:]}" if len(wallet) > 12 else wallet
+    name = (item.get("displayName") or item.get("email")
+            or short_wallet or f"User {str(uid)[-6:]}")
     cust, _ = Customer.objects.update_or_create(
         external_id=uid,
         defaults={
-            "name": item.get("displayName") or item.get("email") or "Unknown",
+            "name": name,
             "email": item.get("email") or "",
             "phone": item.get("phoneCountryCode") or "",
         },
