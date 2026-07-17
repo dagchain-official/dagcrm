@@ -87,7 +87,7 @@ def answer_question(user, question):
             rows = Customer.objects.values("country").annotate(c=Count("id")).order_by("-c")[:6]
             parts = [f"{r['country'] or 'Unknown'}: {r['c']}" for r in rows]
             return "Customers by country — " + (", ".join(parts) or "none yet") + "."
-        return f"There are {Customer.objects.count()} customers in the system."
+        return f"There are {Customer.objects.pipeline().count()} customers in the system."
 
     # ---- OPPORTUNITIES / DEALS ---------------------------------------------
     if has("opportunit", "deal", "pipeline"):
@@ -202,7 +202,7 @@ def _snapshot(user, admin, can_finance):
     leads = Lead.objects.pipeline() if admin else Lead.objects.pipeline().filter(assigned_to=user)
     lines = [
         f"📊 Leads: {leads.count()} ({leads.filter(status='converted').count()} converted)",
-        f"👥 Customers: {Customer.objects.count()}",
+        f"👥 Customers: {Customer.objects.pipeline().count()}",
         f"🎯 Open deals: {Opportunity.objects.exclude(status__in=['won','lost']).count()}",
     ]
     if can_finance or admin:

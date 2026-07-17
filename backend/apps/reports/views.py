@@ -102,7 +102,7 @@ def dashboard_summary(request):
         "total_leads": Lead.objects.pipeline().count(),
         "new_leads": Lead.objects.pipeline().filter(status="new").count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
-        "total_customers": Customer.objects.count(),
+        "total_customers": Customer.objects.pipeline().count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),
         "pipeline_value": _money(Opportunity.objects.filter(status="open"), "expected_revenue"),
         "gross_revenue": gross,

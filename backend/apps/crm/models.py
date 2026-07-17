@@ -138,6 +138,16 @@ class Opportunity(models.Model):
 
 
 # ------------------------------------------------------------------ Customers
+class CustomerQuerySet(models.QuerySet):
+    def pipeline(self):
+        """Customers the CRM itself won — a social/marketing or manual lead that
+        converted. FXArtha-synced traders are platform accounts that belong to the
+        FX Artha module's own dashboards, so they never count as CRM customers.
+        Matched on external_id, which only the sync sets.
+        """
+        return self.filter(external_id="")
+
+
 class Customer(models.Model):
     name = models.CharField(max_length=150)
     external_id = models.CharField(max_length=64, blank=True, db_index=True)  # external system id (e.g. FXArtha user)
@@ -150,6 +160,8 @@ class Customer(models.Model):
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                                     null=True, blank=True, related_name="assigned_customers")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = CustomerQuerySet.as_manager()
 
     def __str__(self):
         return self.name
