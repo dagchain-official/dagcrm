@@ -436,8 +436,12 @@ def business_dashboard(request):
 
     # A business fed by an integration (FXArtha / DAGChain) carries its own synced
     # platform snapshot — use it for the headline stats instead of the CRM rows.
+    # Match by the connection's business, or by name (the FXArtha connection is
+    # global, business=None, but its platform key == "fxartha" == "FX Artha").
     from apps.integrations.models import IntegrationConnection
-    _conn = IntegrationConnection.objects.filter(business=biz).first()
+    _norm = biz.name.replace(" ", "").lower()
+    _conn = (IntegrationConnection.objects.filter(business=biz).first()
+             or IntegrationConnection.objects.filter(platform=_norm).first())
     platform = _conn.platform if _conn else None
     snap = ((_conn.config or {}).get("dashboard") or {}) if _conn else {}
 
