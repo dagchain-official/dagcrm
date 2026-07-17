@@ -38,6 +38,16 @@ def _scoped_revenue(user):
     return qs.filter(business_id__in=ids) if ids is not None else qs
 
 
+def _fxartha_dashboard():
+    """The last-synced FXArtha platform dashboard. Its revenue figures are
+    authoritative: our per-trader rows carry commission only (no swap) and are
+    dated by sync time, so summing them both understates the platform total and
+    piles its whole history onto one month."""
+    from apps.integrations.models import IntegrationConnection
+    conn = IntegrationConnection.objects.filter(platform="fxartha").first()
+    return ((conn.config or {}).get("dashboard") or {}) if conn else {}
+
+
 @api_view(["GET"])
 def my_dashboard(request):
     """Personal KPIs scoped to the logged-in user."""
@@ -82,8 +92,12 @@ def my_dashboard(request):
 @api_view(["GET"])
 def dashboard_summary(request):
     """High-level KPI cards for the main dashboard."""
-    gross = _money(Revenue.objects.all(), "gross_revenue")
-    net = _money(Revenue.objects.all(), "net_revenue")
+    # FXArtha reports its own platform revenue — take it as-is and add the CRM's
+    # own (non-synced) revenue on top, so the trader rows aren't double-counted.
+    fx_revenue = float(_fxartha_dashboard().get("total_revenue") or 0)
+    crm_revenue = Revenue.objects.filter(external_id="")
+    gross = float(_money(crm_revenue, "gross_revenue")) + fx_revenue
+    net = float(_money(crm_revenue, "net_revenue")) + fx_revenue
     reps = []
     for u in User.objects.all():
         leads = Lead.objects.pipeline().filter(assigned_to=u).count()
@@ -261,11 +275,25 @@ def revenue_by_business(request):
 
 @api_view(["GET"])
 def revenue_trend(request):
-    """Monthly net revenue trend."""
-    data = (Revenue.objects.annotate(month=TruncMonth("created_at"))
-            .values("month").annotate(net=Sum("net_revenue")).order_by("month"))
-    return Response([{"month": d["month"].strftime("%b %Y") if d["month"] else "",
-                      "net": d["net"] or 0} for d in data])
+    """Monthly net revenue trend. FXArtha supplies its own per-month figures —
+    our synced rows all carry the sync date, so grouping them by created_at would
+    stack the platform's whole history onto whichever month it was synced. The
+    CRM's own revenue is grouped by month and merged in."""
+    buckets = {}   # "YYYY-MM" -> {"month": "Mon YYYY", "net": float}
+    for m in _fxartha_dashboard().get("revenue_by_month") or []:
+        if m.get("brokerage_total"):
+            buckets[m.get("month")] = {"month": m.get("label"),
+                                       "net": float(m["brokerage_total"])}
+    rows = (Revenue.objects.filter(external_id="")
+            .annotate(m=TruncMonth("created_at")).values("m")
+            .annotate(net=Sum("net_revenue")).order_by("m"))
+    for d in rows:
+        if not d["m"]:
+            continue
+        b = buckets.setdefault(d["m"].strftime("%Y-%m"),
+                               {"month": d["m"].strftime("%b %Y"), "net": 0.0})
+        b["net"] += float(d["net"] or 0)
+    return Response([buckets[k] for k in sorted(buckets)])
 
 
 @api_view(["POST"])
