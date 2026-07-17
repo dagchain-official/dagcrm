@@ -92,12 +92,13 @@ def my_dashboard(request):
 @api_view(["GET"])
 def dashboard_summary(request):
     """High-level KPI cards for the main dashboard."""
-    # FXArtha reports its own platform revenue — take it as-is and add the CRM's
-    # own (non-synced) revenue on top, so the trader rows aren't double-counted.
+    # FXArtha reports its own platform revenue — take it as-is and drop only its
+    # per-trader rows so they aren't double-counted. Every other source still
+    # counts: the CRM's own revenue and other integrations (e.g. DAGChain nodes).
     fx_revenue = float(_fxartha_dashboard().get("total_revenue") or 0)
-    crm_revenue = Revenue.objects.filter(external_id="")
-    gross = float(_money(crm_revenue, "gross_revenue")) + fx_revenue
-    net = float(_money(crm_revenue, "net_revenue")) + fx_revenue
+    other_revenue = Revenue.objects.exclude(external_id__startswith="fxa")
+    gross = float(_money(other_revenue, "gross_revenue")) + fx_revenue
+    net = float(_money(other_revenue, "net_revenue")) + fx_revenue
     reps = []
     for u in User.objects.all():
         leads = Lead.objects.pipeline().filter(assigned_to=u).count()
@@ -284,7 +285,7 @@ def revenue_trend(request):
         if m.get("brokerage_total"):
             buckets[m.get("month")] = {"month": m.get("label"),
                                        "net": float(m["brokerage_total"])}
-    rows = (Revenue.objects.filter(external_id="")
+    rows = (Revenue.objects.exclude(external_id__startswith="fxa")
             .annotate(m=TruncMonth("created_at")).values("m")
             .annotate(net=Sum("net_revenue")).order_by("m"))
     for d in rows:
