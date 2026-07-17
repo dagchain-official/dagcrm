@@ -105,7 +105,9 @@ export default function Integrations() {
   if (!list) return <Spinner label="Loading integrations…" />;
 
   const connected = list.filter((c) => c.status === "connected").length;
-  const totalLeads = list.reduce((s, c) => s + c.total_leads, 0);
+  // Only webhook (social) connectors bring real leads. Poll connectors (FXArtha,
+  // DAGChain) sync platform users/customers — those don't count as leads.
+  const totalLeads = list.reduce((s, c) => s + (c.is_poll ? 0 : c.total_leads), 0);
 
   return (
     <div className="space-y-5">
@@ -148,7 +150,7 @@ export default function Integrations() {
                 <Building2 size={12} /> {c.business_name || "Global (koi business nahi)"}
               </p>
               <div className="flex gap-4 mt-3 text-sm">
-                <div><span className="font-extrabold text-ink-900">{c.total_leads}</span> <span className="text-ink-400">leads</span></div>
+                <div><span className="font-extrabold text-ink-900">{c.total_leads}</span> <span className="text-ink-400">{c.is_poll ? "users" : "leads"}</span></div>
                 <div className="text-ink-400">last: {ago(c.last_lead_at)}</div>
               </div>
               <button className={`mt-4 ${on ? "btn-ghost border border-ink-200" : "btn-primary"}`} onClick={() => open(c)}>
@@ -197,7 +199,7 @@ export default function Integrations() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`badge ${active.status === "connected" ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-500"}`}>{active.status}</span>
               <span className="badge bg-brand-50 text-brand-700 inline-flex items-center gap-1"><Building2 size={12} /> {active.business_name || "Global"}</span>
-              <span className="text-xs text-ink-400">{active.total_leads} leads ingested</span>
+              <span className="text-xs text-ink-400">{active.total_leads} {active.is_poll ? "users synced" : "leads ingested"}</span>
               <button onClick={removeConn} className="ml-auto text-xs text-rose-600 inline-flex items-center gap-1 hover:underline"><Trash2 size={13} /> Delete</button>
             </div>
             <p className="text-xs text-ink-400 -mt-1">Source tag: {active.source_name}</p>
