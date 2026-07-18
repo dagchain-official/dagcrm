@@ -14,7 +14,10 @@ export default function AIAssistant() {
   const [lead, setLead] = useState({ source: "Referral", status: "new", activity_count: 2, email: "x@y.com", phone: "123" });
   const [score, setScore] = useState(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
+  // NOTE: must be a block body — an implicit arrow return would hand React the
+  // scrollIntoView() result as the effect's "cleanup", and React calls that on
+  // unmount → "c2 is not a function" crash when leaving this page.
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const send = async (preset) => {
     const text = (preset ?? input).trim();
