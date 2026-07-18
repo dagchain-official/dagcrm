@@ -42,6 +42,11 @@ export default class ErrorBoundary extends Component {
                 {String(this.state.error.message).slice(0, 300)}
               </p>
             )}
+            {this.state.error?.stack && (
+              <pre className="text-[10px] text-ink-400 mt-2 font-mono text-left bg-ink-50 rounded-lg p-2 max-h-32 overflow-auto whitespace-pre-wrap">
+                {String(this.state.error.stack).split("\n").slice(0, 6).join("\n")}
+              </pre>
+            )}
             <button className="btn-primary mt-5 mx-auto" onClick={() => window.location.reload()}>
               <RefreshCw size={16} /> Reload
             </button>
