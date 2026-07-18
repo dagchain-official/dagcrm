@@ -367,11 +367,43 @@ const PREFIX_TOURS = {
   },
 };
 
-// Returns { steps, next } for a page, or null if that page has no tour yet.
+// route -> index in TOUR, so every page can fall back to a one-line description
+// and a "next module" pointer even without a hand-built feature tour.
+const TOUR_INDEX = Object.fromEntries(TOUR.map((t, i) => [t.route, i]));
+
+// The module that naturally comes after this one in the sidebar order.
+const nextInTour = (pathname) => {
+  const i = TOUR_INDEX[pathname];
+  if (i == null) return null;
+  const n = TOUR[i + 1];
+  return n ? { label: n.label, route: n.route } : null;
+};
+
+// A minimal, always-safe tour for any page without a hand-built one: a single
+// centered card describing the page, plus a pointer to the next module. `center`
+// steps need no on-page target, so they can never land on a blank area.
+function genericPageTour(pathname) {
+  const i = TOUR_INDEX[pathname];
+  if (i != null) {
+    const e = TOUR[i];
+    return { steps: [{ center: true, title: e.label, content: e.content }], next: nextInTour(pathname) };
+  }
+  return {
+    steps: [{
+      center: true,
+      title: "This page",
+      content: "This screen shows the full details for the item you opened. Press the “?” Help button on any page for a guided walkthrough of its features.",
+    }],
+    next: null,
+  };
+}
+
+// Returns { steps, next } for a page. Never null — every page gets at least the
+// generic walkthrough, so the Help button always does something useful.
 export function pageTour(pathname) {
   // Generic list screens (/m/*) share the ResourceTable toolbar tour.
   if (pathname.startsWith("/m/")) {
-    return { steps: RESOURCE_STEPS, next: NEXT[pathname] || null };
+    return { steps: RESOURCE_STEPS, next: NEXT[pathname] || nextInTour(pathname) };
   }
   // Exact custom page, then a dynamic-route prefix match.
   let entry = PAGE_TOURS[pathname];
@@ -379,7 +411,9 @@ export function pageTour(pathname) {
     const key = Object.keys(PREFIX_TOURS).find((k) => pathname.startsWith(k));
     if (key) entry = PREFIX_TOURS[key];
   }
-  if (!entry || !entry.steps || !entry.steps.length) return null;
-  return { steps: entry.steps, next: entry.next ?? NEXT[pathname] ?? null };
+  if (entry && entry.steps && entry.steps.length) {
+    return { steps: entry.steps, next: entry.next ?? NEXT[pathname] ?? nextInTour(pathname) };
+  }
+  return genericPageTour(pathname);
 }
 

@@ -18,11 +18,28 @@ const sidebarSteps = (entries) =>
   }));
 
 // A page's own feature tour: its in-page steps + a "what's next" pointer.
+// - `center` steps have no on-page target (they float in the middle) — used for
+//   intros and the "what's next" card, so they can never land on a blank area.
+// - Steps whose target isn't currently on the page (e.g. an Export button that's
+//   hidden while the list is empty) are dropped, so a tooltip never floats over
+//   nothing.
 const pageSteps = (pt) => {
-  const steps = pt.steps.map((s) => ({
-    target: s.selector, title: s.title, content: s.content,
-    placement: "auto", disableBeacon: true,
-  }));
+  const steps = pt.steps
+    .filter((s) => s.center || (s.selector && document.querySelector(s.selector)))
+    .map((s) => ({
+      target: s.center ? "body" : s.selector,
+      placement: s.center ? "center" : "auto",
+      title: s.title, content: s.content, disableBeacon: true,
+    }));
+  // Nothing on this page to point at? Still give a one-line intro so the Help
+  // button always does something (never a stuck/blank tour).
+  if (!steps.length) {
+    steps.push({
+      target: "body", placement: "center", disableBeacon: true,
+      title: "This page",
+      content: "Explore this screen's details. Use the “?” Help button on any page for a walkthrough of its features.",
+    });
+  }
   if (pt.next) {
     steps.push({
       target: "body", placement: "center", disableBeacon: true,
@@ -75,13 +92,11 @@ export default function Tour() {
     return () => clearTimeout(t);
   }, [user, isAdmin, startOverview]);
 
-  // "?" Help button: tour the CURRENT page if it has one, else the overview.
+  // "?" Help button: always walk through the CURRENT page. pageTour() never
+  // returns null — pages without a hand-built tour get a generic one — so the
+  // button is consistent everywhere and never opens the module picker.
   useEffect(() => {
-    const open = () => {
-      const pt = pageTour(loc.pathname);
-      if (pt) startPage(pt);
-      else setPicker({ mode: "guide", entries: availableEntries(), selected: new Set(availableEntries().map((e) => e.route)) });
-    };
+    const open = () => startPage(pageTour(loc.pathname));
     window.addEventListener("dagos:open-guide", open);
     return () => window.removeEventListener("dagos:open-guide", open);
   }, [loc.pathname, startPage]);
@@ -94,10 +109,13 @@ export default function Tour() {
       firstRun.current = false;
       return;
     }
-    // Bring the target into view (the sidebar scrolls independently).
-    if (type === EVENTS.STEP_BEFORE && step?.target && step.target !== "body") {
+    // Only the sidebar scrolls independently, so only sidebar targets need a
+    // manual nudge — and it must be INSTANT. Page targets are scrolled by Joyride
+    // itself; a second (smooth) scroll here fights it mid-animation and lands the
+    // spotlight on empty space — that was the recurring "blank page" during tours.
+    if (type === EVENTS.STEP_BEFORE && step?.target?.startsWith('[data-tour="/')) {
       const el = document.querySelector(step.target);
-      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (el) el.scrollIntoView({ block: "center", behavior: "auto" });
     }
   }, [user, steps, persist]);
 
@@ -132,6 +150,7 @@ export default function Tour() {
         showProgress
         showSkipButton
         scrollToFirstStep
+        scrollOffset={90}
         disableScrollParentFix
         spotlightPadding={6}
         callback={onJoyride}
