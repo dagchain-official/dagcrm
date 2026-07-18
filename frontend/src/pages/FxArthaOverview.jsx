@@ -70,7 +70,7 @@ export default function FxArthaOverview() {
           <p className="text-sm text-ink-400 mt-1">Enter a valid API key under Integration Hub → FX Artha, then press <b>Sync now</b>.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+        <div data-tour="fxo-tiles" className="grid grid-cols-2 lg:grid-cols-3 gap-5">
           <Tile icon={Users} label="Total Traders" value={num(dash.total_traders)} tint="bg-brand-100 text-brand-600" />
           <Tile icon={Activity} label="Active Accounts" value={num(dash.active_accounts)} tint="bg-emerald-100 text-emerald-600" />
           <Tile icon={CandlestickChart} label="Lots Traded" value={num(dash.lots_traded)} tint="bg-violet-100 text-violet-600" />
@@ -82,7 +82,7 @@ export default function FxArthaOverview() {
 
       {/* Revenue — FXArtha's own authoritative figures (commission + swap) */}
       {rev && (
-        <div className="card p-5">
+        <div data-tour="fxo-revenue" className="card p-5">
           <h3 className="font-bold text-ink-900">Revenue</h3>
           <p className="text-xs text-ink-400 mb-4">FXArtha platform's own numbers — straight from their dashboard</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -105,7 +105,7 @@ export default function FxArthaOverview() {
       )}
 
       {byMonth.length > 0 && (
-        <div className="card p-5">
+        <div data-tour="fxo-chart" className="card p-5">
           <h3 className="font-bold text-ink-900">Revenue by Month</h3>
           <p className="text-xs text-ink-400 mb-4">Commission + swap, every month</p>
           <ResponsiveContainer width="100%" height={240}>
@@ -121,7 +121,7 @@ export default function FxArthaOverview() {
       )}
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Link to="/fxartha-traders" className="card p-5 flex items-center justify-between hover:shadow-soft transition">
+        <Link to="/fxartha-traders" data-tour="fxo-traders" className="card p-5 flex items-center justify-between hover:shadow-soft transition">
           <div><p className="font-bold text-ink-900">All Traders</p><p className="text-sm text-ink-400">Full details for every trader — lots, brokerage, deposits, RM</p></div>
           <ArrowRight className="text-brand-600" />
         </Link>

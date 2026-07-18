@@ -51,21 +51,21 @@ export default function DagChainUsers() {
           <p className="text-sm text-ink-400">{total} users · wallet, DGC balance, referrals, KYC, nodes</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 chip !py-2"><Search size={14} className="text-ink-400" />
+          <div data-tour="dcu-search" className="flex items-center gap-1.5 chip !py-2"><Search size={14} className="text-ink-400" />
             <input className="bg-transparent outline-none text-sm w-40" placeholder="Name / email / wallet…" value={q} onChange={(e) => { setPage(1); setQ(e.target.value); }} />
           </div>
-          <select className="input !w-auto !py-1.5 text-sm" value={kyc} onChange={(e) => { setPage(1); setKyc(e.target.value); }}>
+          <select data-tour="dcu-kyc" className="input !w-auto !py-1.5 text-sm" value={kyc} onChange={(e) => { setPage(1); setKyc(e.target.value); }}>
             <option value="">All KYC</option>
             <option value="not_started">Not started</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
-          <button className="btn-ghost border border-ink-200 text-sm" onClick={exportCsv}><Download size={14} /> CSV</button>
+          <button data-tour="dcu-export" className="btn-ghost border border-ink-200 text-sm" onClick={exportCsv}><Download size={14} /> CSV</button>
         </div>
       </div>
 
-      <div className="card p-0 overflow-hidden">
+      <div data-tour="dcu-table" className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[980px]">
             <thead>

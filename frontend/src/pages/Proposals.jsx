@@ -86,22 +86,22 @@ export default function Proposals() {
           <p className="text-sm text-ink-400">{rows.length} total · {sent} sent</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="chip !py-2">
+          <div data-tour="prop-search" className="chip !py-2">
             <Search size={16} className="text-ink-400" />
             <input className="text-sm outline-none bg-transparent w-40 text-ink-700" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <button className="btn-primary" onClick={() => setBuilder(blankProposal())}><Plus size={16} /> New Proposal</button>
+          <button data-tour="prop-new" className="btn-primary" onClick={() => setBuilder(blankProposal())}><Plus size={16} /> New Proposal</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div data-tour="prop-stats" className="grid grid-cols-3 gap-4">
         {[["Total", rows.length, "text-ink-900"], ["Sent", sent, "text-emerald-600"],
           ["Draft", rows.filter((r) => r.status === "draft").length, "text-amber-600"]].map(([l, v, c]) => (
           <div key={l} className="card p-5"><p className={`text-3xl font-extrabold tabular-nums ${c}`}>{v}</p><p className="text-sm text-ink-400 mt-0.5">{l}</p></div>
         ))}
       </div>
 
-      <div className="card p-5">
+      <div data-tour="prop-list" className="card p-5">
         {rows.length === 0 ? <EmptyState title="No proposals yet" hint="Click “New Proposal” to build one." /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

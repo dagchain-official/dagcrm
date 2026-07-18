@@ -84,7 +84,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-5">
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div data-tour="dash-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Kpi icon={Users} label="Total Leads" value={totalLeads} trend={`${kpi.new_leads} new this period`} color="bg-orange-100 text-orange-600" />
         <Kpi icon={UserCheck} label="Total Customers" value={kpi.total_customers} trend={`${kpi.converted_leads} converted`} color="bg-rose-100 text-rose-500" />
         <Kpi icon={Target} label="Open Opportunities" value={kpi.open_opportunities} trend={money(kpi.pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* total income area */}
-        <div className="card p-5">
+        <div data-tour="dash-revenue" className="card p-5">
           <CardHead title="Total Revenue" />
           <p className="text-3xl font-extrabold text-ink-900 tabular-nums">{money(kpi.net_revenue)}</p>
           <p className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
       {/* tables + AI row */}
       <div className="grid lg:grid-cols-3 gap-5">
         {/* recent revenue */}
-        <div className="card p-5 lg:col-span-2">
+        <div data-tour="dash-recent-revenue" className="card p-5 lg:col-span-2">
           <CardHead title="Recent Revenue" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* AI insights */}
-        <div className="card p-5">
+        <div data-tour="dash-ai" className="card p-5">
           <CardHead title="AI Insights" action={<Sparkles size={18} className="text-brand-500" />} />
           <div className="space-y-3">
             {insights.length === 0 && <p className="text-sm text-ink-400">Crunching numbers…</p>}

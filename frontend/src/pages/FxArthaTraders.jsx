@@ -60,10 +60,10 @@ export default function FxArthaTraders() {
           <p className="text-sm text-ink-400">Full details for every trader — lots, brokerage, deposits/withdrawals, date, RM</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 chip !py-2"><Search size={14} className="text-ink-400" /><input className="bg-transparent outline-none text-sm w-36" placeholder="Search trader…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <label className="chip !py-2 text-xs flex items-center gap-1">From <input type="date" className="bg-transparent outline-none text-xs" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <div data-tour="fxt-search" className="flex items-center gap-1.5 chip !py-2"><Search size={14} className="text-ink-400" /><input className="bg-transparent outline-none text-sm w-36" placeholder="Search trader…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <label data-tour="fxt-dates" className="chip !py-2 text-xs flex items-center gap-1">From <input type="date" className="bg-transparent outline-none text-xs" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
           <label className="chip !py-2 text-xs flex items-center gap-1">To <input type="date" className="bg-transparent outline-none text-xs" value={to} onChange={(e) => setTo(e.target.value)} /></label>
-          <button className="btn-ghost border border-ink-200 text-sm" onClick={exportCsv}><Download size={14} /> CSV</button>
+          <button data-tour="fxt-export" className="btn-ghost border border-ink-200 text-sm" onClick={exportCsv}><Download size={14} /> CSV</button>
         </div>
       </div>
 
@@ -76,7 +76,7 @@ export default function FxArthaTraders() {
         <Stat icon={Coins} label="Withdrawals" value={money(t.withdrawals)} tint="bg-rose-100 text-rose-500" />
       </div>
 
-      <div className="card p-0 overflow-hidden">
+      <div data-tour="fxt-table" className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[1000px]">
             <thead>

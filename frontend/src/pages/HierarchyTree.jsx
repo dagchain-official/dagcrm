@@ -87,7 +87,7 @@ export default function HierarchyTree() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="card p-4">
+        <div data-tour="hier-people" className="card p-4">
           <div className="grid place-items-center w-9 h-9 rounded-xl bg-brand-100 text-brand-600"><Users2 size={18} /></div>
           <p className="text-2xl font-extrabold text-ink-900 mt-2">{d.total}</p>
           <p className="text-xs text-ink-400">People in the org</p>
@@ -97,7 +97,7 @@ export default function HierarchyTree() {
           <p className="text-2xl font-extrabold text-ink-900 mt-2">{levels.size}</p>
           <p className="text-xs text-ink-400">Hierarchy levels</p>
         </div>
-        <div className="card p-4">
+        <div data-tour="hier-heads" className="card p-4">
           <div className="grid place-items-center w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600"><Network size={18} /></div>
           <p className="text-2xl font-extrabold text-ink-900 mt-2">{(d.tree || []).length}</p>
           <p className="text-xs text-ink-400">Top-level heads</p>
@@ -107,7 +107,7 @@ export default function HierarchyTree() {
       {(d.tree || []).length === 0 ? (
         <EmptyState title="No hierarchy yet" hint="Add employees and set each one's manager to build the tree." />
       ) : (
-        <div className="space-y-3">
+        <div data-tour="hier-tree" className="space-y-3">
           {d.tree.map((n) => <Node key={n.id} n={n} />)}
         </div>
       )}

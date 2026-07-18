@@ -63,7 +63,7 @@ export default function DagChainOverview() {
       </div>
 
       {/* headline */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div data-tour="dc-tiles" className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Tile icon={Users} label="Total Users" value={num(dash.totalUsers ?? p.users)} tint="bg-brand-100 text-brand-600" />
         <Tile icon={Coins} label="Node Revenue" value={money(d.node_revenue)} tint="bg-emerald-100 text-emerald-600" />
         <Tile icon={Server} label="Validator Nodes" value={num(val.count)} tint="bg-violet-100 text-violet-600" />
@@ -72,7 +72,7 @@ export default function DagChainOverview() {
 
       {/* node breakdown */}
       <div className="grid lg:grid-cols-2 gap-5">
-        <div className="card p-5">
+        <div data-tour="dc-validator" className="card p-5">
           <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2"><Server size={18} className="text-violet-600" /> Validator Nodes</h3>
           <div className="space-y-3">
             {[["Nodes sold", num(val.count)], ["Revenue", money(val.revenue)],
@@ -85,7 +85,7 @@ export default function DagChainOverview() {
             ))}
           </div>
         </div>
-        <div className="card p-5">
+        <div data-tour="dc-storage" className="card p-5">
           <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2"><HardDrive size={18} className="text-amber-600" /> Storage Nodes</h3>
           <div className="space-y-3">
             {[["Nodes sold", num(sto.count)], ["Revenue", money(sto.revenue)],
@@ -109,7 +109,7 @@ export default function DagChainOverview() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Link to="/dagchain-users" className="card p-5 flex items-center justify-between hover:shadow-soft transition">
+        <Link to="/dagchain-users" data-tour="dc-users" className="card p-5 flex items-center justify-between hover:shadow-soft transition">
           <div><p className="font-bold text-ink-900">All Users</p><p className="text-sm text-ink-400">Wallet, DGC balance, referrals, KYC, nodes, RM</p></div>
           <ArrowRight className="text-brand-600" />
         </Link>

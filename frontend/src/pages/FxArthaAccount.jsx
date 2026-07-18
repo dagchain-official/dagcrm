@@ -24,9 +24,9 @@ function Tile({ icon: Icon, label, value, tint, sub }) {
   );
 }
 
-function Section({ icon: Icon, title, count, actions, children }) {
+function Section({ icon: Icon, title, count, actions, children, tour }) {
   return (
-    <div className="card p-0 overflow-hidden">
+    <div data-tour={tour} className="card p-0 overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-ink-100">
         <Icon size={16} className="text-brand-600" />
         <h3 className="font-bold text-ink-900">{title}</h3>
@@ -93,7 +93,7 @@ export default function FxArthaAccount() {
       </div>
 
       {/* account metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div data-tour="fxa-metrics" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <Tile icon={Wallet} label="Balance" value={money(a.balance)} tint="bg-brand-100 text-brand-600" />
         <Tile icon={TrendingUp} label="Equity" value={money(a.equity)} tint="bg-emerald-100 text-emerald-600" />
         <Tile icon={Wallet} label="Credit" value={money(a.credit)} tint="bg-amber-100 text-amber-600" />
@@ -104,7 +104,7 @@ export default function FxArthaAccount() {
       </div>
 
       {/* trades — open + closed, with symbol + status filters */}
-      <Section icon={CandlestickChart} title="Trades" count={tradesShown.length}
+      <Section icon={CandlestickChart} title="Trades" count={tradesShown.length} tour="fxa-trades"
         actions={trades.length > 0 && (
           <>
             <select className="input !py-1.5 !text-xs w-auto" value={tsym} onChange={(e) => setTsym(e.target.value)}>
@@ -187,7 +187,7 @@ export default function FxArthaAccount() {
         </Section>
 
         {/* IB info */}
-        <Section icon={Users} title="IB / Referral">
+        <Section icon={Users} title="IB / Referral" tour="fxa-ib">
           <div className="p-4 grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
             {[
               ["Is IB", ib.is_ib ? "Yes" : "No"],
@@ -212,7 +212,7 @@ export default function FxArthaAccount() {
       </div>
 
       {/* ledger */}
-      <Section icon={BookOpen} title="Ledger — balance movements" count={ledShown.length}
+      <Section icon={BookOpen} title="Ledger — balance movements" count={ledShown.length} tour="fxa-ledger"
         actions={ledger.length > 0 && (
           <>
             <div className="chip !py-1.5"><Search size={13} className="text-ink-400" /><input className="bg-transparent outline-none text-xs w-28" placeholder="Search…" value={lq} onChange={(e) => setLq(e.target.value)} /></div>

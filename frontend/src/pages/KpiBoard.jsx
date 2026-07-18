@@ -72,11 +72,11 @@ export default function KpiBoard() {
           <p className="text-sm text-ink-400">Configurable KPIs · rolled up the org tree</p>
         </div>
         <div className="flex items-center gap-2">
-          <select className="input !w-auto" value={business} onChange={(e) => setBusiness(e.target.value)}>
+          <select data-tour="kpi-business" className="input !w-auto" value={business} onChange={(e) => setBusiness(e.target.value)}>
             <option value="">All businesses</option>
             {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <select className="input !w-auto" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+          <select data-tour="kpi-period" className="input !w-auto" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
             {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
           <select className="input !w-auto" value={year} onChange={(e) => setYear(Number(e.target.value))}>
