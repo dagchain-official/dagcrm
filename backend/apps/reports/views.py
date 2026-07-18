@@ -436,6 +436,69 @@ def fxartha_account(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("dagchain")])
+def dagchain_account(request):
+    """DAGChain account for one synced user (?customer=<crm id>): wallet/DGC
+    profile, referrals, KYC, and every validator/storage node with its rewards."""
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
+    from apps.integrations.models import DagChainProfile, DagChainNode
+    cust = Customer.objects.filter(id=request.query_params.get("customer")).first()
+    if not cust:
+        return Response({"error": "Customer not found."}, status=404)
+    prof = DagChainProfile.objects.filter(customer=cust).first()
+    if not prof:
+        return Response({"error": "Not a synced DAGChain user."}, status=404)
+    role = getattr(getattr(request.user, "role", None), "name", "")
+    if not (is_admin_view(request.user) or role in ("Finance", "HR")):
+        if cust.assigned_to_id not in subordinate_user_ids(request.user, include_self=True):
+            return Response({"error": "No access to this user."}, status=403)
+
+    nodes = list(DagChainNode.objects.filter(customer=cust).order_by("kind", "-purchase_price"))
+
+    def f(v):
+        return float(v or 0)
+
+    def node_row(n):
+        return {
+            "id": n.id, "kind": n.kind, "node_key": n.node_key, "package": n.package,
+            "purchase_price": f(n.purchase_price), "currency": n.currency,
+            "status": n.status, "payment_status": n.payment_status, "uptime": f(n.uptime),
+            "blocks_validated": n.blocks_validated, "rewards_earned": f(n.rewards_earned),
+            "pending_rewards": f(n.pending_rewards), "claimed_rewards": f(n.claimed_rewards),
+            "effective_apy": f(n.effective_apy), "capacity": n.capacity,
+            "is_staked": n.is_staked, "opened_at": n.opened_at,
+        }
+
+    profile = {
+        "wallet_address": prof.wallet_address, "user_type": prof.user_type,
+        "status": prof.status, "kyc_status": prof.kyc_status,
+        "email_verified": prof.email_verified, "social_provider": prof.social_provider,
+        "dgc_balance": f(prof.dgc_balance), "fuel_wallet_usd": f(prof.fuel_wallet_usd),
+        "referral_code": prof.referral_code, "referral_count": prof.referral_count,
+        "total_referral_earnings": f(prof.total_referral_earnings),
+        "validator_nodes_count": prof.validator_nodes_count,
+        "storage_nodes_count": prof.storage_nodes_count,
+        "login_count": prof.login_count, "joined_at": prof.joined_at,
+    }
+    totals = {
+        "nodes": len(nodes),
+        "validator_nodes": sum(1 for n in nodes if n.kind == "validator"),
+        "storage_nodes": sum(1 for n in nodes if n.kind == "storage"),
+        "node_spend": sum(f(n.purchase_price) for n in nodes),
+        "rewards_earned": sum(f(n.rewards_earned) for n in nodes),
+        "pending_rewards": sum(f(n.pending_rewards) for n in nodes),
+        "claimed_rewards": sum(f(n.claimed_rewards) for n in nodes),
+    }
+    return Response({
+        "customer_id": cust.id,
+        "name": prof.display_name or cust.name or (prof.email or "DAGChain User"),
+        "email": prof.email or cust.email or "",
+        "rm": getattr(cust.assigned_to, "name", None),
+        "profile": profile, "nodes": [node_row(n) for n in nodes], "totals": totals,
+    })
+
+
+@api_view(["GET"])
 def traders_lots(request):
     """Traders & Lots — per employee: their traders, lots (month + total),
     and estimated per-lot commission. Optional ?rate= overrides the configured

@@ -365,6 +365,16 @@ const PREFIX_TOURS = {
     ],
     next: { label: "FX Artha Traders", route: "/fxartha-traders" },
   },
+
+  // DAGChain — single user account
+  "/dagchain-account/": {
+    steps: [
+      { selector: '[data-tour="dca-metrics"]', title: "Account metrics", content: "DGC balance, fuel wallet, referrals and node counts — this user's DAGChain state at a glance." },
+      { selector: '[data-tour="dca-profile"]', title: "Profile & wallet", content: "Wallet type, KYC status, social login, referral code and total node rewards (earned, pending, claimed)." },
+      { selector: '[data-tour="dca-nodes"]', title: "Nodes", content: "Every validator and storage node this user bought — price, status, APY, uptime, blocks and rewards. Filter by type or status." },
+    ],
+    next: { label: "DAGChain Users", route: "/dagchain-users" },
+  },
 };
 
 // route -> index in TOUR, so every page can fall back to a one-line description

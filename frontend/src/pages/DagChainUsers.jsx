@@ -87,7 +87,7 @@ export default function DagChainUsers() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-ink-100 hover:bg-ink-50/60">
                   <td className="py-2.5 px-4">
-                    <Link to={`/customers/${r.customer}`} className="font-medium text-brand-700 hover:underline">{r.display_name || r.email || r.customer_name || short(r.wallet_address) || "—"}</Link>
+                    <Link to={`/dagchain-account/${r.customer}`} className="font-medium text-brand-700 hover:underline">{r.display_name || r.email || r.customer_name || short(r.wallet_address) || "—"}</Link>
                     <div className="text-[11px] text-ink-400">{r.email || short(r.wallet_address)}</div>
                   </td>
                   <td className="py-2.5 px-4 font-mono text-xs text-ink-500" title={r.wallet_address}>{short(r.wallet_address)}</td>

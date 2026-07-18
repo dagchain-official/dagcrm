@@ -21,6 +21,7 @@ import FxArthaOverview from "./pages/FxArthaOverview";
 import FxArthaAccount from "./pages/FxArthaAccount";
 import DagChainOverview from "./pages/DagChainOverview";
 import DagChainUsers from "./pages/DagChainUsers";
+import DagChainAccount from "./pages/DagChainAccount";
 import DagChainNodes from "./pages/DagChainNodes";
 import Recruitment from "./pages/Recruitment";
 import ApplyPage from "./pages/ApplyPage";
@@ -97,6 +98,7 @@ export default function App() {
         <Route path="fxartha-account/:id" element={<FxArthaAccount />} />
         <Route path="dagchain" element={<DagChainOverview />} />
         <Route path="dagchain-users" element={<DagChainUsers />} />
+        <Route path="dagchain-account/:id" element={<DagChainAccount />} />
         <Route path="dagchain-nodes" element={<DagChainNodes />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
