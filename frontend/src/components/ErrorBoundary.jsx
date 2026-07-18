@@ -24,6 +24,9 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (this.state.error) {
+      // Non-essential UI (e.g. the product tour) can fail without taking the
+      // whole app down — render nothing instead of a big error card.
+      if (this.props.silent) return this.props.fallback ?? null;
       return (
         <div className="grid place-items-center min-h-[60vh] text-center p-6">
           <div className="card p-8 max-w-md">

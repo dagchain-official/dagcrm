@@ -124,6 +124,7 @@ export default function Tour() {
 
   return (
     <>
+      {run && steps.length > 0 && (
       <Joyride
         steps={steps}
         run={run}
@@ -141,6 +142,7 @@ export default function Tour() {
           tooltipContent: { textAlign: "left", fontSize: 14, color: "#475569" },
         }}
       />
+      )}
 
       {picker && (
         <div className="fixed inset-0 z-[9999] grid place-items-center bg-black/40 p-4">

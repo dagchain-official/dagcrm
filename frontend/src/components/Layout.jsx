@@ -104,7 +104,7 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Tour />
+      <ErrorBoundary silent><Tour /></ErrorBoundary>
       <Sidebar open={open} />
       {open && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setOpen(false)} />}
 
