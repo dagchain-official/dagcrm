@@ -26,7 +26,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     loadCount();
-    const t = setInterval(() => { if (!document.hidden) loadCount(); }, 1000);
+    const t = setInterval(() => { if (!document.hidden) loadCount(); }, 30000);
     const onClick = (e) => box.current && !box.current.contains(e.target) && setOpen(false);
     document.addEventListener("mousedown", onClick);
     return () => { clearInterval(t); document.removeEventListener("mousedown", onClick); };

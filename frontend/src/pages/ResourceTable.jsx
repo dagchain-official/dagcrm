@@ -132,7 +132,7 @@ export default function ResourceTable({ resource: propResource }) {
 
   // live auto-refresh — list updates without manual reload
   useEffect(() => {
-    const id = setInterval(() => { if (!document.hidden) load(true); }, 1000);
+    const id = setInterval(() => { if (!document.hidden) load(true); }, 15000);
     return () => clearInterval(id);
   }, [load]);
 

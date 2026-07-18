@@ -54,7 +54,7 @@ export default function UserDashboard() {
     const fetchData = () => api.get("/reports/my-dashboard/").then((r) => setD(r.data)).catch(() => {});
     fetchData();
     // live auto-refresh — new assigned leads appear without manual reload
-    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 1000);
+    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 15000);
     return () => clearInterval(id);
   }, []);
 
