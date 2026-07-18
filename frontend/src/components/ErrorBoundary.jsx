@@ -37,6 +37,11 @@ export default class ErrorBoundary extends Component {
             <p className="text-sm text-ink-500 mt-1">
               Something went wrong on this page. Please reload and try again.
             </p>
+            {this.state.error?.message && (
+              <p className="text-[11px] text-rose-500 mt-3 font-mono break-words bg-rose-50 rounded-lg p-2">
+                {String(this.state.error.message).slice(0, 300)}
+              </p>
+            )}
             <button className="btn-primary mt-5 mx-auto" onClick={() => window.location.reload()}>
               <RefreshCw size={16} /> Reload
             </button>

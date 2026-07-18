@@ -10,7 +10,7 @@ export default function RefSelect({ field, value, onChange, placeholder, filterP
   useEffect(() => {
     api
       .get(`/${field.ref}/`, { params: { page_size: 200, ...(filterParam || {}) } })
-      .then(({ data }) => setOpts(data.results || data))
+      .then(({ data }) => setOpts(Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : []))
       .catch(() => setOpts([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [field.ref, key]);
