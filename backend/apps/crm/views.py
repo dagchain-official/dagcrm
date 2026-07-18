@@ -106,16 +106,14 @@ class LeadSourceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def social(self, request):
-        """Only social/marketing-platform lead sources (Meta, Google, WhatsApp…)
-        — excludes FXArtha (poll) and manual sources. Used by the Leads filters."""
-        from django.db.models import Q
+        """Social / marketing lead sources for the Leads filters and forms.
+        Returns every source EXCEPT the poll-connector platforms (FXArtha,
+        DAGChain) and the per-business "Base · Business" variants — so any
+        source an admin adds (Facebook, Instagram, Referral, …) shows up too."""
         from apps.integrations.models import PLATFORMS
-        social = [m["source"] for m in PLATFORMS.values() if not m.get("poll")]
-        if not social:
-            return Response([])
-        # Only clean platform names (Meta Ads, Google Ads…) — no FXArtha, no
-        # per-business "Base · Business" variants.
-        rows = LeadSource.objects.filter(name__in=social).order_by("name")
+        poll = [m["source"] for m in PLATFORMS.values() if m.get("poll")]
+        rows = (LeadSource.objects.exclude(name__in=poll)
+                .exclude(name__contains="·").order_by("name"))
         return Response([{"id": r.id, "name": r.name} for r in rows])
 
 

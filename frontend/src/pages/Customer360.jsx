@@ -231,7 +231,7 @@ export default function Customer360() {
       <div className="card p-5">
         <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2">
           <CandlestickChart size={18} className="text-brand-600" /> Trading Activity
-          <span className="text-xs font-normal text-ink-400">(FXArtha se auto)</span>
+          <span className="text-xs font-normal text-ink-400">(auto-synced from FXArtha)</span>
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="rounded-2xl bg-brand-50 border border-brand-100 p-4">
