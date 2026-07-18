@@ -330,6 +330,42 @@ def target_board(request):
 
 
 @api_view(["GET"])
+def hierarchy(request):
+    """The org tree, built from each Employee's manager chain (+ hierarchy level).
+    The super admin is never a node — the tree starts at the top real manager."""
+    from apps.hr.models import Employee
+    emps = [e for e in Employee.objects.select_related(
+        "user", "user__role", "hierarchy_level", "manager").all()
+        if e.user and not e.user.is_superuser]
+    by_user = {e.user_id: e for e in emps}
+    kids = {}
+    roots = []
+    for e in emps:
+        # attach under the manager only if that manager is also a (non-admin) employee
+        if e.manager_id and e.manager_id in by_user:
+            kids.setdefault(e.manager_id, []).append(e)
+        else:
+            roots.append(e)
+
+    def node(e):
+        children = sorted(kids.get(e.user_id, []), key=lambda x: x.user.name or "")
+        child_nodes = [node(c) for c in children]
+        return {
+            "id": e.user_id,
+            "name": e.user.name or "—",
+            "email": e.user.email,
+            "role": getattr(e.user.role, "name", "") or "",
+            "level": e.hierarchy_level.level_name if e.hierarchy_level else "",
+            "designation": e.designation or "",
+            "reports": len(child_nodes) + sum(c["reports"] for c in child_nodes),
+            "children": child_nodes,
+        }
+
+    roots.sort(key=lambda e: (e.hierarchy_level.level_order if e.hierarchy_level else 99, e.user.name or ""))
+    return Response({"tree": [node(e) for e in roots], "total": len(emps)})
+
+
+@api_view(["GET"])
 @permission_classes([module_required("dagchain")])
 def dagchain_overview(request):
     """DAGChain platform snapshot — synced dashboard + node stats + CRM counts."""

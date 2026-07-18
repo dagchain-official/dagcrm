@@ -4,7 +4,7 @@ import {
   Crosshair, DollarSign, LifeBuoy, Clock, CalendarOff, Wallet, Award,
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
   TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
-  Landmark, PiggyBank, Scale, CandlestickChart, LineChart, Boxes, Server,
+  Landmark, PiggyBank, Scale, CandlestickChart, LineChart, Boxes, Server, Network,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
@@ -20,6 +20,7 @@ export const moduleOf = (to) => {
   if (to === "/targets" || to === "/assign-target") return "targets";
   if (to === "/team-requests") return "teams";
   if (to === "/hr/people") return "employees";
+  if (to === "/hr/hierarchy") return "employees";
   if (to === "/recruitment") return "employees";
   if (to === "/hr/attendance") return "attendance";
   if (to === "/hr/costs") return "cost-categories";
@@ -84,6 +85,7 @@ export const NAV = [
     group: "HR & People",
     items: [
       { to: "/hr/people", label: "People", icon: Briefcase },
+      { to: "/hr/hierarchy", label: "Org Hierarchy", icon: Network },
       { to: "/recruitment", label: "Recruitment", icon: UserPlus },
       { to: "/hr/attendance", label: "Attendance & Leave", icon: Clock },
       { to: "/hr/costs", label: "Cost & CTC", icon: Wallet },

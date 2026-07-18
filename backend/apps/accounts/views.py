@@ -177,6 +177,12 @@ class UserViewSet(viewsets.ModelViewSet):
     filterset_fields = ["role", "status", "manager"]
     search_fields = ["name", "email", "employee_id", "phone"]
 
+    def get_queryset(self):
+        # The founder / super admin is never listed or offered in dropdowns
+        # (manager, assignee, team member, etc.). They act through the system but
+        # aren't a selectable user anywhere.
+        return super().get_queryset().filter(is_superuser=False)
+
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def assignable(self, request):
         """Users a lead can be assigned to — sales roles only.
