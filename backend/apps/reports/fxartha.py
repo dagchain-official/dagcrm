@@ -151,9 +151,24 @@ def fxartha_account_detail(customer):
         "ib_custom_commission_per_lot", "ib_custom_commission_per_trade",
         "ib_commission_total", "referral_code", "referred_by",
         "referrals_count", "followers_count")}
+
+    # Per-account breakdown so the UI can offer an account picker (a trader can
+    # hold several trading accounts). Trades/ledger rows already carry
+    # `account_number`, so the frontend filters those client-side.
+    def acct_view(x):
+        f = lambda k: round(float(x.get(k) or 0), 2)
+        return {
+            "account_number": x.get("account_number"),
+            "account_type": x.get("account_type"), "account_status": x.get("account_status"),
+            "currency": x.get("currency"), "leverage": x.get("leverage"),
+            "swap_free": x.get("swap_free"), "margin_level": x.get("margin_level"),
+            "balance": f("balance"), "equity": f("equity"), "credit": f("credit"),
+            "margin_used": f("margin_used"), "free_margin": f("free_margin"),
+        }
     return {
         "customer_id": customer.id,
         "account": account,
+        "accounts_detail": [acct_view(x) for x in accounts],
         "orders": orders,
         "trades": trades,
         "ledger": ledger,

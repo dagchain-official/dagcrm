@@ -48,6 +48,7 @@ export default function FxArthaAccount() {
   const [lfrom, setLfrom] = useState(""); // ledger date from
   const [lto, setLto] = useState("");     // ledger date to
   const [tst, setTst] = useState("");     // trades status filter: ""=all|open|closed
+  const [acct, setAcct] = useState("");   // selected trading account ("" = all accounts)
 
   usePolling(() => {
     api.get(`/reports/fxartha-account/`, { params: { customer: id } })
@@ -59,6 +60,9 @@ export default function FxArthaAccount() {
   if (!d) return <Spinner label="Loading FX Artha account…" />;
 
   const a = d.account || {};
+  const accountsDetail = d.accounts_detail || [];
+  // metrics view: the chosen account, else the combined (all-accounts) figure
+  const av = (acct && accountsDetail.find((x) => x.account_number === acct)) || a;
   const orders = d.orders || [];
   const ledger = d.ledger || [];
   const trades = d.trades || [];
@@ -66,9 +70,11 @@ export default function FxArthaAccount() {
 
   const tsymbols = [...new Set(trades.map((t) => t.symbol))].sort();
   const tradesShown = trades.filter((t) =>
-    (!tst || (t.status || "").toLowerCase() === tst) && (!tsym || t.symbol === tsym));
+    (!tst || (t.status || "").toLowerCase() === tst) && (!tsym || t.symbol === tsym)
+    && (!acct || t.account_number === acct));
   const ledTypes = [...new Set(ledger.map((l) => l.type))].sort();
   const ledShown = ledger.filter((l) => {
+    if (acct && l.account_number !== acct) return false;
     if (ltype && l.type !== ltype) return false;
     if (lq && !`${l.description || ""} ${l.type || ""}`.toLowerCase().includes(lq.toLowerCase())) return false;
     const day = (l.created_at || "").slice(0, 10);
@@ -84,23 +90,35 @@ export default function FxArthaAccount() {
           <Link to="/fxartha-traders" className="text-xs text-brand-600 inline-flex items-center gap-1 hover:underline"><ArrowLeft size={12} /> All Traders</Link>
           <h1 className="text-2xl font-extrabold text-ink-900 mt-1">{a.name || "Trader"}</h1>
           <p className="text-sm text-ink-400">
-            {a.account_type || "—"} · {a.broker || "FXArtha"} · {a.currency || "USD"}
-            {a.accounts?.length ? ` · ${a.accounts.join(", ")}` : ""}
+            {av.account_type || a.account_type || "—"} · {a.broker || "FXArtha"} · {av.currency || a.currency || "USD"}
+            {acct ? ` · ${acct}` : (a.accounts?.length ? ` · ${a.accounts.length} accounts` : "")}
             {" · "}<Link to={`/customers/${d.customer_id}`} className="text-brand-600 hover:underline">Customer 360</Link>
           </p>
         </div>
-        <span className="text-xs text-ink-400 inline-flex items-center gap-1"><RefreshCcw size={12} /> live · every 12s</span>
+        <div className="flex items-center gap-3">
+          {accountsDetail.length > 1 && (
+            <select data-tour="fxa-account" className="input !py-1.5 !w-auto text-sm" value={acct} onChange={(e) => setAcct(e.target.value)}>
+              <option value="">All Accounts ({accountsDetail.length})</option>
+              {accountsDetail.map((x) => (
+                <option key={x.account_number} value={x.account_number}>
+                  {x.account_number} · {money(x.balance)}
+                </option>
+              ))}
+            </select>
+          )}
+          <span className="text-xs text-ink-400 inline-flex items-center gap-1 whitespace-nowrap"><RefreshCcw size={12} /> live · every 12s</span>
+        </div>
       </div>
 
-      {/* account metrics */}
+      {/* account metrics — for the selected account, or all accounts combined */}
       <div data-tour="fxa-metrics" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        <Tile icon={Wallet} label="Balance" value={money(a.balance)} tint="bg-brand-100 text-brand-600" />
-        <Tile icon={TrendingUp} label="Equity" value={money(a.equity)} tint="bg-emerald-100 text-emerald-600" />
-        <Tile icon={Wallet} label="Credit" value={money(a.credit)} tint="bg-amber-100 text-amber-600" />
-        <Tile icon={Layers} label="Free Margin" value={money(a.free_margin)} tint="bg-sky-100 text-sky-600" />
-        <Tile icon={Layers} label="Margin Used" value={money(a.margin_used)} tint="bg-rose-100 text-rose-500" />
-        <Tile icon={Gauge} label="Margin Level" value={`${num(a.margin_level)}%`} tint="bg-indigo-100 text-indigo-600" />
-        <Tile icon={Gauge} label="Leverage" value={a.leverage ? `1:${a.leverage}` : "—"} tint="bg-ink-100 text-ink-600" sub={a.swap_free ? "swap-free" : null} />
+        <Tile icon={Wallet} label="Balance" value={money(av.balance)} tint="bg-brand-100 text-brand-600" />
+        <Tile icon={TrendingUp} label="Equity" value={money(av.equity)} tint="bg-emerald-100 text-emerald-600" />
+        <Tile icon={Wallet} label="Credit" value={money(av.credit)} tint="bg-amber-100 text-amber-600" />
+        <Tile icon={Layers} label="Free Margin" value={money(av.free_margin)} tint="bg-sky-100 text-sky-600" />
+        <Tile icon={Layers} label="Margin Used" value={money(av.margin_used)} tint="bg-rose-100 text-rose-500" />
+        <Tile icon={Gauge} label="Margin Level" value={`${num(av.margin_level)}%`} tint="bg-indigo-100 text-indigo-600" />
+        <Tile icon={Gauge} label="Leverage" value={av.leverage ? `1:${av.leverage}` : "—"} tint="bg-ink-100 text-ink-600" sub={av.swap_free ? "swap-free" : null} />
       </div>
 
       {/* trades — open + closed, with symbol + status filters */}
