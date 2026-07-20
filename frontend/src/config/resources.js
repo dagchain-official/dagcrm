@@ -451,7 +451,7 @@ export const RESOURCES = {
     title: "Payroll", endpoint: "payrolls",
     // Auto-calculate basic/incentive/deduction when an employee (and month/year) is chosen.
     autofill: { endpoint: "payrolls/suggest", trigger: ["employee", "month", "year"],
-                fills: ["basic_salary", "incentive", "bonus", "deduction"] },
+                fills: ["basic_salary", "incentive", "bonus", "deduction", "month", "year"] },
     rowActions: [
       { label: "Payslip", icon: "download", variant: "info", download: (id) => `payrolls/${id}/payslip/` },
     ],

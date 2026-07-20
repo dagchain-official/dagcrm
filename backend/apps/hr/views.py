@@ -325,6 +325,9 @@ class PayrollViewSet(viewsets.ModelViewSet):
         return Response({
             "basic_salary": basic, "incentive": incentive, "bonus": bonus,
             "deduction": deduction, "unpaid_days": unpaid_days,
+            # echo the period back so the form auto-fills month/year (defaults to
+            # the current month/year) the moment an employee is selected.
+            "month": month, "year": year,
             "final_salary": round(basic + incentive + bonus - deduction, 2),
         })
 
