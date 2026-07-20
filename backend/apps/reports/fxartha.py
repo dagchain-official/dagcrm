@@ -167,6 +167,8 @@ def fxartha_account_detail(customer):
         }
     return {
         "customer_id": customer.id,
+        "rm": getattr(customer.assigned_to, "name", None),
+        "rm_id": customer.assigned_to_id,
         "account": account,
         "accounts_detail": [acct_view(x) for x in accounts],
         "orders": orders,

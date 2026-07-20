@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Wallet, TrendingUp, Layers, Gauge, ArrowLeft, ClipboardList,
-  BookOpen, Users, RefreshCcw, Search, CandlestickChart,
+  BookOpen, Users, RefreshCcw, Search, CandlestickChart, UserCog,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
-import { Spinner, EmptyState } from "../components/ui";
+import { Spinner, EmptyState, Modal } from "../components/ui";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -49,12 +51,38 @@ export default function FxArthaAccount() {
   const [lto, setLto] = useState("");     // ledger date to
   const [tst, setTst] = useState("");     // trades status filter: ""=all|open|closed
   const [acct, setAcct] = useState("");   // selected trading account ("" = all accounts)
+  const { user } = useAuth();
+  const toast = useToast();
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [assignables, setAssignables] = useState([]);
+  const [newOwner, setNewOwner] = useState("");
+  const [saving, setSaving] = useState(false);
 
   usePolling(() => {
     api.get(`/reports/fxartha-account/`, { params: { customer: id } })
       .then((r) => { setD(r.data); setErr(r.data?.error || ""); })
       .catch((e) => setErr(e.response?.data?.error || "Failed to load FX Artha account."));
   }, 12000, [id]);
+
+  useEffect(() => {
+    if (user?.can_assign_leads) api.get("/users/assignable/").then((r) => setAssignables(r.data)).catch(() => {});
+  }, [user]);
+
+  const doReassign = async () => {
+    if (!newOwner || !d) return;
+    setSaving(true);
+    try {
+      await api.post(`/customers/${d.customer_id}/reassign/`, { user: Number(newOwner) });
+      const nm = assignables.find((u) => String(u.id) === String(newOwner))?.name;
+      setD((prev) => ({ ...prev, rm: nm, rm_id: Number(newOwner) }));   // optimistic
+      setReassignOpen(false); setNewOwner("");
+      toast.success(`Trader reassigned to ${nm}`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Reassign failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (err) return <EmptyState title="Not available" hint={err} />;
   if (!d) return <Spinner label="Loading FX Artha account…" />;
@@ -106,12 +134,18 @@ export default function FxArthaAccount() {
               ))}
             </select>
           )}
+          {user?.can_assign_leads && (
+            <button className="chip !py-2" onClick={() => setReassignOpen(true)} title="Reassign this trader to another RM">
+              <UserCog size={14} /> Reassign
+            </button>
+          )}
           <span className="text-xs text-ink-400 inline-flex items-center gap-1 whitespace-nowrap"><RefreshCcw size={12} /> live · every 12s</span>
         </div>
       </div>
 
       {/* account metrics — for the selected account, or all accounts combined */}
       <div data-tour="fxa-metrics" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <Tile icon={UserCog} label="Owner (RM)" value={d.rm || "Unassigned"} tint="bg-violet-100 text-violet-600" />
         <Tile icon={Wallet} label="Balance" value={money(av.balance)} tint="bg-brand-100 text-brand-600" />
         <Tile icon={TrendingUp} label="Equity" value={money(av.equity)} tint="bg-emerald-100 text-emerald-600" />
         <Tile icon={Wallet} label="Credit" value={money(av.credit)} tint="bg-amber-100 text-amber-600" />
@@ -269,6 +303,30 @@ export default function FxArthaAccount() {
           </div>
         )}
       </Section>
+
+      {/* reassign this trader to another RM */}
+      <Modal open={reassignOpen} onClose={() => setReassignOpen(false)} title="Reassign trader to another RM"
+        footer={
+          <>
+            <button className="btn-ghost" onClick={() => setReassignOpen(false)}>Cancel</button>
+            <button className="btn-primary" onClick={doReassign} disabled={saving || !newOwner}>
+              {saving ? "Saving…" : "Reassign"}
+            </button>
+          </>
+        }>
+        <div className="space-y-3">
+          <p className="text-sm text-ink-500">
+            Currently owned by <b className="text-ink-800">{d.rm || "Unassigned"}</b>. Future revenue, AUM and KPI credit will follow the new owner.
+          </p>
+          <div>
+            <label className="label">New owner (RM)</label>
+            <select className="input" value={newOwner} onChange={(e) => setNewOwner(e.target.value)}>
+              <option value="">Select an employee…</option>
+              {assignables.map((u) => <option key={u.id} value={u.id}>{u.name} — {u.role_name}</option>)}
+            </select>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
