@@ -158,12 +158,16 @@ class LeadViewSet(viewsets.ModelViewSet):
             if rm:
                 serializer.validated_data["assigned_to"] = rm
         lead = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        from .scoring import rescore
+        rescore(lead)
         self._notify_assignee(lead, self.request.user)
 
     def perform_update(self, serializer):
         prev = self.get_object().assigned_to_id
         self._enforce_assignment(serializer)
         lead = serializer.save()
+        from .scoring import rescore          # keep the score in sync with the new status
+        rescore(lead)
         if lead.assigned_to_id != prev:          # assignee changed -> notify the new one
             self._notify_assignee(lead, self.request.user)
 
@@ -201,6 +205,9 @@ class LeadViewSet(viewsets.ModelViewSet):
             lead=lead, user=user, activity_type=kind,
             remarks=remarks or labels.get(kind, kind),
         )
+        lead.refresh_from_db()               # status may have auto-advanced via signal
+        from .scoring import rescore
+        rescore(lead)
 
         telephony = None
         if kind in ("whatsapp", "email", "proposal"):
@@ -447,6 +454,9 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
         if user and user.is_superuser:
             user = None  # founder's actions are not tracked as activity
         obj = serializer.save(user=user)
+        # engagement changed -> refresh the lead's score
+        from .scoring import rescore
+        rescore(obj.lead)
         # Auto activity tracking: real call/note actions bump the counters.
         if user:
             from apps.hr.services import bump_activity
