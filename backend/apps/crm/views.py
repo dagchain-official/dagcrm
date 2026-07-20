@@ -126,7 +126,10 @@ class LeadViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset().pipeline()
         if not is_admin_view(self.request.user):
-            qs = qs.filter(assigned_to=self.request.user)
+            # A manager (Sales Manager / Team Leader) sees their whole team's
+            # leads, not just leads assigned to them personally.
+            from apps.accounts.access import subordinate_user_ids
+            qs = qs.filter(assigned_to_id__in=subordinate_user_ids(self.request.user, include_self=True))
         return qs
 
     def _notify_assignee(self, lead, actor):
@@ -435,7 +438,8 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
         # Super Admin's activity is never shown to anyone
         qs = super().get_queryset().exclude(user__is_superuser=True)
         if not is_admin_view(self.request.user):
-            qs = qs.filter(user=self.request.user)
+            from apps.accounts.access import subordinate_user_ids
+            qs = qs.filter(user_id__in=subordinate_user_ids(self.request.user, include_self=True))
         return qs
 
     def perform_create(self, serializer):
@@ -461,7 +465,8 @@ class OpportunityViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if not is_admin_view(self.request.user):
-            qs = qs.filter(assigned_to=self.request.user)
+            from apps.accounts.access import subordinate_user_ids
+            qs = qs.filter(assigned_to_id__in=subordinate_user_ids(self.request.user, include_self=True))
         return qs
 
 
