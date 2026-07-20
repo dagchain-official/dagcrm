@@ -548,6 +548,12 @@ def business_dashboard(request):
              or IntegrationConnection.objects.filter(platform=_norm).first())
     platform = _conn.platform if _conn else None
     snap = ((_conn.config or {}).get("dashboard") or {}) if _conn else {}
+    # DAGChain's /admin/dashboard reports only approved/active nodes under its
+    # "total…" keys, so this snapshot showed 4/1 while the DAGChain Overview (built
+    # from every synced node + node revenue) showed 12/4. node-stats carries the
+    # true totals — merge it in so both screens agree.
+    if platform == "dagchain" and _conn:
+        snap = {**snap, **((_conn.config or {}).get("node_stats") or {})}
 
     rev = Revenue.objects.filter(business=biz)
     month_rev = rev.filter(created_at__year=year, created_at__month=month)
