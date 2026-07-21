@@ -621,6 +621,7 @@ export const RESOURCES = {
       { key: "business", label: "Business", ref: "businesses", labelKey: "name" },
       { key: "date", label: "Date", dateRange: true },
     ],
+    totals: ["deposit", "trading_loss", "brokerage", "insurance", "staking", "other"],
     columns: [
       { key: "employee_name", label: "Employee" },
       { key: "customer_name", label: "Customer" },

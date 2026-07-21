@@ -104,6 +104,7 @@ export default function ResourceTable({ resource: propResource }) {
   const [distResult, setDistResult] = useState(null);
   const [distRunning, setDistRunning] = useState(false);
   const [users, setUsers] = useState([]);
+  const [totalsRow, setTotalsRow] = useState({});
 
   const load = useCallback((silent = false) => {
     if (!cfg) return;
@@ -135,6 +136,20 @@ export default function ResourceTable({ resource: propResource }) {
     const id = setInterval(() => { if (!document.hidden) load(true); }, 15000);
     return () => clearInterval(id);
   }, [load]);
+
+  // column totals (money summary row) for resources that declare `cfg.totals`.
+  // Sums the whole filtered set — the current page if it holds everything, else
+  // a full fetch so the total isn't just this page.
+  useEffect(() => {
+    const cols = cfg?.totals || [];
+    if (!cols.length) return;
+    const sum = (list) => Object.fromEntries(cols.map((k) => [k, list.reduce((a, r) => a + Number(r[k] || 0), 0)]));
+    if (count <= rows.length) { setTotalsRow(sum(rows)); return; }
+    const params = { search: search || undefined, page_size: 10000, ...filters };
+    Object.keys(params).forEach((k) => (params[k] === "" || params[k] == null) && delete params[k]);
+    api.get(`/${cfg.endpoint}/`, { params }).then(({ data }) => setTotalsRow(sum(data.results || data))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, count, filters, search]);
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
@@ -427,6 +442,19 @@ export default function ResourceTable({ resource: propResource }) {
                   </tr>
                 ))}
               </tbody>
+              {(cfg.totals || []).length > 0 && rows.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-ink-200 font-bold bg-ink-50">
+                    <td className="py-3 pr-4"></td>
+                    {columns.map((c, i) => (
+                      <td key={c.key} className={`py-3 px-4 ${c.money ? "text-right tabular-nums text-ink-900" : "text-ink-500"}`}>
+                        {i === 0 ? "Total" : (cfg.totals.includes(c.key) ? money(totalsRow[c.key] || 0) : "")}
+                      </td>
+                    ))}
+                    <td className="py-3 px-4"></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
