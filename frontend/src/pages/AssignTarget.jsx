@@ -29,6 +29,8 @@ export default function AssignTarget() {
   const [incType, setIncType] = useState("");   // "" | percentage | fixed | slab
   const [incValue, setIncValue] = useState("");
   const [slabs, setSlabs] = useState([]);       // attainment tiers when type = slab
+  const [dedPct, setDedPct] = useState("");     // deduction % of target if missed
+  const [overPct, setOverPct] = useState("");   // increment % on over-achievement
 
   // load the current global slabs into the editor when "slab" is picked
   useEffect(() => {
@@ -62,14 +64,18 @@ export default function AssignTarget() {
     setSaving(true);
     try {
       const payload = { scope, id, multiplier, month, year, name };
-      if (incType === "slab") payload.incentive = { type: "slab", slabs };
-      else if (incType) payload.incentive = { type: incType, value: Number(incValue || 0) };
+      if (incType) payload.incentive = {
+        type: incType,
+        value: incType === "slab" ? 0 : Number(incValue || 0),
+        slabs: incType === "slab" ? slabs : undefined,
+        deduction_pct: Number(dedPct || 0),
+        over_pct: Number(overPct || 0),
+      };
       const { data } = await api.post("/reports/assign-target/", payload);
       let msg = `Target assigned: ${money(data.value)} across ${data.assignees} people`;
-      if (data.incentive?.employees) msg += ` · incentive set for ${data.incentive.employees}`;
-      else if (data.incentive?.type === "slab") msg += ` · ${data.incentive.tiers} slab tier(s) saved`;
+      if (data.incentive?.employees) msg += ` · incentive plan set for ${data.incentive.employees}`;
       toast.success(msg);
-      setId(""); setPreview(null); setName(""); setIncType(""); setIncValue("");
+      setId(""); setPreview(null); setName(""); setIncType(""); setIncValue(""); setDedPct(""); setOverPct("");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Assign failed");
     } finally { setSaving(false); }
@@ -188,8 +194,34 @@ export default function AssignTarget() {
                 onClick={() => setSlabs([...slabs, { min_pct: "", max_pct: "", incentive_pct: "" }])}>
                 <Plus size={12} /> Add tier
               </button>
-              <p className="text-[11px] text-ink-400">Saved as the incentive slabs; the real payout computes from actual attainment when incentives are run.</p>
+              <p className="text-[11px] text-ink-400">Saved as this employee/team's slab (priority over the global one); the real payout computes from actual attainment.</p>
             </div>
+          )}
+
+          {/* deduction on miss + increment on over-achievement (apply to all types) */}
+          {incType && (
+            <div className="grid sm:grid-cols-2 gap-3 pt-3 border-t border-ink-100">
+              <div>
+                <label className="label text-xs">Deduction if target missed</label>
+                <div className="flex items-center gap-2">
+                  <input className="input w-24 !py-1.5" type="number" placeholder="0" value={dedPct} onChange={(e) => setDedPct(e.target.value)} />
+                  <span className="text-xs text-ink-500">% of target</span>
+                </div>
+              </div>
+              <div>
+                <label className="label text-xs">Increment on extra (over-achievement)</label>
+                <div className="flex items-center gap-2">
+                  <input className="input w-24 !py-1.5" type="number" placeholder="0" value={overPct} onChange={(e) => setOverPct(e.target.value)} />
+                  <span className="text-xs text-ink-500">% of amount above target</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {incType && (
+            <p className="text-[11px] text-brand-600 bg-brand-50 rounded-lg px-3 py-2">
+              This plan gets <b>priority</b> over the global incentive section. Payout computes from actual attainment: <b>met</b> → incentive {overPct ? `+ ${overPct}% on extra` : ""}, <b>missed</b> → {dedPct ? `−${dedPct}% of target` : "no deduction"}.
+            </p>
           )}
         </div>
 

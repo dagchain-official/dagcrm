@@ -835,54 +835,39 @@ def assign_target(request):
                body=f"{name}: ${value:,.0f} (CTC ${ctc_total:,.0f} × {mult})",
                kind="info", link="/target-board")
 
-    # optional: set the incentive for these assignees in the same action.
-    #   percentage -> each assignee gets (their target × value%)  (planned incentive)
-    #   fixed      -> each assignee gets a flat `value`
-    #   slab       -> no fixed amount now; the slab engine computes it from actual
-    #                 attainment when incentives are run (Rules & Config → Slabs)
+    # optional: an incentive/deduction PLAN for these assignees, set with the
+    # target. It takes PRIORITY over the global slab schedule and computes from
+    # actual attainment when incentives are run:
+    #   met  -> base (%/fixed/slab) + over_pct increment on revenue above target
+    #   miss -> deduction_pct of target
     incentive = d.get("incentive") or {}
     itype = incentive.get("type")
     inc_result = None
-    if itype in ("percentage", "fixed"):
-        from apps.hr.models import Employee, Incentive
-        try:
-            ival = float(incentive.get("value") or 0)
-        except (TypeError, ValueError):
-            ival = 0.0
+    if itype in ("percentage", "fixed", "slab"):
+        from apps.hr.models import Employee, IncentivePlan
+
+        def _f(x):
+            try:
+                return float(x or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        ival = _f(incentive.get("value"))
+        ded_pct = _f(incentive.get("deduction_pct"))
+        over_pct = _f(incentive.get("over_pct"))
+        plan_slabs = (incentive.get("slabs") or []) if itype == "slab" else []
         made = 0
         for r in rows:
             emp = Employee.objects.filter(user_id=r["user_id"]).first()
             if not emp:
                 continue
-            per_target = round(r["ctc"] * mult, 2)
-            amount = round(per_target * ival / 100, 2) if itype == "percentage" else round(ival, 2)
-            Incentive.objects.update_or_create(
-                employee=emp, rule=None, source="manual", month=month, year=year,
-                defaults={"amount": amount})
+            IncentivePlan.objects.update_or_create(
+                employee=emp, month=month, year=year,
+                defaults={"incentive_type": itype, "incentive_value": ival,
+                          "slabs": plan_slabs, "deduction_pct": ded_pct, "over_pct": over_pct})
             made += 1
-        inc_result = {"type": itype, "value": ival, "employees": made}
-    elif itype == "slab":
-        # define the attainment slabs inline (replaces the global tiers). The real
-        # payout still computes from actual attainment when incentives are run.
-        from apps.hr.models import IncentiveSlab
-        slabs = incentive.get("slabs") or []
-        clean = []
-        for s in slabs:
-            try:
-                clean.append({
-                    "min_pct": float(s.get("min_pct") or 0),
-                    "max_pct": (float(s["max_pct"]) if s.get("max_pct") not in (None, "") else None),
-                    "incentive_pct": float(s.get("incentive_pct") or 0),
-                    "basis": s.get("basis") or "revenue",
-                })
-            except (TypeError, ValueError):
-                continue
-        if clean:
-            IncentiveSlab.objects.all().delete()          # replace with the new tiers
-            for c in clean:
-                IncentiveSlab.objects.create(status="active", **c)
-        inc_result = {"type": "slab", "tiers": len(clean),
-                      "note": "Slab incentive computes from actual attainment when incentives are run."}
+        inc_result = {"type": itype, "employees": made,
+                      "deduction_pct": ded_pct, "over_pct": over_pct}
 
     return Response({"id": t.id, "name": t.name, "value": value, "ctc": ctc_total,
                      "multiplier": mult, "scope": scope, "assignees": len(rows),

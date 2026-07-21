@@ -303,6 +303,33 @@ class ActivityIncentive(models.Model):
         return f"{self.name}: {self.rate} per {self.metric.unit or 'unit'}"
 
 
+class IncentivePlan(models.Model):
+    """Per-employee, per-month incentive/deduction rule, set when a target is
+    assigned. Takes PRIORITY over the global IncentiveSlab schedule; the real
+    numbers still compute from ACTUAL attainment when incentives are run:
+      target met  (attainment >= 100%): base incentive (%/fixed/slab) + over_pct
+                                         increment on the revenue above target
+      target missed (attainment < 100%): deduction_pct of target (a penalty)
+    """
+    TYPES = [("percentage", "Percentage of target"), ("fixed", "Fixed amount"),
+             ("slab", "Attainment slab")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="incentive_plans")
+    month = models.PositiveSmallIntegerField()
+    year = models.PositiveIntegerField()
+    incentive_type = models.CharField(max_length=20, choices=TYPES, default="percentage")
+    incentive_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)   # % or fixed $
+    slabs = models.JSONField(default=list, blank=True)                                  # [{min_pct,max_pct,incentive_pct}]
+    deduction_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)      # of target, when missed
+    over_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)           # of revenue above target
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("employee", "month", "year")
+
+    def __str__(self):
+        return f"IncentivePlan {self.employee_id} {self.month}/{self.year}"
+
+
 # ---- Formula Builder (PART 16) --------------------------------------------
 # Admin-defined incentive rules WITHOUT code, e.g. "Revenue > Cost × 2 → 10%",
 # "New Users > 50 → $500", "Lots > 100 → $2 per lot". Structured (NOT eval) for

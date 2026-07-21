@@ -14,7 +14,8 @@ from decimal import Decimal
 
 from apps.crm.models import MetricDefinition
 from apps.hr.models import (
-    ActivityIncentive, Employee, Incentive, IncentiveSlab, Payroll, TargetMultiplier,
+    ActivityIncentive, Employee, Incentive, IncentivePlan, IncentiveSlab, Payroll,
+    TargetMultiplier,
 )
 
 from .metrics import _leaf_stats
@@ -46,6 +47,49 @@ def _pick_slab(attainment, slabs):
     return None
 
 
+def _pick_slab_json(attainment, slabs):
+    """Same, but for a plan's inline slab tiers (list of dicts)."""
+    for s in slabs or []:
+        try:
+            lo = float(s.get("min_pct") or 0)
+            hi = float(s["max_pct"]) if s.get("max_pct") not in (None, "") else float("inf")
+        except (TypeError, ValueError):
+            continue
+        if lo <= attainment < hi:
+            return s
+    return None
+
+
+def _plan_amount(plan, revenue, target, attain):
+    """A per-employee IncentivePlan → (incentive, deduction, label).
+      met  (attain >= 100%): base (%/fixed/slab) + over_pct on revenue above target
+      miss (attain < 100%) : deduction_pct of target
+    """
+    inc = ded = 0.0
+    if attain >= 100:
+        if plan.incentive_type == "percentage":
+            inc = float(plan.incentive_value) / 100 * target
+            label = f"met → {plan.incentive_value}% of target"
+        elif plan.incentive_type == "fixed":
+            inc = float(plan.incentive_value)
+            label = f"met → ${plan.incentive_value} fixed"
+        else:  # slab
+            tier = _pick_slab_json(attain, plan.slabs)
+            pct = float(tier.get("incentive_pct", 0)) if tier else 0.0
+            inc = pct / 100 * revenue
+            label = f"met → slab {pct}% of revenue"
+        over_pct = float(plan.over_pct or 0)
+        if over_pct and revenue > target:
+            over = (revenue - target) * over_pct / 100
+            inc += over
+            label += f" + {over_pct}% on ${round(revenue - target):,} extra"
+    else:
+        ded_pct = float(plan.deduction_pct or 0)
+        ded = ded_pct / 100 * target
+        label = f"missed ({round(attain)}%) → −{ded_pct}% of target"
+    return round(inc, 2), round(ded, 2), label
+
+
 def compute_incentives(month, year):
     emps = list(Employee.objects.select_related("user", "hierarchy_level")
                 .exclude(user__is_superuser=True))
@@ -53,6 +97,7 @@ def compute_incentives(month, year):
     mult = _multiplier_resolver()
 
     slabs = list(IncentiveSlab.objects.filter(status="active"))
+    plans = {p.employee_id: p for p in IncentivePlan.objects.filter(month=month, year=year)}
     acts = list(ActivityIncentive.objects.filter(status="active").select_related("metric"))
     act_metrics = [a.metric for a in acts if a.metric.status == "active"]
     leaf = _leaf_stats(act_metrics, month, year) if act_metrics else {}
@@ -63,14 +108,21 @@ def compute_incentives(month, year):
         target = float(e.monthly_ctc(month, year) * mult(e))
         attain = (revenue / target * 100) if target else 0.0
 
-        slab = _pick_slab(attain, slabs)
-        slab_amt = 0.0
-        slab_label = None
-        if slab and slab.incentive_pct:
-            base = revenue if slab.basis == "revenue" else target
-            slab_amt = float(slab.incentive_pct) / 100 * base
-            hi = f"{slab.max_pct}%" if slab.max_pct is not None else "∞"
-            slab_label = f"{slab.min_pct}–{hi}% → {slab.incentive_pct}% of {slab.basis}"
+        # A per-employee IncentivePlan (set with the target) takes PRIORITY over
+        # the global slab schedule; otherwise fall back to the global slabs.
+        deduction = 0.0
+        plan = plans.get(e.id)
+        if plan:
+            slab_amt, deduction, slab_label = _plan_amount(plan, revenue, target, attain)
+        else:
+            slab = _pick_slab(attain, slabs)
+            slab_amt = 0.0
+            slab_label = None
+            if slab and slab.incentive_pct:
+                base = revenue if slab.basis == "revenue" else target
+                slab_amt = float(slab.incentive_pct) / 100 * base
+                hi = f"{slab.max_pct}%" if slab.max_pct is not None else "∞"
+                slab_label = f"{slab.min_pct}–{hi}% → {slab.incentive_pct}% of {slab.basis}"
 
         activities = []
         for a in acts:
@@ -86,7 +138,7 @@ def compute_incentives(month, year):
                                    "amount": round(amt, 2)})
 
         act_total = sum(x["amount"] for x in activities)
-        total = round(slab_amt + act_total, 2)
+        total = round(slab_amt + act_total - deduction, 2)   # deduction on target-miss
         rows.append({
             "id": e.id, "user_id": e.user_id, "manager_id": e.manager_id,
             "name": e.user.name if e.user else "—",
@@ -94,6 +146,7 @@ def compute_incentives(month, year):
             "revenue": round(revenue, 2), "target": round(target, 2),
             "attainment": round(attain, 1),
             "slab": slab_label, "slab_amount": round(slab_amt, 2),
+            "deduction": round(deduction, 2), "has_plan": bool(plan),
             "activities": activities, "activity_amount": round(act_total, 2),
             "total": total,
         })
