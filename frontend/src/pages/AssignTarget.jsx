@@ -202,14 +202,14 @@ export default function AssignTarget() {
           {incType && (
             <div className="grid sm:grid-cols-2 gap-3 pt-3 border-t border-ink-100">
               <div>
-                <label className="label text-xs">Deduction if target missed</label>
+                <label className="label text-xs">Deduction if target missed <span className="text-ink-400 font-normal">(optional)</span></label>
                 <div className="flex items-center gap-2">
                   <input className="input w-24 !py-1.5" type="number" placeholder="0" value={dedPct} onChange={(e) => setDedPct(e.target.value)} />
                   <span className="text-xs text-ink-500">% of target</span>
                 </div>
               </div>
               <div>
-                <label className="label text-xs">Increment on extra (over-achievement)</label>
+                <label className="label text-xs">Increment on over-achievement <span className="text-ink-400 font-normal">(optional)</span></label>
                 <div className="flex items-center gap-2">
                   <input className="input w-24 !py-1.5" type="number" placeholder="0" value={overPct} onChange={(e) => setOverPct(e.target.value)} />
                   <span className="text-xs text-ink-500">% of amount above target</span>
