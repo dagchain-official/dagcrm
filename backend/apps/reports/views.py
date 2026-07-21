@@ -862,8 +862,27 @@ def assign_target(request):
             made += 1
         inc_result = {"type": itype, "value": ival, "employees": made}
     elif itype == "slab":
-        inc_result = {"type": "slab",
-                      "note": "Slab incentive will auto-compute from attainment when you run incentives."}
+        # define the attainment slabs inline (replaces the global tiers). The real
+        # payout still computes from actual attainment when incentives are run.
+        from apps.hr.models import IncentiveSlab
+        slabs = incentive.get("slabs") or []
+        clean = []
+        for s in slabs:
+            try:
+                clean.append({
+                    "min_pct": float(s.get("min_pct") or 0),
+                    "max_pct": (float(s["max_pct"]) if s.get("max_pct") not in (None, "") else None),
+                    "incentive_pct": float(s.get("incentive_pct") or 0),
+                    "basis": s.get("basis") or "revenue",
+                })
+            except (TypeError, ValueError):
+                continue
+        if clean:
+            IncentiveSlab.objects.all().delete()          # replace with the new tiers
+            for c in clean:
+                IncentiveSlab.objects.create(status="active", **c)
+        inc_result = {"type": "slab", "tiers": len(clean),
+                      "note": "Slab incentive computes from actual attainment when incentives are run."}
 
     return Response({"id": t.id, "name": t.name, "value": value, "ctc": ctc_total,
                      "multiplier": mult, "scope": scope, "assignees": len(rows),

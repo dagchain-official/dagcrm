@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Crosshair, Users, Building2, User } from "lucide-react";
+import { Crosshair, Users, Building2, User, X, Plus } from "lucide-react";
 import api from "../api/client";
 import RefSelect from "../components/RefSelect";
 import { Spinner } from "../components/ui";
@@ -28,6 +28,21 @@ export default function AssignTarget() {
   const [saving, setSaving] = useState(false);
   const [incType, setIncType] = useState("");   // "" | percentage | fixed | slab
   const [incValue, setIncValue] = useState("");
+  const [slabs, setSlabs] = useState([]);       // attainment tiers when type = slab
+
+  // load the current global slabs into the editor when "slab" is picked
+  useEffect(() => {
+    if (incType !== "slab") return;
+    api.get("/incentive-slabs/").then((r) => {
+      const rows = (r.data.results || r.data || [])
+        .map((s) => ({ min_pct: s.min_pct, max_pct: s.max_pct ?? "", incentive_pct: s.incentive_pct }));
+      setSlabs(rows.length ? rows : [
+        { min_pct: 0, max_pct: 100, incentive_pct: 0 },
+        { min_pct: 100, max_pct: "", incentive_pct: 10 },
+      ]);
+    }).catch(() => setSlabs([{ min_pct: 100, max_pct: "", incentive_pct: 10 }]));
+  }, [incType]);
+  const setSlab = (i, k, v) => setSlabs((s) => s.map((r, x) => (x === i ? { ...r, [k]: v } : r)));
 
   const refField = scope === "team"
     ? { ref: "teams", labelKey: "name", label: "Team" }
@@ -47,11 +62,12 @@ export default function AssignTarget() {
     setSaving(true);
     try {
       const payload = { scope, id, multiplier, month, year, name };
-      if (incType) payload.incentive = { type: incType, value: incType === "slab" ? 0 : Number(incValue || 0) };
+      if (incType === "slab") payload.incentive = { type: "slab", slabs };
+      else if (incType) payload.incentive = { type: incType, value: Number(incValue || 0) };
       const { data } = await api.post("/reports/assign-target/", payload);
       let msg = `Target assigned: ${money(data.value)} across ${data.assignees} people`;
       if (data.incentive?.employees) msg += ` · incentive set for ${data.incentive.employees}`;
-      else if (data.incentive?.type === "slab") msg += " · slab incentive enabled";
+      else if (data.incentive?.type === "slab") msg += ` · ${data.incentive.tiers} slab tier(s) saved`;
       toast.success(msg);
       setId(""); setPreview(null); setName(""); setIncType(""); setIncValue("");
     } catch (e) {
@@ -152,7 +168,28 @@ export default function AssignTarget() {
             <p className="text-xs text-ink-500">≈ {money(preview.suggested_target * Number(incValue) / 100)} total incentive on this target</p>
           )}
           {incType === "slab" && (
-            <p className="text-xs text-ink-500">Uses the attainment slabs from Rules &amp; Config — the real incentive computes from actual attainment when incentives are run.</p>
+            <div className="space-y-2">
+              <p className="text-xs text-ink-500">Define attainment tiers: if achievement falls in a range, that % of revenue is the incentive. (Blank “To” = ∞.)</p>
+              <div className="space-y-1.5">
+                {slabs.map((s, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs">
+                    <span className="text-ink-400">From</span>
+                    <input className="input w-16 !py-1.5 !text-xs" type="number" value={s.min_pct} onChange={(e) => setSlab(i, "min_pct", e.target.value)} />
+                    <span className="text-ink-400">% to</span>
+                    <input className="input w-16 !py-1.5 !text-xs" type="number" placeholder="∞" value={s.max_pct} onChange={(e) => setSlab(i, "max_pct", e.target.value)} />
+                    <span className="text-ink-400">% →</span>
+                    <input className="input w-16 !py-1.5 !text-xs" type="number" value={s.incentive_pct} onChange={(e) => setSlab(i, "incentive_pct", e.target.value)} />
+                    <span className="text-ink-400">% incentive</span>
+                    <button className="text-ink-400 hover:text-rose-500 ml-1" onClick={() => setSlabs(slabs.filter((_, x) => x !== i))}><X size={13} /></button>
+                  </div>
+                ))}
+              </div>
+              <button className="text-xs text-brand-600 font-semibold inline-flex items-center gap-1"
+                onClick={() => setSlabs([...slabs, { min_pct: "", max_pct: "", incentive_pct: "" }])}>
+                <Plus size={12} /> Add tier
+              </button>
+              <p className="text-[11px] text-ink-400">Saved as the incentive slabs; the real payout computes from actual attainment when incentives are run.</p>
+            </div>
           )}
         </div>
 
