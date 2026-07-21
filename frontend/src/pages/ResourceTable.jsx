@@ -447,7 +447,7 @@ export default function ResourceTable({ resource: propResource }) {
                   <tr className="border-t-2 border-ink-200 font-bold bg-ink-50">
                     <td className="py-3 pr-4"></td>
                     {columns.map((c, i) => (
-                      <td key={c.key} className={`py-3 px-4 ${c.money ? "text-right tabular-nums text-ink-900" : "text-ink-500"}`}>
+                      <td key={c.key} className={`py-3 px-4 ${c.money ? "tabular-nums text-ink-900" : "text-ink-500"}`}>
                         {i === 0 ? "Total" : (cfg.totals.includes(c.key) ? money(totalsRow[c.key] || 0) : "")}
                       </td>
                     ))}
