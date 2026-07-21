@@ -379,6 +379,8 @@ def dagchain_overview(request):
     prof = DagChainProfile.objects.aggregate(
         users=Count("id"), dgc=Sum("dgc_balance"),
         refs=Sum("referral_count"), earn=Sum("total_referral_earnings"))
+    stake = DagChainNode.objects.aggregate(
+        staked=Sum("staked_amount"), requirement=Sum("staking_requirement"))
     return Response({
         "dashboard": cfg.get("dashboard", {}),
         "node_stats": cfg.get("node_stats", {}),
@@ -387,6 +389,11 @@ def dagchain_overview(request):
         "nodes_by_kind": list(nodes),
         "profiles": prof,
         "node_revenue": float(DagChainNode.objects.aggregate(s=Sum("purchase_price"))["s"] or 0),
+        "staking": {
+            "staked": float(stake["staked"] or 0),
+            "requirement": float(stake["requirement"] or 0),
+            "staked_nodes": DagChainNode.objects.filter(is_staked=True).count(),
+        },
     })
 
 

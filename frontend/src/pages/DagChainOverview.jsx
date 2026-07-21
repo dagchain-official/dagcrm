@@ -44,6 +44,7 @@ export default function DagChainOverview() {
   const dash = d.dashboard || {};
   const ns = d.node_stats || {};
   const p = d.profiles || {};
+  const st = d.staking || {};
   const byKind = Object.fromEntries((d.nodes_by_kind || []).map((k) => [k.kind, k]));
   const val = byKind.validator || {};
   const sto = byKind.storage || {};
@@ -77,7 +78,9 @@ export default function DagChainOverview() {
           <div className="space-y-3">
             {[["Nodes sold", num(val.count)], ["Revenue", money(val.revenue)],
               ["Blocks validated", num(val.blocks)], ["Rewards earned", num(val.rewards)],
-              ["Active now", num(ns.activeValidatorNodes)], ["Blocks today", num(ns.totalBlocksToday)]].map(([l, v]) => (
+              ["Active now", num(ns.activeValidatorNodes)], ["Blocks today", num(ns.totalBlocksToday)],
+              ["Staked (DGC)", num(st.staked)], ["Staked nodes", num(st.staked_nodes)],
+              ["Staking required (DGC)", num(st.requirement)]].map(([l, v]) => (
               <div key={l} className="flex items-center justify-between">
                 <span className="text-sm text-ink-500">{l}</span>
                 <span className="text-sm font-bold text-ink-900 tabular-nums">{v}</span>
@@ -101,10 +104,11 @@ export default function DagChainOverview() {
       </div>
 
       {/* platform + community */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
         <Tile icon={Activity} label="Transactions" value={num(dash.totalTransactions)} tint="bg-sky-100 text-sky-600" />
         <Tile icon={Layers} label="Total Volume" value={num(dash.totalVolume)} tint="bg-ink-100 text-ink-500" />
         <Tile icon={Coins} label="DGC held (users)" value={num(p.dgc)} tint="bg-emerald-100 text-emerald-600" />
+        <Tile icon={Coins} label="Staked (DGC)" value={num(st.staked)} tint="bg-violet-100 text-violet-600" />
         <Tile icon={Users} label="Referrals" value={num(p.refs)} tint="bg-rose-100 text-rose-500" />
       </div>
 
