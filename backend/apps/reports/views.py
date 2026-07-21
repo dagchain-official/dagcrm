@@ -835,8 +835,39 @@ def assign_target(request):
                body=f"{name}: ${value:,.0f} (CTC ${ctc_total:,.0f} × {mult})",
                kind="info", link="/target-board")
 
+    # optional: set the incentive for these assignees in the same action.
+    #   percentage -> each assignee gets (their target × value%)  (planned incentive)
+    #   fixed      -> each assignee gets a flat `value`
+    #   slab       -> no fixed amount now; the slab engine computes it from actual
+    #                 attainment when incentives are run (Rules & Config → Slabs)
+    incentive = d.get("incentive") or {}
+    itype = incentive.get("type")
+    inc_result = None
+    if itype in ("percentage", "fixed"):
+        from apps.hr.models import Employee, Incentive
+        try:
+            ival = float(incentive.get("value") or 0)
+        except (TypeError, ValueError):
+            ival = 0.0
+        made = 0
+        for r in rows:
+            emp = Employee.objects.filter(user_id=r["user_id"]).first()
+            if not emp:
+                continue
+            per_target = round(r["ctc"] * mult, 2)
+            amount = round(per_target * ival / 100, 2) if itype == "percentage" else round(ival, 2)
+            Incentive.objects.update_or_create(
+                employee=emp, rule=None, source="manual", month=month, year=year,
+                defaults={"amount": amount})
+            made += 1
+        inc_result = {"type": itype, "value": ival, "employees": made}
+    elif itype == "slab":
+        inc_result = {"type": "slab",
+                      "note": "Slab incentive will auto-compute from attainment when you run incentives."}
+
     return Response({"id": t.id, "name": t.name, "value": value, "ctc": ctc_total,
-                     "multiplier": mult, "scope": scope, "assignees": len(rows)}, status=201)
+                     "multiplier": mult, "scope": scope, "assignees": len(rows),
+                     "incentive": inc_result}, status=201)
 
 
 @api_view(["GET"])

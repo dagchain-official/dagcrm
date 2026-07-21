@@ -26,6 +26,8 @@ export default function AssignTarget() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [incType, setIncType] = useState("");   // "" | percentage | fixed | slab
+  const [incValue, setIncValue] = useState("");
 
   const refField = scope === "team"
     ? { ref: "teams", labelKey: "name", label: "Team" }
@@ -44,10 +46,14 @@ export default function AssignTarget() {
     if (!id) return toast.error("Select who to assign the target to");
     setSaving(true);
     try {
-      const { data } = await api.post("/reports/assign-target/",
-        { scope, id, multiplier, month, year, name });
-      toast.success(`Target assigned: ${money(data.value)} across ${data.assignees} people`);
-      setId(""); setPreview(null); setName("");
+      const payload = { scope, id, multiplier, month, year, name };
+      if (incType) payload.incentive = { type: incType, value: incType === "slab" ? 0 : Number(incValue || 0) };
+      const { data } = await api.post("/reports/assign-target/", payload);
+      let msg = `Target assigned: ${money(data.value)} across ${data.assignees} people`;
+      if (data.incentive?.employees) msg += ` · incentive set for ${data.incentive.employees}`;
+      else if (data.incentive?.type === "slab") msg += " · slab incentive enabled";
+      toast.success(msg);
+      setId(""); setPreview(null); setName(""); setIncType(""); setIncValue("");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Assign failed");
     } finally { setSaving(false); }
@@ -119,6 +125,36 @@ export default function AssignTarget() {
             )}
           </div>
         )}
+
+        {/* optional incentive — set alongside the target */}
+        <div className="rounded-xl border border-ink-100 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-ink-800">Set incentive (optional)</p>
+            {incType && <button className="text-xs text-ink-400 hover:text-rose-500" onClick={() => { setIncType(""); setIncValue(""); }}>Clear</button>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[["percentage", "% of target"], ["fixed", "Fixed amount"], ["slab", "Slab (attainment)"]].map(([v, label]) => (
+              <button key={v} onClick={() => setIncType(v)}
+                className={`chip !py-2 ${incType === v ? "!bg-brand-50 !text-brand-700 border border-brand-300" : ""}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {(incType === "percentage" || incType === "fixed") && (
+            <div className="flex items-center gap-2">
+              <input className="input w-40" type="number" step={incType === "percentage" ? "0.5" : "100"}
+                placeholder={incType === "percentage" ? "e.g. 10" : "e.g. 5000"}
+                value={incValue} onChange={(e) => setIncValue(e.target.value)} />
+              <span className="text-sm text-ink-500">{incType === "percentage" ? "% of each person's target" : "$ per person"}</span>
+            </div>
+          )}
+          {incType === "percentage" && preview && incValue && (
+            <p className="text-xs text-ink-500">≈ {money(preview.suggested_target * Number(incValue) / 100)} total incentive on this target</p>
+          )}
+          {incType === "slab" && (
+            <p className="text-xs text-ink-500">Uses the attainment slabs from Rules &amp; Config — the real incentive computes from actual attainment when incentives are run.</p>
+          )}
+        </div>
 
         <div className="flex justify-end">
           <button className="btn-primary" disabled={saving || !id} onClick={assign}>
