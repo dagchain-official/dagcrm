@@ -37,6 +37,8 @@ export default function LeadDetail() {
   const [emailAccounts, setEmailAccounts] = useState([]);
   const [emailFrom, setEmailFrom] = useState("");
   const [proposal, setProposal] = useState(null);
+  const [history, setHistory] = useState([]);   // past messages/emails in the thread
+  const [histLoading, setHistLoading] = useState(false);
 
   const load = () => api.get(`/leads/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
   usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
@@ -51,6 +53,25 @@ export default function LeadDetail() {
       setEmailFrom(def ? String(def.id) : "");
     }).catch(() => setEmailAccounts([]));
   }, [msgModal]);
+
+  // load the past conversation (WhatsApp / Email) for the thread view.
+  // oldest first so it reads top -> bottom like a chat.
+  const loadHistory = () => {
+    if (!msgModal) return;
+    setHistLoading(true);
+    api.get("/communications/", { params: { lead: id, channel: msgModal.type, page_size: 100 } })
+      .then((r) => {
+        const rows = r.data.results || r.data || [];
+        setHistory([...rows].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+      })
+      .catch(() => setHistory([]))
+      .finally(() => setHistLoading(false));
+  };
+  useEffect(() => {
+    if (!msgModal) { setHistory([]); return; }
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgModal, id]);
 
   const engage = async (type, opts = {}) => {
     setBusy(true);
@@ -205,7 +226,33 @@ export default function LeadDetail() {
               </>
             )}
 
-            <textarea className="input min-h-[110px]" placeholder="Type your message…" value={msg} onChange={(e) => setMsg(e.target.value)} />
+            {/* conversation history — past messages/emails with this lead */}
+            <div>
+              <label className="label">Conversation history</label>
+              {histLoading ? (
+                <p className="text-xs text-ink-400 py-3 text-center">Loading…</p>
+              ) : history.length === 0 ? (
+                <p className="text-xs text-ink-400 py-4 text-center bg-ink-50 rounded-xl">
+                  No previous {msgModal.type === "whatsapp" ? "WhatsApp messages" : "emails"} with this lead yet.
+                </p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto space-y-2 p-3 rounded-xl bg-ink-50 border border-ink-100">
+                  {history.map((c) => (
+                    <div key={c.id} className={`flex ${c.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[78%] px-3 py-2 rounded-2xl text-sm ${c.direction === "outbound"
+                        ? "bg-brand-600 text-white rounded-br-sm" : "bg-white border border-ink-200 text-ink-800 rounded-bl-sm"}`}>
+                        <p className="whitespace-pre-line break-words">{c.message}</p>
+                        <p className={`text-[10px] mt-0.5 ${c.direction === "outbound" ? "text-white/60" : "text-ink-400"}`}>
+                          {c.direction === "inbound" ? "Received" : "Sent"} · {dt(c.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <textarea className="input min-h-[90px]" placeholder="Type your message…" value={msg} onChange={(e) => setMsg(e.target.value)} />
             {msgModal.type === "whatsapp"
               ? <p className="text-xs text-ink-400">If Twilio is configured this sends live, otherwise it's logged in the activity.</p>
               : <p className="text-xs text-ink-400">A real email is sent via the selected account's SMTP; otherwise it's logged in the activity.</p>}
