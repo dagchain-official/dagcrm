@@ -170,6 +170,8 @@ def _sync_node(node, business, kind):
             "effective_apy": _num(node.get("effectiveApy") or node.get("annualROI")),
             "capacity": node.get("capacityDisplay") or node.get("storageCapacity") or "",
             "is_staked": bool(node.get("isStaked")),
+            "staked_amount": _num(node.get("stakedAmount")),
+            "staking_requirement": _num(node.get("stakingRequirement")),
             "opened_at": _dt(node.get("createdAt")),
         },
     )

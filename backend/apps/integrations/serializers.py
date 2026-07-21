@@ -27,7 +27,7 @@ class DagChainNodeSerializer(serializers.ModelSerializer):
                   "package", "purchase_price", "currency", "status", "payment_status",
                   "uptime", "blocks_validated", "rewards_earned", "pending_rewards",
                   "claimed_rewards", "effective_apy", "capacity", "is_staked",
-                  "opened_at", "synced_at"]
+                  "staked_amount", "staking_requirement", "opened_at", "synced_at"]
 
 
 class IntegrationLogSerializer(serializers.ModelSerializer):

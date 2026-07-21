@@ -466,7 +466,8 @@ def dagchain_account(request):
             "blocks_validated": n.blocks_validated, "rewards_earned": f(n.rewards_earned),
             "pending_rewards": f(n.pending_rewards), "claimed_rewards": f(n.claimed_rewards),
             "effective_apy": f(n.effective_apy), "capacity": n.capacity,
-            "is_staked": n.is_staked, "opened_at": n.opened_at,
+            "is_staked": n.is_staked, "staked_amount": f(n.staked_amount),
+            "staking_requirement": f(n.staking_requirement), "opened_at": n.opened_at,
         }
 
     profile = {
@@ -488,6 +489,8 @@ def dagchain_account(request):
         "rewards_earned": sum(f(n.rewards_earned) for n in nodes),
         "pending_rewards": sum(f(n.pending_rewards) for n in nodes),
         "claimed_rewards": sum(f(n.claimed_rewards) for n in nodes),
+        "staked": sum(f(n.staked_amount) for n in nodes),
+        "staked_nodes": sum(1 for n in nodes if n.is_staked),
     }
     return Response({
         "customer_id": cust.id,

@@ -119,6 +119,8 @@ class DagChainNode(models.Model):
     effective_apy = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     capacity = models.CharField(max_length=40, blank=True)       # storage only
     is_staked = models.BooleanField(default=False)
+    staked_amount = models.DecimalField(max_digits=22, decimal_places=6, default=0)        # DGC staked on the node
+    staking_requirement = models.DecimalField(max_digits=22, decimal_places=6, default=0)  # DGC required to stake
     opened_at = models.DateTimeField(null=True, blank=True)
     synced_at = models.DateTimeField(auto_now=True)
 
