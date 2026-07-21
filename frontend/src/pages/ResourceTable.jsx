@@ -298,6 +298,23 @@ export default function ResourceTable({ resource: propResource }) {
               <div key={f.key} className="w-44">
                 <RefSelect field={f} placeholder={`All ${f.label}s`} value={filters[f.key] ?? ""} onChange={(v) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: v })); }} />
               </div>
+            ) : f.dateRange ? (
+              <div key={f.key} className="flex items-center gap-1">
+                <label className="chip !py-2 text-xs flex items-center gap-1">From
+                  <input type="date" className="bg-transparent outline-none text-xs" value={filters[`${f.key}_from`] ?? ""}
+                    onChange={(e) => { setPage(1); setFilters((s) => ({ ...s, [`${f.key}_from`]: e.target.value })); }} />
+                </label>
+                <label className="chip !py-2 text-xs flex items-center gap-1">To
+                  <input type="date" className="bg-transparent outline-none text-xs" value={filters[`${f.key}_to`] ?? ""}
+                    onChange={(e) => { setPage(1); setFilters((s) => ({ ...s, [`${f.key}_to`]: e.target.value })); }} />
+                </label>
+                {(filters[`${f.key}_from`] || filters[`${f.key}_to`]) && (
+                  <button className="text-ink-400 hover:text-rose-500 px-1" title="Clear dates"
+                    onClick={() => { setPage(1); setFilters((s) => ({ ...s, [`${f.key}_from`]: "", [`${f.key}_to`]: "" })); }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             ) : (
               <select key={f.key} className="input !py-2 w-auto" value={filters[f.key] ?? ""}
                 onChange={(e) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: e.target.value })); }}>

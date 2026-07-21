@@ -94,6 +94,15 @@ class ContributionEntryViewSet(viewsets.ModelViewSet):
     serializer_class = ContributionEntrySerializer
     filterset_fields = ["employee", "customer", "business", "date"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        p = self.request.query_params
+        if p.get("date_from"):
+            qs = qs.filter(date__gte=p["date_from"])
+        if p.get("date_to"):
+            qs = qs.filter(date__lte=p["date_to"])
+        return qs
+
 
 class ContributionWeightViewSet(viewsets.ModelViewSet):
     queryset = ContributionWeight.objects.all()

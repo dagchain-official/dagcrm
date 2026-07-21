@@ -619,6 +619,7 @@ export const RESOURCES = {
     filters: [
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
       { key: "business", label: "Business", ref: "businesses", labelKey: "name" },
+      { key: "date", label: "Date", dateRange: true },
     ],
     columns: [
       { key: "employee_name", label: "Employee" },
