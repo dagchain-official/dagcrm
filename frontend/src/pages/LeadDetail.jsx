@@ -88,13 +88,18 @@ export default function LeadDetail() {
       const liveNote = t?.note ? ` — ${t.note}` : t?.live ? " (live)" : "";
       toast.success(`${type === "call" ? "Call placed" : type === "whatsapp" ? "WhatsApp sent" : type === "email" ? "Email sent" : "Proposal sent"}${liveNote}`);
       if (data.lead.status !== prev) toast.info(`Status auto-advanced: ${prev} → ${data.lead.status}`);
+      if (type === "whatsapp" || type === "email") {
+        // keep the chat modal open so the conversation can continue — clear the
+        // box and refresh the thread so the just-sent message appears.
+        setMsg("");
+        loadHistory();
+      } else {
+        setMsgModal(null);
+      }
     } catch (e) {
       toast.error("Action failed: " + (e.response?.data?.detail || e.message));
     } finally {
       setBusy(false);
-      setMsgModal(null);
-      setMsg("");
-      setSubject("");
     }
   };
 
