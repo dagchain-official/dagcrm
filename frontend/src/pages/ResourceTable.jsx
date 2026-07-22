@@ -77,8 +77,8 @@ export default function ResourceTable({ resource: propResource }) {
   const canCreate = can(resource, "create");
   const canEdit = can(resource, "edit");
   const canDelete = can(resource, "delete");
-  // `adminOnly` columns (e.g. Lead phone) are visible only to super admin / business head
-  const columns = cfg.columns.filter((c) => !c.adminOnly || user?.is_admin_view);
+  // `adminOnly` columns (e.g. Lead phone) are visible ONLY to the Super Admin
+  const columns = cfg.columns.filter((c) => !c.adminOnly || user?.is_superuser);
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -167,23 +167,21 @@ class LeadSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Super admin / business head see everything. Assigned employees (RMs)
-        # must NOT see the phone number — email & rest stay visible. They still
+        # ONLY the Super Admin (superuser) may see lead phone numbers. Everyone
+        # else — including Business Head and managers — has it hidden. They still
         # call/WhatsApp via the system (number is used server-side only).
-        from apps.accounts.access import is_admin_view
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if user and not is_admin_view(user):
-            data["phone"] = ""          # hidden from employees
+        if not (user and user.is_superuser):
+            data["phone"] = ""          # hidden from everyone except admin
             data["phone_hidden"] = True
         return data
 
     def update(self, instance, validated_data):
-        # employees can't change/blank the number (their view sends it empty)
-        from apps.accounts.access import is_admin_view
+        # non-admins can't change/blank the number (their view sends it empty)
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if user and not is_admin_view(user):
+        if not (user and user.is_superuser):
             validated_data.pop("phone", None)
         return super().update(instance, validated_data)
 
