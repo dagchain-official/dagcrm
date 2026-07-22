@@ -601,7 +601,7 @@ export default function ResourceTable({ resource: propResource }) {
                   ["performance", "Performance Based", "Top performers (higher conversion) get more leads"],
                   ["manual", "Manual", "Assign all to one specific RM"],
                 ].map(([val, label, desc]) => (
-                  <label key={val} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${dist.strategy === val ? "border-brand-300 bg-brand-50" : "border-ink-200"}`}>
+                  <label key={val} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${dist.strategy === val ? "border-brand-300 bg-brand-50 dark:bg-brand-500/15 dark:border-brand-500/40" : "border-ink-200"}`}>
                     <input type="radio" name="strategy" className="mt-1" checked={dist.strategy === val} onChange={() => setDist({ ...dist, strategy: val })} />
                     <div><p className="text-sm font-semibold text-ink-800">{label}</p><p className="text-xs text-ink-400">{desc}</p></div>
                   </label>

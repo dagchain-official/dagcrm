@@ -184,7 +184,7 @@ export default function Tour() {
                 return (
                   <label key={e.route}
                     className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition
-                      ${on ? "border-brand-300 bg-brand-50" : "border-ink-200 hover:border-ink-300"}`}>
+                      ${on ? "border-brand-300 bg-brand-50 dark:bg-brand-500/15 dark:border-brand-500/40" : "border-ink-200 hover:border-ink-300"}`}>
                     <input type="checkbox" className="mt-0.5" checked={on} onChange={() => toggle(e.route)} />
                     <span className="text-sm font-semibold text-ink-800">{e.label}</span>
                   </label>

@@ -94,7 +94,7 @@ export default function AssignTarget() {
       <div className="grid grid-cols-3 gap-3">
         {SCOPES.map((s) => (
           <button key={s.key} onClick={() => setScope(s.key)}
-            className={`card p-4 text-left transition ${scope === s.key ? "!border-brand-400 bg-brand-50" : "hover:bg-ink-50"}`}>
+            className={`card p-4 text-left transition ${scope === s.key ? "!border-brand-400 bg-brand-50 dark:bg-brand-500/15" : "hover:bg-ink-50"}`}>
             <s.icon size={20} className={scope === s.key ? "text-brand-600" : "text-ink-400"} />
             <p className="font-bold text-ink-800 mt-2">{s.label}</p>
             <p className="text-xs text-ink-400">{s.hint}</p>

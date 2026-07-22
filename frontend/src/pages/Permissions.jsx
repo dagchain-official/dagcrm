@@ -195,7 +195,7 @@ function BusinessAccess() {
                 key={b.id}
                 onClick={() => toggle(b.id)}
                 className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition
-                  ${on ? "border-brand-300 bg-brand-50" : "border-ink-200 bg-ink-0 hover:bg-ink-50"}`}
+                  ${on ? "border-brand-300 bg-brand-50 dark:bg-brand-500/15 dark:border-brand-500/40" : "border-ink-200 bg-ink-0 hover:bg-ink-50"}`}
               >
                 <div className={`grid place-items-center w-10 h-10 rounded-xl ${on ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-400"}`}>
                   {on ? <Check size={18} /> : <Building2 size={18} />}
