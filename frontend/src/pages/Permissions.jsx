@@ -4,6 +4,16 @@ import api from "../api/client";
 import { Spinner } from "../components/ui";
 import { useToast } from "../context/ToastContext";
 
+// Friendly labels for the split FX Artha / DAGChain per-page modules.
+const MODULE_LABELS = {
+  fxartha: "FX Artha · Overview",
+  "fxartha-traders": "FX Artha · Traders",
+  "fxartha-lots": "FX Artha · Lots & Commission",
+  dagchain: "DAGChain · Overview",
+  "dagchain-users": "DAGChain · Users",
+  "dagchain-nodes": "DAGChain · Nodes",
+};
+
 function Toggle({ on, onClick }) {
   return (
     <button
@@ -101,7 +111,7 @@ function ModulePerms() {
             <tbody>
               {meta.modules.map((m) => (
                 <tr key={m} className="border-t border-ink-100">
-                  <td className="py-3 pr-4 font-medium text-ink-700 capitalize">{m.replace(/-/g, " ")}</td>
+                  <td className={`py-3 pr-4 font-medium text-ink-700 ${MODULE_LABELS[m] ? "" : "capitalize"}`}>{MODULE_LABELS[m] || m.replace(/-/g, " ")}</td>
                   {ACTIONS.map(([field]) => (
                     <td key={field} className="py-3 px-4">
                       <div className="flex justify-center">

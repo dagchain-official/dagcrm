@@ -414,7 +414,7 @@ def fxartha_overview(request):
 
 
 @api_view(["GET"])
-@permission_classes([module_required("fxartha")])
+@permission_classes([module_required("fxartha-traders")])
 def fxartha_traders(request):
     """Full FXArtha trader detail: per trader — lots, brokerage, deposits,
     withdrawals, net AUM, contribution, date, RM. Filters: ?q= ?from= ?to=."""
@@ -427,7 +427,7 @@ def fxartha_traders(request):
 
 
 @api_view(["GET"])
-@permission_classes([module_required("fxartha")])
+@permission_classes([module_required("fxartha-traders")])
 def fxartha_account(request):
     """Live FXArtha account for one synced trader (?customer=<crm id>): account
     metrics, live positions + floating P&L, working orders, ledger, and IB info."""
@@ -443,7 +443,7 @@ def fxartha_account(request):
 
 
 @api_view(["GET"])
-@permission_classes([module_required("dagchain")])
+@permission_classes([module_required("dagchain-users")])
 def dagchain_account(request):
     """DAGChain account for one synced user (?customer=<crm id>): wallet/DGC
     profile, referrals, KYC, and every validator/storage node with its rewards."""
@@ -509,6 +509,7 @@ def dagchain_account(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("fxartha-lots")])
 def traders_lots(request):
     """Traders & Lots — per employee: their traders, lots (month + total),
     and estimated per-lot commission. Optional ?rate= overrides the configured

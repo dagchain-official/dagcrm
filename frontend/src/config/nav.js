@@ -12,10 +12,14 @@ import {
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
   if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board"].includes(to)) return "reports";
-  // Lots & Commission is an FX Artha page — gate it by the fxartha module so RMs
-  // (who have FX Artha access) see it too, with their own lots scoped to them.
-  if (to === "/fxartha" || to === "/fxartha-traders" || to.startsWith("/fxartha-account") || to === "/traders-lots") return "fxartha";
-  if (to === "/dagchain" || to === "/dagchain-users" || to === "/dagchain-nodes" || to.startsWith("/dagchain-account")) return "dagchain";
+  // FX Artha & DAGChain: each sub-page has its own permission module so access
+  // can be granted/denied per page (Overview / Traders / Lots, Users / Nodes…).
+  if (to === "/fxartha") return "fxartha";                                   // Overview
+  if (to === "/fxartha-traders" || to.startsWith("/fxartha-account")) return "fxartha-traders";
+  if (to === "/traders-lots") return "fxartha-lots";                         // Lots & Commission
+  if (to === "/dagchain") return "dagchain";                                 // Overview
+  if (to === "/dagchain-users" || to.startsWith("/dagchain-account")) return "dagchain-users";
+  if (to === "/dagchain-nodes") return "dagchain-nodes";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
