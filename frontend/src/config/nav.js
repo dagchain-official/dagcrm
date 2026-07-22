@@ -11,8 +11,10 @@ import {
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board", "/traders-lots"].includes(to)) return "reports";
-  if (to === "/fxartha" || to === "/fxartha-traders" || to.startsWith("/fxartha-account")) return "fxartha";
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board"].includes(to)) return "reports";
+  // Lots & Commission is an FX Artha page — gate it by the fxartha module so RMs
+  // (who have FX Artha access) see it too, with their own lots scoped to them.
+  if (to === "/fxartha" || to === "/fxartha-traders" || to.startsWith("/fxartha-account") || to === "/traders-lots") return "fxartha";
   if (to === "/dagchain" || to === "/dagchain-users" || to === "/dagchain-nodes" || to.startsWith("/dagchain-account")) return "dagchain";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
