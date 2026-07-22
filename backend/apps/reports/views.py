@@ -509,6 +509,17 @@ def dagchain_account(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("dagchain-users")])
+def dagchain_by_rm(request):
+    """Per-RM DAGChain book — each employee's assigned users with node counts,
+    node spend, rewards, staked, DGC balance and referrals. Scoped by role."""
+    from .dagchain_rm import compute_dagchain_by_rm, scoped_dagchain_by_rm
+    emp = request.query_params.get("employee")
+    data = compute_dagchain_by_rm(int(emp) if emp else None)
+    return Response(scoped_dagchain_by_rm(request.user, data))
+
+
+@api_view(["GET"])
 @permission_classes([module_required("fxartha-lots")])
 def traders_lots(request):
     """Traders & Lots — per employee: their traders, lots (month + total),

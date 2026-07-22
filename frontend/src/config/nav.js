@@ -18,7 +18,7 @@ export const moduleOf = (to) => {
   if (to === "/fxartha-traders" || to.startsWith("/fxartha-account")) return "fxartha-traders";
   if (to === "/traders-lots") return "fxartha-lots";                         // Lots & Commission
   if (to === "/dagchain") return "dagchain";                                 // Overview
-  if (to === "/dagchain-users" || to.startsWith("/dagchain-account")) return "dagchain-users";
+  if (to === "/dagchain-users" || to.startsWith("/dagchain-account") || to === "/dagchain-rm") return "dagchain-users";
   if (to === "/dagchain-nodes") return "dagchain-nodes";
   if (to === "/permissions" || to === "/integrations") return "__admin__";
   if (to === "/formula-builder") return "formula-rules";
@@ -81,6 +81,7 @@ export const NAV = [
       { to: "/dagchain", label: "Overview", icon: Boxes },
       { to: "/dagchain-users", label: "Users", icon: Users },
       { to: "/dagchain-nodes", label: "Nodes", icon: Server },
+      { to: "/dagchain-rm", label: "Nodes & Revenue", icon: Coins },
     ],
   },
   {

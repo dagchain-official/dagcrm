@@ -25,6 +25,7 @@ urlpatterns = [
     path("reports/fxartha-traders/", views.fxartha_traders),
     path("reports/fxartha-account/", views.fxartha_account),
     path("reports/dagchain-account/", views.dagchain_account),
+    path("reports/dagchain-rm/", views.dagchain_by_rm),
     path("reports/business-dashboard/", views.business_dashboard),
     path("reports/performance/", views.performance),
     path("reports/incentive-board/", views.incentive_board),
