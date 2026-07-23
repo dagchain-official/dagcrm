@@ -16,6 +16,14 @@ const PAGE_SIZE = 25;
 const money = (v) => (v == null || v === "" ? "—" : `$${Number(v).toLocaleString()}`);
 const dt = (v) => (v ? new Date(v).toLocaleString() : "—");
 
+// Module titles are plural ("Departments"); a single record dialog needs the
+// singular ("New Department"). Handles -ies -> -y and -sses -> -ss.
+const singular = (s = "") =>
+  s.endsWith("ies") ? `${s.slice(0, -3)}y`
+    : s.endsWith("sses") ? s.slice(0, -2)
+      : s.endsWith("s") && !s.endsWith("ss") ? s.slice(0, -1)
+        : s;
+
 function Progress({ value }) {
   const v = Math.round(Number(value) || 0);
   const color = v >= 100 ? "bg-emerald-500" : v >= 50 ? "bg-brand-500" : "bg-amber-500";
@@ -478,7 +486,7 @@ export default function ResourceTable({ resource: propResource }) {
       </div>
 
       <Modal open={!!modal} onClose={() => setModal(null)}
-        title={`${modal?.mode === "edit" ? "Edit" : "New"} ${cfg.title}`}>
+        title={`${modal?.mode === "edit" ? "Edit" : "New"} ${singular(cfg.title)}`}>
         {modal && (
           <DataForm fields={cfg.fields} initial={modal.row} submitting={saving} autofill={cfg.autofill}
             onSubmit={save} onCancel={() => setModal(null)} />
@@ -490,7 +498,7 @@ export default function ResourceTable({ resource: propResource }) {
         busy={deleting}
         onClose={() => setConfirmRow(null)}
         onConfirm={remove}
-        title={`Delete ${cfg.title.replace(/s$/, "")}?`}
+        title={`Delete ${singular(cfg.title)}?`}
         message="This record will be permanently deleted. Are you sure?"
       />
 
