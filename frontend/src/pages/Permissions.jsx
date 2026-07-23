@@ -12,6 +12,14 @@ const MODULE_LABELS = {
   dagchain: "DAGChain · Overview",
   "dagchain-users": "DAGChain · Users",
   "dagchain-nodes": "DAGChain · Nodes",
+  "assign-targets": "Targets · Assign to own team",
+};
+
+// Capabilities, not CRUD screens: one toggle instead of four. `can_create` is
+// the field that decides them, so that's the column the toggle sits in.
+const ACTION_HINT = {
+  "assign-targets":
+    "Set targets & incentive plans. Whoever holds this reaches only their own team, downwards — never a peer or a manager. Only the Super Admin covers the whole company.",
 };
 
 function Toggle({ on, onClick }) {
@@ -109,18 +117,36 @@ function ModulePerms() {
               </tr>
             </thead>
             <tbody>
-              {meta.modules.map((m) => (
-                <tr key={m} className="border-t border-ink-100">
-                  <td className={`py-3 pr-4 font-medium text-ink-700 ${MODULE_LABELS[m] ? "" : "capitalize"}`}>{MODULE_LABELS[m] || m.replace(/-/g, " ")}</td>
-                  {ACTIONS.map(([field]) => (
-                    <td key={field} className="py-3 px-4">
-                      <div className="flex justify-center">
-                        <Toggle on={!!byModule[m]?.[field]} onClick={() => toggle(m, field)} />
-                      </div>
+              {meta.modules.map((m) => {
+                const isAction = (meta.action_modules || []).includes(m);
+                return (
+                  <tr key={m} className="border-t border-ink-100">
+                    <td className={`py-3 pr-4 font-medium text-ink-700 ${MODULE_LABELS[m] ? "" : "capitalize"}`}>
+                      {MODULE_LABELS[m] || m.replace(/-/g, " ")}
+                      {isAction && ACTION_HINT[m] && (
+                        <p className="text-xs font-normal text-ink-400 mt-0.5 max-w-md">{ACTION_HINT[m]}</p>
+                      )}
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {isAction ? (
+                      // one yes/no toggle, spanning the four action columns
+                      <td className="py-3 px-4" colSpan={ACTIONS.length}>
+                        <div className="flex items-center justify-center gap-2">
+                          <Toggle on={!!byModule[m]?.can_create} onClick={() => toggle(m, "can_create")} />
+                          <span className="text-xs text-ink-400">
+                            {byModule[m]?.can_create ? "Allowed" : "Not allowed"}
+                          </span>
+                        </div>
+                      </td>
+                    ) : ACTIONS.map(([field]) => (
+                      <td key={field} className="py-3 px-4">
+                        <div className="flex justify-center">
+                          <Toggle on={!!byModule[m]?.[field]} onClick={() => toggle(m, field)} />
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

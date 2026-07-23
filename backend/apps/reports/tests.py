@@ -1,4 +1,4 @@
-"""DAGChain per-RM commission — three bases, three rates, two currencies."""
+"""Reports: DAGChain per-RM commission, and the Target Board's target source."""
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -81,3 +81,66 @@ class DagChainCommissionTests(TestCase):
         self.assertEqual(row["commission"], 0)
         self.assertEqual(row["comm_staking"], 0)
         self.assertEqual(row["node_spend"], 10019.0)        # revenue still reported
+
+
+class TargetBoardSourceTests(TestCase):
+    """Deleting an assigned target must be visible on the board — it falls back
+    to the CTC × multiplier default rather than leaving the old number behind."""
+
+    def setUp(self):
+        from apps.crm.models import Target, TargetAssignment
+        self.Target, self.TargetAssignment = Target, TargetAssignment
+        role = Role.objects.create(name="Sales Executive")
+        self.rm = User.objects.create_user(email="rm2@dagos.test", name="Rita",
+                                           password="x", role=role)
+        # salary 10,000 and the default global multiplier of 1 -> derived target
+        self.emp = Employee.objects.create(user=self.rm, salary=10000)
+
+    def _board(self):
+        from apps.reports.targets import compute_targets
+
+        def walk(nodes):
+            for n in nodes:
+                yield n
+                yield from walk(n["reports"])
+        tree = compute_targets(7, 2026)["tree"]
+        return next(n for n in walk(tree) if n["user_id"] == self.rm.id)
+
+    def _assign(self, value):
+        t = self.Target.objects.create(name="July", target_type="revenue", value=value,
+                                       start_date="2026-07-01", end_date="2026-07-31")
+        self.TargetAssignment.objects.create(target=t, user=self.rm)
+        return t
+
+    def _derived(self):
+        """CTC × the seeded global multiplier — what the board shows by default."""
+        row = self._board()
+        return round(row["ctc"] * row["multiplier"], 2)
+
+    def test_without_an_assignment_the_board_derives_the_target(self):
+        row = self._board()
+        self.assertEqual(row["target"], self._derived())
+        self.assertFalse(row["assigned"])
+
+    def test_an_assigned_target_wins_over_the_formula(self):
+        self._assign(25000)
+        row = self._board()
+        self.assertEqual(row["target"], 25000.0)
+        self.assertTrue(row["assigned"])
+
+    def test_deleting_the_target_drops_it_from_the_board(self):
+        derived = self._derived()
+        t = self._assign(25000)
+        self.assertEqual(self._board()["target"], 25000.0)
+
+        t.delete()
+        row = self._board()
+        self.assertEqual(row["target"], derived)     # back to CTC × multiplier
+        self.assertFalse(row["assigned"])
+
+    def test_a_target_for_another_month_is_ignored(self):
+        t = self.Target.objects.create(name="June", target_type="revenue", value=99000,
+                                       start_date="2026-06-01", end_date="2026-06-30")
+        self.TargetAssignment.objects.create(target=t, user=self.rm)
+        self.assertEqual(self._board()["target"], self._derived())
+        self.assertFalse(self._board()["assigned"])

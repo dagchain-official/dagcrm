@@ -14,8 +14,12 @@ ROLES = [
 # Roles that see ALL data (company-wide), bypass business scoping.
 MANAGER_ROLES = {"Super Admin", "Business Head"}
 
-# Roles that can ASSIGN targets / build teams for others (management chain).
-# Admin assigns anyone; Business Head / Sales Director only within their own subtree.
+# Who may assign targets is a PERMISSION ("assign-targets" in the matrix), not a
+# fixed list of roles — grant it to a Sales Manager or Team Leader and they can
+# set targets too. This set is only the DEFAULT the matrix is seeded with, and
+# the fallback for a role that has no matrix row yet.
+# Whoever holds it, the reach is the same: their own team, downwards. Only the
+# Super Admin assigns across the whole company.
 TARGET_ASSIGNER_ROLES = {"Super Admin", "Business Head", "Sales Director"}
 
 # Roles that see ALL data (company-wide), bypass business scoping.
@@ -74,7 +78,13 @@ MODULES = [
     # separately (the sidebar item + its endpoint use these keys).
     "fxartha", "fxartha-traders", "fxartha-lots",
     "dagchain", "dagchain-users", "dagchain-nodes",
+    # capability modules — see ACTION_MODULES
+    "assign-targets",
 ]
+
+# Modules that aren't a CRUD screen but a single capability. Only `create` is
+# meaningful on these, and the Permission Matrix shows one toggle instead of four.
+ACTION_MODULES = {"assign-targets"}
 
 
 def _split(s):
@@ -100,6 +110,7 @@ ROLE_MATRIX = {
         **_view(_split("revenues products businesses lead-sources tickets reports users "
                        "metric-definitions employees fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
         "leaves": "vce", "leave-types": "v",
+        "assign-targets": "c",
     },
     "Sales Manager": {
         **_full(_split("leads lead-activities opportunities proposals customers communications targets "
@@ -108,6 +119,8 @@ ROLE_MATRIX = {
                        "metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
+        # may set targets — for their own team only (see can_assign_to)
+        "assign-targets": "c",
     },
     "Team Leader": {
         **_full(_split("leads lead-activities opportunities proposals customers communications "
@@ -115,6 +128,8 @@ ROLE_MATRIX = {
         **_view(_split("targets tickets reports metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
+        # may set targets — for their own team only (see can_assign_to)
+        "assign-targets": "c",
     },
     "Sales Executive": {
         **_full(_split("leads lead-activities opportunities proposals customers communications "
@@ -240,23 +255,34 @@ def subordinate_user_ids(user, include_self=False):
 
 
 def can_assign_targets(user):
-    """Whether the user may assign targets / build teams at all."""
+    """Whether the user may assign targets at all — driven by the
+    "assign-targets" permission so it can be granted to any role from the
+    Permission Matrix. A role with no matrix row yet falls back to the default
+    set, so behaviour never silently disappears."""
     if getattr(user, "is_superuser", False):
         return True
+    perms = role_permissions(user)
+    if "assign-targets" in perms:
+        return bool(perms["assign-targets"].get("create"))
     return getattr(getattr(user, "role", None), "name", None) in TARGET_ASSIGNER_ROLES
 
 
-def can_assign_to(actor, target_user_id):
-    """Delegation rule: admin -> anyone (incl. other businesses);
-    Business Head / Sales Director -> only users inside their own subtree."""
+def can_assign_to(actor, target_user_id, allow_self=False):
+    """How far an assigner reaches: the Super Admin covers the whole company;
+    everyone else only their own subtree — you can set targets for the people
+    below you, never for a peer or someone above you.
+
+    `allow_self` is for team/business targets: the roll-up legitimately includes
+    the leader themselves, and refusing that would block a manager from setting
+    their own team's number. An INDIVIDUAL target still has to go downwards.
+    """
     if getattr(actor, "is_superuser", False):
         return True
-    role = getattr(getattr(actor, "role", None), "name", None)
-    if role == "Super Admin":
+    if getattr(getattr(actor, "role", None), "name", None) == "Super Admin":
         return True
-    if role in ("Business Head", "Sales Director"):
-        return target_user_id in subordinate_user_ids(actor)
-    return False
+    if not can_assign_targets(actor):
+        return False
+    return target_user_id in subordinate_user_ids(actor, include_self=allow_self)
 
 
 def allowed_business_ids(user):

@@ -24,6 +24,12 @@ function Row({ n, depth }) {
           <p className="text-sm font-semibold text-ink-800 truncate">
             {n.name}
             {n.is_manager && <span className="ml-2 text-[10px] font-bold uppercase text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded">team</span>}
+            {n.assigned && (
+              <span className="ml-2 text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
+                title="Set from Targets → Assign Target. Delete that target and this goes back to CTC × Multiplier.">
+                assigned
+              </span>
+            )}
           </p>
           {n.level && <p className="text-[11px] text-ink-400">{n.level}</p>}
         </div>
@@ -67,7 +73,7 @@ export default function TargetBoard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-ink-900 flex items-center gap-2"><Gauge className="text-brand-600" /> Target Board</h1>
-          <p className="text-sm text-ink-400">Target = CTC × Multiplier · rolled up the org tree</p>
+          <p className="text-sm text-ink-400">Target = CTC × Multiplier, rolled up the org tree — unless a target was assigned for the month, which wins</p>
         </div>
         <div className="flex items-center gap-2">
           <select className="input !w-auto" value={month} onChange={(e) => setMonth(Number(e.target.value))}>

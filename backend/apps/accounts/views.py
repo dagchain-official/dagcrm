@@ -29,7 +29,8 @@ def tokens_for(user):
 
 def me_payload(user):
     """User profile + effective access (role, dashboard, modules, businesses)."""
-    from .access import ROLE_DASHBOARD, allowed_business_ids, role_permissions, can_assign_leads
+    from .access import (ROLE_DASHBOARD, allowed_business_ids, role_permissions,
+                         can_assign_leads, can_assign_targets)
     from apps.crm.models import Business
 
     data = UserSerializer(user).data
@@ -42,6 +43,7 @@ def me_payload(user):
     data["is_superuser"] = user.is_superuser
     data["modules"] = role_permissions(user)
     data["can_assign_leads"] = can_assign_leads(user)
+    data["can_assign_targets"] = can_assign_targets(user)
     data["business_ids"] = ids  # null = all
     data["businesses"] = [{"id": b.id, "name": b.name} for b in businesses]
     data["onboarded"] = user.onboarded
@@ -278,8 +280,10 @@ class AccessMetaView(APIView):
     permission_classes = [IsAdminView]
 
     def get(self, request):
-        from .access import MODULES, ROLE_MATRIX
-        return Response({"modules": MODULES, "roles": list(ROLE_MATRIX.keys())})
+        from .access import ACTION_MODULES, MODULES, ROLE_MATRIX
+        return Response({"modules": MODULES, "roles": list(ROLE_MATRIX.keys()),
+                         # single-toggle capabilities, not CRUD screens
+                         "action_modules": sorted(ACTION_MODULES)})
 
 
 class TeamViewSet(viewsets.ModelViewSet):

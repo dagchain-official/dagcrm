@@ -1,7 +1,9 @@
 """Target Engine (PART 5) — derived, only TargetMultiplier is a new table.
 
-Per-employee target = monthly CTC (PART 3) × multiplier (TargetMultiplier).
-Multiplier resolves employee > hierarchy-level > global (default 1.0).
+Per-employee target = monthly CTC (PART 3) × multiplier (TargetMultiplier),
+UNLESS a target was explicitly assigned for that month (Targets → Assign Target),
+in which case the assigned value wins. Delete the assigned target and the board
+falls straight back to the derived number — nothing is left stranded.
 
 A manager's HEADLINE target = the SUM of their whole team's individual targets
 (their own personal target is NOT folded in). Achieved mirrors the same set so
@@ -33,6 +35,53 @@ def _multiplier_resolver():
     return resolve
 
 
+def assigned_targets(month, year, ctc_by_user):
+    """user_id -> explicitly assigned revenue target covering this month.
+
+    An individual assignment lands on that user. A team assignment is split
+    across the team by CTC share — the value was derived from the team's summed
+    CTC in the first place, so splitting it back that way reproduces each
+    person's number and keeps the roll-up exact.
+    """
+    from calendar import monthrange
+    from datetime import date
+
+    from apps.accounts.models import Team, TeamMember
+    from apps.crm.models import TargetAssignment
+
+    first = date(year, month, 1)
+    last = date(year, month, monthrange(year, month)[1])
+    out = {}
+    rows = (TargetAssignment.objects
+            .filter(target__target_type="revenue",
+                    target__start_date__lte=last, target__end_date__gte=first)
+            .select_related("target", "team")
+            .order_by("target_id", "id"))        # a later assignment wins
+    team_members = {}
+    for a in rows:
+        value = float(a.target.value or 0)
+        if a.user_id:
+            out[a.user_id] = value
+            continue
+        if not a.team_id:
+            continue
+        uids = team_members.get(a.team_id)
+        if uids is None:
+            uids = set(TeamMember.objects.filter(team_id=a.team_id)
+                       .values_list("user_id", flat=True))
+            leader = Team.objects.filter(id=a.team_id).values_list("leader_id", flat=True).first()
+            if leader:
+                uids.add(leader)
+            team_members[a.team_id] = uids
+        if not uids:
+            continue
+        total_ctc = sum(ctc_by_user.get(u, 0.0) for u in uids)
+        for u in uids:
+            share = (ctc_by_user.get(u, 0.0) / total_ctc) if total_ctc else 1.0 / len(uids)
+            out[u] = value * share
+    return out
+
+
 def compute_targets(month, year):
     emps = list(Employee.objects.select_related("user", "hierarchy_level")
                 .exclude(user__is_superuser=True))
@@ -43,8 +92,11 @@ def compute_targets(month, year):
     by_user, _ = _revenue_by_user(month, year)
     resolve = _multiplier_resolver()
     ctc = {e.id: e.monthly_ctc(month, year) for e in emps}   # one CTC calc per employee
+    assigned = assigned_targets(month, year, {e.user_id: float(ctc[e.id]) for e in emps})
 
     def own_target(e):
+        if e.user_id in assigned:            # an assigned target beats the formula
+            return assigned[e.user_id]
         return float(ctc[e.id] * resolve(e))
 
     def node(e, seen):
@@ -65,7 +117,12 @@ def compute_targets(month, year):
             team_target += cn["own_target"] + cn["team_target"]
             team_ach += cn["own_achieved"] + cn["team_achieved"]
         has_team = bool(children)
-        target = team_target if has_team else o_target
+        # a target assigned straight to this person is their headline, even if
+        # they lead a team (that's what a "business" scope assignment means)
+        if e.user_id in assigned:
+            target = assigned[e.user_id]
+        else:
+            target = team_target if has_team else o_target
         achieved = team_ach if has_team else o_ach
         return {
             "id": e.id, "user_id": e.user_id,
@@ -77,6 +134,8 @@ def compute_targets(month, year):
             "own_target": round(o_target, 2), "own_achieved": round(o_ach, 2),
             "team_target": round(team_target, 2), "team_achieved": round(team_ach, 2),
             "is_manager": has_team,
+            # true = this number came from an assigned target, not CTC × multiplier
+            "assigned": e.user_id in assigned,
             "target": round(target, 2), "achieved": round(achieved, 2),
             "progress": round(min(100, achieved / target * 100), 1) if target else 0,
             "reports": children,

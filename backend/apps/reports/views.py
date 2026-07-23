@@ -845,9 +845,11 @@ def assign_target(request):
     if not rows:
         return Response({"detail": "No employees found for this selection."}, status=400)
 
-    # Delegation check against every covered user.
+    # Delegation check against every covered user. A team/business roll-up may
+    # include the assigner themselves (they lead it) — an individual target may not.
+    allow_self = scope != "user"
     for r in rows:
-        if not can_assign_to(actor, r["user_id"]):
+        if not can_assign_to(actor, r["user_id"], allow_self=allow_self):
             return Response({"detail": "You can only assign within your own team/business."}, status=403)
 
     try:
