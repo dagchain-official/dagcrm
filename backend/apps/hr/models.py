@@ -27,6 +27,21 @@ class HierarchyLevel(models.Model):
         return f"{self.level_order}. {self.level_name}"
 
 
+def level_for_role(role_name):
+    """The org level an employee gets from their RBAC role. Nobody types this on
+    the form any more — role is the single thing you pick and the level follows.
+    The level row is created on first use so a fresh install needs no seeding."""
+    from apps.accounts.access import ROLE_TO_LEVEL
+    mapped = ROLE_TO_LEVEL.get(role_name or "")
+    if not mapped:
+        return None
+    name, order = mapped
+    lvl = HierarchyLevel.objects.filter(level_name=name).first()
+    if lvl is None:
+        lvl = HierarchyLevel.objects.create(level_name=name, level_order=order)
+    return lvl
+
+
 class Employee(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="employee")
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")

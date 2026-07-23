@@ -45,14 +45,14 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     # HR-profile fields. A user and an employee are the same person, so this one
     # form manages both — the Employee record is created/updated alongside the
-    # login account (HR → People uses the identical field set).
-    hierarchy_level = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    # login account (HR → People uses the identical field set). The org level is
+    # NOT here: it is derived from the role (see hr.models.level_for_role).
     department = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     salary = serializers.DecimalField(max_digits=12, decimal_places=2, write_only=True,
                                       required=False, allow_null=True)
     joining_date = serializers.DateField(write_only=True, required=False, allow_null=True)
 
-    HR_KEYS = ("hierarchy_level", "department", "salary", "joining_date")
+    HR_KEYS = ("department", "salary", "joining_date")
 
     class Meta:
         model = User
@@ -60,7 +60,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id", "employee_id", "name", "email", "phone", "role", "role_name",
             "manager", "manager_name", "status", "is_active", "created_at",
             "is_admin_view", "password",
-            "hierarchy_level", "department", "salary", "joining_date",
+            "department", "salary", "joining_date",
         ]
         read_only_fields = ["created_at"]
 
@@ -70,10 +70,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         # imported lazily — hr imports accounts, so a module-level import loops
-        from apps.hr.models import Department, HierarchyLevel
-        if attrs.get("hierarchy_level") and not HierarchyLevel.objects.filter(
-                id=attrs["hierarchy_level"]).exists():
-            raise serializers.ValidationError({"hierarchy_level": "Unknown org level."})
+        from apps.hr.models import Department
         if attrs.get("department") and not Department.objects.filter(
                 id=attrs["department"]).exists():
             raise serializers.ValidationError({"department": "Unknown department."})
@@ -94,16 +91,21 @@ class UserSerializer(serializers.ModelSerializer):
         data["joining_date"] = emp.joining_date.isoformat() if emp and emp.joining_date else None
         return data
 
-    def _sync_employee(self, user, hr, manager_given):
-        """Mirror the HR-profile half of the form onto the Employee record.
-        Only touched when the form actually sent one of these fields, so a plain
-        password reset never rewrites someone's HR profile."""
-        from apps.hr.models import Employee
-        if not hr and not manager_given:
-            return
-        emp = Employee.objects.filter(user=user).first() or Employee(user=user)
-        if "hierarchy_level" in hr:
-            emp.hierarchy_level_id = hr["hierarchy_level"]
+    def _sync_employee(self, user, hr, manager_given, role_given=False):
+        """Mirror the HR-profile half of the form onto the Employee record, and
+        put the person on the org level their role implies. A shell record is
+        never created for an edit that sent nothing HR-ish (e.g. a password
+        reset on someone who has no employee profile)."""
+        from apps.hr.models import Employee, level_for_role
+        emp = Employee.objects.filter(user=user).first()
+        if emp is None:
+            if not (hr or manager_given or role_given):
+                return
+            emp = Employee(user=user)
+        # org level follows the role — it isn't asked for on the form
+        lvl = level_for_role(getattr(getattr(user, "role", None), "name", None))
+        if lvl:
+            emp.hierarchy_level = lvl
         if "department" in hr:
             emp.department_id = hr["department"]
         if "salary" in hr and hr["salary"] is not None:
@@ -121,19 +123,20 @@ class UserSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        self._sync_employee(user, hr, manager_given=True)
+        self._sync_employee(user, hr, manager_given=True, role_given=True)
         return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
         hr = {k: validated_data.pop(k) for k in self.HR_KEYS if k in validated_data}
         manager_given = "manager" in validated_data
+        role_given = "role" in validated_data
         for k, v in validated_data.items():
             setattr(instance, k, v)
         if password:
             instance.set_password(password)
         instance.save()
-        self._sync_employee(instance, hr, manager_given)
+        self._sync_employee(instance, hr, manager_given, role_given)
         return instance
 
 

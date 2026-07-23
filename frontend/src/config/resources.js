@@ -65,8 +65,9 @@ const PERSON_FIELDS = [
   { key: "email", label: "Email", type: "email", required: true },
   { key: "employee_id", label: "Employee ID" },
   { key: "phone", label: "Phone" },
+  // Role drives the org level — pick the role and the level follows, so there is
+  // no "Org Level" field to keep in step with it.
   { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
-  { key: "hierarchy_level", label: "Org Level", type: "ref", ref: "hierarchy-levels", labelKey: "label" },
   { key: "manager", label: "Reports to (manager)", type: "ref", ref: "users/assignable", labelKey: "name" },
   { key: "department", label: "Department", type: "ref", ref: "departments", labelKey: "department_name" },
   { key: "salary", label: "Salary (monthly)", type: "number" },

@@ -31,6 +31,22 @@ def can_assign_leads(user):
         return True
     return getattr(getattr(user, "role", None), "name", None) in LEAD_ASSIGNER_ROLES
 
+# ---- Role -> org level -------------------------------------------------
+# The org level is DERIVED from the role, never typed on the form: role name ->
+# (level name, level order). 1 = top of the org. Support/HR/Finance sit outside
+# the sales ladder, so they share the bottom rung.
+ROLE_TO_LEVEL = {
+    "Super Admin":     ("Business Head", 1),
+    "Business Head":   ("Business Head", 1),
+    "Sales Director":  ("Sales Director", 2),
+    "Sales Manager":   ("Sales Manager", 3),
+    "Team Leader":     ("Team Leader", 4),
+    "Sales Executive": ("Relationship Manager", 5),
+    "Support":         ("Support", 6),
+    "HR":              ("HR", 6),
+    "Finance":         ("Finance", 6),
+}
+
 # Which dashboard each role lands on (frontend route key).
 ROLE_DASHBOARD = {
     "Super Admin": "admin",

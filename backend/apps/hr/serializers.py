@@ -66,23 +66,37 @@ class EmployeeSerializer(serializers.ModelSerializer):
                   "phone", "employee_id", "password", "status",
                   "department", "department_name", "hierarchy_level", "hierarchy_level_name",
                   "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name"]
-        extra_kwargs = {"user": {"required": False}}
+        # hierarchy_level is derived from the role, never posted from the form
+        extra_kwargs = {"user": {"required": False}, "hierarchy_level": {"read_only": True}}
 
     def get_monthly_ctc(self, obj):
         from django.utils import timezone
         today = timezone.localdate()
         return obj.monthly_ctc(today.month, today.year)
 
+    def _derived_level(self, attrs):
+        """The level this employee will end up on, from the role being saved."""
+        from apps.accounts.models import Role
+        from apps.hr.models import level_for_role
+        role_id = attrs.get("role")
+        if not role_id and self.instance and self.instance.user_id:
+            role_id = self.instance.user.role_id
+        name = (Role.objects.filter(id=role_id).values_list("name", flat=True).first()
+                if role_id else None)
+        return level_for_role(name)
+
     def validate(self, attrs):
-        # a manager must sit ABOVE the employee in the org (smaller level_order)
-        level = attrs.get("hierarchy_level") or getattr(self.instance, "hierarchy_level", None)
+        # A manager may not sit BELOW the employee in the org. Same level is
+        # allowed — levels are derived from the role now, so an HR lead managing
+        # HR staff (or a senior RM leading RMs) is a normal, valid setup.
+        level = self._derived_level(attrs) or getattr(self.instance, "hierarchy_level", None)
         manager = attrs.get("manager") or getattr(self.instance, "manager", None)
         if level and manager:
             mgr_emp = Employee.objects.filter(user=manager).select_related("hierarchy_level").first()
             mgr_level = mgr_emp.hierarchy_level if mgr_emp else None
-            if mgr_level and mgr_level.level_order >= level.level_order:
+            if mgr_level and mgr_level.level_order > level.level_order:
                 raise serializers.ValidationError(
-                    {"manager": f"Manager must be at a higher level than '{level.level_name}'."})
+                    {"manager": f"Manager sits below '{level.level_name}' in the org."})
         return attrs
 
     def to_representation(self, instance):
@@ -143,7 +157,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
                 email=email, name=name, password=password or "changeme123")
         self._apply_role(validated_data["user"], role_id)
         self._apply_account(validated_data["user"], phone, employee_id, status, password)
-        return self._sync_manager(super().create(validated_data))
+        return self._sync_level(self._sync_manager(super().create(validated_data)))
 
     def update(self, instance, validated_data):
         name = validated_data.pop("name", None)
@@ -161,7 +175,17 @@ class EmployeeSerializer(serializers.ModelSerializer):
             instance.user.save()
         self._apply_role(instance.user, role_id)
         self._apply_account(instance.user, phone, employee_id, status, password)
-        return self._sync_manager(super().update(instance, validated_data))
+        return self._sync_level(self._sync_manager(super().update(instance, validated_data)))
+
+    def _sync_level(self, emp):
+        """Org level follows the role — change someone's role and they move."""
+        from apps.hr.models import level_for_role
+        name = getattr(getattr(emp.user, "role", None), "name", None) if emp.user_id else None
+        lvl = level_for_role(name)
+        if lvl and emp.hierarchy_level_id != lvl.id:
+            emp.hierarchy_level = lvl
+            emp.save(update_fields=["hierarchy_level"])
+        return emp
 
     def _sync_manager(self, emp):
         """Keep User.manager in step with Employee.manager — the Users page reads

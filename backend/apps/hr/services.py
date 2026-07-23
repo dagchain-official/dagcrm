@@ -1,7 +1,7 @@
 """Self-service helpers for real-time attendance + auto activity tracking."""
 from django.utils import timezone
 
-from .models import Attendance, Employee, EmployeeActivity
+from .models import Attendance, Employee, EmployeeActivity, level_for_role
 
 
 def ensure_employee(user):
@@ -14,8 +14,10 @@ def ensure_employee(user):
         if len(emps) > 1:                       # keep the oldest, drop the rest
             Employee.objects.filter(id__in=[e.id for e in emps[1:]]).delete()
         return emps[0]
+    role_name = getattr(user.role, "name", "")
     return Employee.objects.create(
-        user=user, designation=getattr(user.role, "name", "") or "Staff"
+        user=user, designation=role_name or "Staff",
+        hierarchy_level=level_for_role(role_name),   # org level follows the role
     )
 
 
