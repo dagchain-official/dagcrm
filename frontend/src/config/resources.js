@@ -56,6 +56,25 @@ export const STATUS_COLORS = {
 
 const sel = (...opts) => opts.map((o) => ({ value: o, label: o[0].toUpperCase() + o.slice(1).replace("_", " ") }));
 
+// A user and an employee are the same person, so Administration → Users and
+// HR → People share ONE form. Both endpoints accept every field below: the login
+// half (email/password/status) and the HR half (level/manager/salary) are saved
+// together whichever page you add the person from.
+const PERSON_FIELDS = [
+  { key: "name", label: "Name", required: true },
+  { key: "email", label: "Email", type: "email", required: true },
+  { key: "employee_id", label: "Employee ID" },
+  { key: "phone", label: "Phone" },
+  { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
+  { key: "hierarchy_level", label: "Org Level", type: "ref", ref: "hierarchy-levels", labelKey: "label" },
+  { key: "manager", label: "Reports to (manager)", type: "ref", ref: "users/assignable", labelKey: "name" },
+  { key: "department", label: "Department", type: "ref", ref: "departments", labelKey: "department_name" },
+  { key: "salary", label: "Salary (monthly)", type: "number" },
+  { key: "joining_date", label: "Joining date", type: "date" },
+  { key: "status", label: "Status", type: "select", options: sel("active", "inactive", "suspended") },
+  { key: "password", label: "Password (set/reset)", type: "text" },
+];
+
 export const RESOURCES = {
   users: {
     title: "Users", endpoint: "users", search: true,
@@ -65,17 +84,11 @@ export const RESOURCES = {
       { key: "email", label: "Email" },
       { key: "phone", label: "Phone" },
       { key: "role_name", label: "Role" },
+      { key: "hierarchy_level_name", label: "Level" },
+      { key: "manager_name", label: "Reports to" },
       { key: "status", label: "Status", badge: true },
     ],
-    fields: [
-      { key: "name", label: "Name", required: true },
-      { key: "email", label: "Email", type: "email", required: true },
-      { key: "employee_id", label: "Employee ID" },
-      { key: "phone", label: "Phone" },
-      { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
-      { key: "status", label: "Status", type: "select", options: sel("active", "inactive", "suspended") },
-      { key: "password", label: "Password (set/reset)", type: "text" },
-    ],
+    fields: PERSON_FIELDS,
   },
   roles: {
     title: "Roles", endpoint: "roles",
@@ -363,7 +376,9 @@ export const RESOURCES = {
   employees: {
     title: "Employees", endpoint: "employees", search: true,
     columns: [
+      { key: "employee_id", label: "Emp ID" },
       { key: "user_name", label: "Name" },
+      { key: "email", label: "Email" },
       { key: "role_name", label: "Role" },
       { key: "hierarchy_level_name", label: "Level" },
       { key: "manager_name", label: "Reports to" },
@@ -372,16 +387,7 @@ export const RESOURCES = {
       { key: "monthly_ctc", label: "CTC (mo)", money: true },
       { key: "joining_date", label: "Joined" },
     ],
-    fields: [
-      { key: "name", label: "Name", required: true },
-      { key: "email", label: "Email", type: "email" },
-      { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
-      { key: "hierarchy_level", label: "Org Level", type: "ref", ref: "hierarchy-levels", labelKey: "label" },
-      { key: "manager", label: "Reports to (manager)", type: "ref", ref: "users/assignable", labelKey: "name" },
-      { key: "department", label: "Department", type: "ref", ref: "departments", labelKey: "department_name" },
-      { key: "salary", label: "Salary", type: "number" },
-      { key: "joining_date", label: "Joining date", type: "date" },
-    ],
+    fields: PERSON_FIELDS,   // same form as Administration → Users
   },
   attendance: {
     title: "Attendance", endpoint: "attendance",

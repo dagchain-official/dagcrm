@@ -172,7 +172,10 @@ class RoleViewSet(viewsets.ModelViewSet):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.select_related("role", "manager").all().order_by("-created_at")
+    # the HR half of the row is serialized too, so pull it in the same query
+    queryset = (User.objects.select_related("role", "manager")
+                .prefetch_related("employee__hierarchy_level", "employee__department")
+                .all().order_by("-created_at"))
     serializer_class = UserSerializer
     filterset_fields = ["role", "status", "manager"]
     search_fields = ["name", "email", "employee_id", "phone"]

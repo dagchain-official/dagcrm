@@ -43,6 +43,16 @@ class UserSerializer(serializers.ModelSerializer):
     manager_name = serializers.CharField(source="manager.name", read_only=True)
     is_admin_view = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    # HR-profile fields. A user and an employee are the same person, so this one
+    # form manages both — the Employee record is created/updated alongside the
+    # login account (HR → People uses the identical field set).
+    hierarchy_level = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    department = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    salary = serializers.DecimalField(max_digits=12, decimal_places=2, write_only=True,
+                                      required=False, allow_null=True)
+    joining_date = serializers.DateField(write_only=True, required=False, allow_null=True)
+
+    HR_KEYS = ("hierarchy_level", "department", "salary", "joining_date")
 
     class Meta:
         model = User
@@ -50,6 +60,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id", "employee_id", "name", "email", "phone", "role", "role_name",
             "manager", "manager_name", "status", "is_active", "created_at",
             "is_admin_view", "password",
+            "hierarchy_level", "department", "salary", "joining_date",
         ]
         read_only_fields = ["created_at"]
 
@@ -57,20 +68,72 @@ class UserSerializer(serializers.ModelSerializer):
         from .utils import is_admin_view
         return is_admin_view(obj)
 
+    def validate(self, attrs):
+        # imported lazily — hr imports accounts, so a module-level import loops
+        from apps.hr.models import Department, HierarchyLevel
+        if attrs.get("hierarchy_level") and not HierarchyLevel.objects.filter(
+                id=attrs["hierarchy_level"]).exists():
+            raise serializers.ValidationError({"hierarchy_level": "Unknown org level."})
+        if attrs.get("department") and not Department.objects.filter(
+                id=attrs["department"]).exists():
+            raise serializers.ValidationError({"department": "Unknown department."})
+        return attrs
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        # .all() (not .first()) so the viewset's prefetch cache is used
+        emps = list(obj.employee.all())
+        emp = emps[0] if emps else None
+        data["employee_pk"] = emp.id if emp else None
+        data["hierarchy_level"] = emp.hierarchy_level_id if emp else None
+        data["hierarchy_level_name"] = (
+            emp.hierarchy_level.level_name if emp and emp.hierarchy_level else "")
+        data["department"] = emp.department_id if emp else None
+        data["department_name"] = emp.department.department_name if emp and emp.department else ""
+        data["salary"] = str(emp.salary) if emp else None
+        data["joining_date"] = emp.joining_date.isoformat() if emp and emp.joining_date else None
+        return data
+
+    def _sync_employee(self, user, hr, manager_given):
+        """Mirror the HR-profile half of the form onto the Employee record.
+        Only touched when the form actually sent one of these fields, so a plain
+        password reset never rewrites someone's HR profile."""
+        from apps.hr.models import Employee
+        if not hr and not manager_given:
+            return
+        emp = Employee.objects.filter(user=user).first() or Employee(user=user)
+        if "hierarchy_level" in hr:
+            emp.hierarchy_level_id = hr["hierarchy_level"]
+        if "department" in hr:
+            emp.department_id = hr["department"]
+        if "salary" in hr and hr["salary"] is not None:
+            emp.salary = hr["salary"]
+        if "joining_date" in hr:
+            emp.joining_date = hr["joining_date"]
+        if manager_given:
+            # the org tree is walked through Employee.manager — keep it in step
+            emp.manager_id = user.manager_id
+        emp.save()
+
     def create(self, validated_data):
         password = validated_data.pop("password", None) or "changeme123"
+        hr = {k: validated_data.pop(k) for k in self.HR_KEYS if k in validated_data}
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        self._sync_employee(user, hr, manager_given=True)
         return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
+        hr = {k: validated_data.pop(k) for k in self.HR_KEYS if k in validated_data}
+        manager_given = "manager" in validated_data
         for k, v in validated_data.items():
             setattr(instance, k, v)
         if password:
             instance.set_password(password)
         instance.save()
+        self._sync_employee(instance, hr, manager_given)
         return instance
 
 

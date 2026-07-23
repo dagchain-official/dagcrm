@@ -54,10 +54,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
     name = serializers.CharField(write_only=True, required=False)
     email = serializers.EmailField(write_only=True, required=False)
     role = serializers.IntegerField(write_only=True, required=False)
+    # login-account fields, so ONE form creates both the person and their login
+    phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    employee_id = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    status = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Employee
         fields = ["id", "user", "user_name", "name", "email", "role", "role_name",
+                  "phone", "employee_id", "password", "status",
                   "department", "department_name", "hierarchy_level", "hierarchy_level_name",
                   "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name"]
         extra_kwargs = {"user": {"required": False}}
@@ -85,6 +91,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
         data["name"] = u.name if u else ""
         data["email"] = u.email if u else ""
         data["role"] = u.role_id if u else None
+        data["phone"] = u.phone if u else ""
+        data["employee_id"] = u.employee_id if u else ""
+        data["status"] = u.status if u else ""
+        data["password"] = ""            # never echo a password back
         return data
 
     def _apply_role(self, user, role_id):
@@ -98,12 +108,30 @@ class EmployeeSerializer(serializers.ModelSerializer):
         slug = re.sub(r"[^a-z0-9]+", ".", (name or "employee").lower()).strip(".")
         return f"{slug or 'employee'}@dagos.com"
 
+    def _apply_account(self, user, phone, employee_id, status, password):
+        """Push the login-account fields onto the linked user."""
+        if not user:
+            return
+        if phone:
+            user.phone = phone
+        if employee_id:
+            user.employee_id = employee_id
+        if status:
+            user.status = status
+        if password:
+            user.set_password(password)
+        user.save()
+
     def create(self, validated_data):
         from django.contrib.auth import get_user_model
         User = get_user_model()
         name = validated_data.pop("name", None)
         email = validated_data.pop("email", None)
         role_id = validated_data.pop("role", None)
+        phone = validated_data.pop("phone", "")
+        employee_id = validated_data.pop("employee_id", "")
+        password = validated_data.pop("password", "")
+        status = validated_data.pop("status", "")
         if not validated_data.get("user"):
             if not name:
                 raise serializers.ValidationError({"name": "Employee name is required."})
@@ -112,14 +140,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
             while User.objects.filter(email=email).exists():
                 email = base.replace("@", f"{i}@"); i += 1
             validated_data["user"] = User.objects.create_user(
-                email=email, name=name, password="changeme123")
+                email=email, name=name, password=password or "changeme123")
         self._apply_role(validated_data["user"], role_id)
-        return super().create(validated_data)
+        self._apply_account(validated_data["user"], phone, employee_id, status, password)
+        return self._sync_manager(super().create(validated_data))
 
     def update(self, instance, validated_data):
         name = validated_data.pop("name", None)
         email = validated_data.pop("email", None)
         role_id = validated_data.pop("role", None)
+        phone = validated_data.pop("phone", "")
+        employee_id = validated_data.pop("employee_id", "")
+        password = validated_data.pop("password", "")
+        status = validated_data.pop("status", "")
         if instance.user and (name or email):
             if name:
                 instance.user.name = name
@@ -127,7 +160,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
                 instance.user.email = email
             instance.user.save()
         self._apply_role(instance.user, role_id)
-        return super().update(instance, validated_data)
+        self._apply_account(instance.user, phone, employee_id, status, password)
+        return self._sync_manager(super().update(instance, validated_data))
+
+    def _sync_manager(self, emp):
+        """Keep User.manager in step with Employee.manager — the Users page reads
+        the one, the org tree walks the other, and both forms are now the same."""
+        if emp.user_id and emp.user.manager_id != emp.manager_id:
+            emp.user.manager_id = emp.manager_id
+            emp.user.save(update_fields=["manager"])
+        return emp
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
