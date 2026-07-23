@@ -82,6 +82,62 @@ def assigned_targets(month, year, ctc_by_user):
     return out
 
 
+def rollup_for_incentives(month, year):
+    """Per-employee {target, revenue, is_manager} for the incentive run, with the
+    org roll-up applied.
+
+    A manager owns no customers, so revenue attributed directly to them is 0 —
+    grading them on that reads as 0% attainment and hands them a deduction while
+    their team is over target. They are measured on their TEAM instead: the sum
+    of their reports' targets and revenue (plus anything they closed themselves).
+
+    Unlike the board, a leaf with no assigned target falls back to CTC ×
+    multiplier — a month where nobody set targets must not dock everyone's pay.
+    """
+    emps = list(Employee.objects.select_related("user").exclude(user__is_superuser=True))
+    reports = {}
+    for e in emps:
+        reports.setdefault(e.manager_id, []).append(e)
+    user_ids = {e.user_id for e in emps}
+    by_user, _ = _revenue_by_user(month, year)
+    resolve = _multiplier_resolver()
+    ctc = {e.id: float(e.monthly_ctc(month, year)) for e in emps}
+    assigned = assigned_targets(month, year, {e.user_id: ctc[e.id] for e in emps})
+
+    out = {}
+
+    def walk(e, seen):
+        """Returns this node's headline (target, revenue); the parent sums those."""
+        if e.id in seen:                       # cycle guard (A->B->A)
+            return 0.0, 0.0
+        seen = seen | {e.id}
+        team_t = team_r = 0.0
+        kids = reports.get(e.user_id, [])
+        for c in kids:
+            t, r = walk(c, seen)
+            team_t += t
+            team_r += r
+        has_team = bool(kids)
+        own_r = by_user.get(e.user_id, 0.0)
+        if e.user_id in assigned:              # an explicit target always wins
+            target = assigned[e.user_id]
+        elif has_team:
+            target = team_t
+        else:
+            target = ctc[e.id] * float(resolve(e))
+        revenue = team_r + own_r if has_team else own_r
+        out[e.id] = {"target": target, "revenue": revenue, "is_manager": has_team}
+        return target, revenue
+
+    for e in (x for x in emps if not x.manager_id or x.manager_id not in user_ids):
+        walk(e, set())
+    for e in emps:                             # anyone stranded by a manager cycle
+        out.setdefault(e.id, {
+            "target": assigned.get(e.user_id) or ctc[e.id] * float(resolve(e)),
+            "revenue": by_user.get(e.user_id, 0.0), "is_manager": False})
+    return out
+
+
 def compute_targets(month, year):
     emps = list(Employee.objects.select_related("user", "hierarchy_level")
                 .exclude(user__is_superuser=True))

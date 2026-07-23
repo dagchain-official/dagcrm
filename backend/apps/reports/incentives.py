@@ -15,27 +15,10 @@ from decimal import Decimal
 from apps.crm.models import MetricDefinition
 from apps.hr.models import (
     ActivityIncentive, Employee, Incentive, IncentivePlan, IncentiveSlab, Payroll,
-    TargetMultiplier,
 )
 
 from .metrics import _leaf_stats
-from .pnl import _revenue_by_user
-from .targets import assigned_targets
-
-
-def _multiplier_resolver():
-    rows = list(TargetMultiplier.objects.filter(status="active"))
-    glob = next((r.multiplier for r in rows if r.scope == "global"), Decimal("1"))
-    by_level = {r.hierarchy_level_id: r.multiplier for r in rows if r.scope == "level"}
-    by_emp = {r.employee_id: r.multiplier for r in rows if r.scope == "employee"}
-
-    def resolve(e):
-        if e.id in by_emp:
-            return by_emp[e.id]
-        if e.hierarchy_level_id in by_level:
-            return by_level[e.hierarchy_level_id]
-        return glob
-    return resolve
+from .targets import rollup_for_incentives
 
 
 def _pick_slab(attainment, slabs):
@@ -94,13 +77,10 @@ def _plan_amount(plan, revenue, target, attain):
 def compute_incentives(month, year):
     emps = list(Employee.objects.select_related("user", "hierarchy_level")
                 .exclude(user__is_superuser=True))
-    by_user, _ = _revenue_by_user(month, year)
-    mult = _multiplier_resolver()
-    # Attainment is measured against the target the person was ACTUALLY given.
-    # Only when nothing was assigned do we fall back to CTC × multiplier —
-    # otherwise a month with no target would read as 0% and trigger deductions.
-    ctc = {e.id: float(e.monthly_ctc(month, year)) for e in emps}
-    assigned = assigned_targets(month, year, {e.user_id: ctc[e.id] for e in emps})
+    # Target and revenue both come from the org roll-up: an assigned target wins,
+    # a manager is graded on their team, and a leaf with no target set falls back
+    # to CTC × multiplier so an empty month can't dock everyone's pay.
+    roll = rollup_for_incentives(month, year)
 
     slabs = list(IncentiveSlab.objects.filter(status="active"))
     plans = {p.employee_id: p for p in IncentivePlan.objects.filter(month=month, year=year)}
@@ -110,8 +90,8 @@ def compute_incentives(month, year):
 
     rows = []
     for e in emps:
-        revenue = by_user.get(e.user_id, 0.0)
-        target = assigned.get(e.user_id) or ctc[e.id] * float(mult(e))
+        r = roll[e.id]
+        revenue, target = r["revenue"], r["target"]
         attain = (revenue / target * 100) if target else 0.0
 
         # A per-employee IncentivePlan (set with the target) takes PRIORITY over

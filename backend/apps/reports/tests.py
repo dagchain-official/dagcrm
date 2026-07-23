@@ -196,6 +196,55 @@ class TargetBoardSourceTests(TestCase):
         t = self._assign(25000)
         self.assertEqual(TargetSerializer(t).data["achieved"], 4000.0)
 
+    def test_a_manager_is_graded_on_their_team_not_on_zero(self):
+        """A manager owns no customers, so revenue attributed straight to them is
+        0. Grading them on that used to read as 0% and dock their pay while the
+        team was over target."""
+        from apps.crm.models import Customer
+        from apps.reports.incentives import compute_incentives
+        from apps.reports.targets import rollup_for_incentives
+        from apps.sales.models import Revenue
+
+        mgr = User.objects.create_user(email="mgr3@dagos.test", name="Kamni",
+                                       password="x", role=self.rm.role)
+        mgr_emp = Employee.objects.create(user=mgr, salary=20000)
+        self.emp.manager = mgr                     # the RM now reports to them
+        self.emp.save(update_fields=["manager"])
+
+        cust = Customer.objects.create(name="C", assigned_to=self.rm)
+        Revenue.objects.create(customer=cust, gross_revenue=50000)
+        self._assign(20000)                        # the RM's target: comfortably beaten
+
+        roll = rollup_for_incentives(7, 2026)
+        self.assertEqual(roll[self.emp.id]["revenue"], 50000.0)
+        # the manager inherits the team's target and revenue
+        self.assertEqual(roll[mgr_emp.id]["target"], 20000.0)
+        self.assertEqual(roll[mgr_emp.id]["revenue"], 50000.0)
+        self.assertTrue(roll[mgr_emp.id]["is_manager"])
+
+        rows = {r["id"]: r for r in compute_incentives(7, 2026)["rows"]}
+        self.assertEqual(rows[mgr_emp.id]["attainment"], 250.0)
+        self.assertEqual(rows[mgr_emp.id]["deduction"], 0)      # no longer docked
+        self.assertGreaterEqual(rows[mgr_emp.id]["total"], 0)
+
+    def test_a_manager_keeps_their_own_sales_on_top_of_the_team(self):
+        from apps.crm.models import Customer
+        from apps.reports.targets import rollup_for_incentives
+        from apps.sales.models import Revenue
+
+        mgr = User.objects.create_user(email="mgr4@dagos.test", name="Selling Mgr",
+                                       password="x", role=self.rm.role)
+        mgr_emp = Employee.objects.create(user=mgr, salary=20000)
+        self.emp.manager = mgr
+        self.emp.save(update_fields=["manager"])
+
+        Revenue.objects.create(customer=Customer.objects.create(name="Team", assigned_to=self.rm),
+                               gross_revenue=1000)
+        Revenue.objects.create(customer=Customer.objects.create(name="Own", assigned_to=mgr),
+                               gross_revenue=400)
+
+        self.assertEqual(rollup_for_incentives(7, 2026)[mgr_emp.id]["revenue"], 1400.0)
+
     def test_a_target_for_another_month_does_not_leak(self):
         t = self.Target.objects.create(name="June", target_type="revenue", value=99000,
                                        start_date="2026-06-01", end_date="2026-06-30")
