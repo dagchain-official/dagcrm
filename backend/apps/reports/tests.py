@@ -84,8 +84,9 @@ class DagChainCommissionTests(TestCase):
 
 
 class TargetBoardSourceTests(TestCase):
-    """Deleting an assigned target must be visible on the board — it falls back
-    to the CTC × multiplier default rather than leaving the old number behind."""
+    """The board shows ONLY targets that were actually assigned. No assignment
+    means no target — delete one and it leaves the board entirely, rather than
+    silently reverting to a CTC × multiplier figure nobody set."""
 
     def setUp(self):
         from apps.crm.models import Target, TargetAssignment
@@ -112,35 +113,54 @@ class TargetBoardSourceTests(TestCase):
         self.TargetAssignment.objects.create(target=t, user=self.rm)
         return t
 
-    def _derived(self):
-        """CTC × the seeded global multiplier — what the board shows by default."""
-        row = self._board()
-        return round(row["ctc"] * row["multiplier"], 2)
+    def _company(self, month=7):
+        from apps.reports.targets import compute_targets
+        return compute_targets(month, 2026)["company"]
 
-    def test_without_an_assignment_the_board_derives_the_target(self):
+    def test_no_assignment_means_no_target(self):
         row = self._board()
-        self.assertEqual(row["target"], self._derived())
+        self.assertEqual(row["target"], 0)
         self.assertFalse(row["assigned"])
+        self.assertEqual(self._company()["target"], 0)
+        # the CTC × multiplier figure is still offered, but only as a suggestion
+        self.assertEqual(row["suggested"], round(row["ctc"] * row["multiplier"], 2))
+        self.assertGreater(row["suggested"], 0)
 
-    def test_an_assigned_target_wins_over_the_formula(self):
+    def test_an_assigned_target_is_what_the_board_shows(self):
         self._assign(25000)
         row = self._board()
         self.assertEqual(row["target"], 25000.0)
         self.assertTrue(row["assigned"])
+        self.assertEqual(self._company()["target"], 25000.0)
 
-    def test_deleting_the_target_drops_it_from_the_board(self):
-        derived = self._derived()
+    def test_deleting_the_target_clears_it_from_the_board(self):
         t = self._assign(25000)
         self.assertEqual(self._board()["target"], 25000.0)
 
         t.delete()
         row = self._board()
-        self.assertEqual(row["target"], derived)     # back to CTC × multiplier
+        self.assertEqual(row["target"], 0)          # gone, not reverted to a formula
         self.assertFalse(row["assigned"])
+        self.assertEqual(self._company()["target"], 0)
 
-    def test_a_target_for_another_month_is_ignored(self):
+    def test_incentives_measure_against_the_assigned_target(self):
+        from apps.reports.incentives import compute_incentives
+
+        def target_for(month=7):
+            rows = compute_incentives(month, 2026)["rows"]
+            return next(r for r in rows if r["id"] == self.emp.id)["target"]
+
+        # nothing assigned -> falls back to CTC × multiplier, so a month with no
+        # target can't read as 0% attainment and hand out a deduction
+        self.assertEqual(target_for(), self._board()["suggested"])
+
+        self._assign(25000)
+        self.assertEqual(target_for(), 25000.0)
+
+    def test_a_target_for_another_month_does_not_leak(self):
         t = self.Target.objects.create(name="June", target_type="revenue", value=99000,
                                        start_date="2026-06-01", end_date="2026-06-30")
         self.TargetAssignment.objects.create(target=t, user=self.rm)
-        self.assertEqual(self._board()["target"], self._derived())
+        self.assertEqual(self._board()["target"], 0)        # July
         self.assertFalse(self._board()["assigned"])
+        self.assertEqual(self._company(month=6)["target"], 99000.0)

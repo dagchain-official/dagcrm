@@ -20,6 +20,7 @@ from apps.hr.models import (
 
 from .metrics import _leaf_stats
 from .pnl import _revenue_by_user
+from .targets import assigned_targets
 
 
 def _multiplier_resolver():
@@ -95,6 +96,11 @@ def compute_incentives(month, year):
                 .exclude(user__is_superuser=True))
     by_user, _ = _revenue_by_user(month, year)
     mult = _multiplier_resolver()
+    # Attainment is measured against the target the person was ACTUALLY given.
+    # Only when nothing was assigned do we fall back to CTC × multiplier —
+    # otherwise a month with no target would read as 0% and trigger deductions.
+    ctc = {e.id: float(e.monthly_ctc(month, year)) for e in emps}
+    assigned = assigned_targets(month, year, {e.user_id: ctc[e.id] for e in emps})
 
     slabs = list(IncentiveSlab.objects.filter(status="active"))
     plans = {p.employee_id: p for p in IncentivePlan.objects.filter(month=month, year=year)}
@@ -105,7 +111,7 @@ def compute_incentives(month, year):
     rows = []
     for e in emps:
         revenue = by_user.get(e.user_id, 0.0)
-        target = float(e.monthly_ctc(month, year) * mult(e))
+        target = assigned.get(e.user_id) or ctc[e.id] * float(mult(e))
         attain = (revenue / target * 100) if target else 0.0
 
         # A per-employee IncentivePlan (set with the target) takes PRIORITY over

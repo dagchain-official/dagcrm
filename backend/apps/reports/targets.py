@@ -94,16 +94,15 @@ def compute_targets(month, year):
     ctc = {e.id: e.monthly_ctc(month, year) for e in emps}   # one CTC calc per employee
     assigned = assigned_targets(month, year, {e.user_id: float(ctc[e.id]) for e in emps})
 
-    def own_target(e):
-        if e.user_id in assigned:            # an assigned target beats the formula
-            return assigned[e.user_id]
-        return float(ctc[e.id] * resolve(e))
-
     def node(e, seen):
         if e.id in seen:                  # cycle guard (A->B->A)
             return None
         seen = seen | {e.id}
-        o_target = own_target(e)
+        # NO assigned target = no target. CTC × multiplier is only what the
+        # Assign Target form SUGGESTS; it is not a target until someone sets it,
+        # so deleting the target really does clear the board.
+        o_target = assigned.get(e.user_id, 0.0)
+        suggested = float(ctc[e.id] * resolve(e))
         o_ach = by_user.get(e.user_id, 0.0)
         kids = sorted(reports.get(e.user_id, []),
                       key=lambda x: x.hierarchy_level.level_order if x.hierarchy_level else 999)
@@ -131,10 +130,12 @@ def compute_targets(month, year):
             "level_order": e.hierarchy_level.level_order if e.hierarchy_level else 999,
             "multiplier": float(resolve(e)),
             "ctc": round(float(ctc[e.id]), 2),
+            # what Assign Target would propose — shown greyed out, never counted
+            "suggested": round(suggested, 2),
             "own_target": round(o_target, 2), "own_achieved": round(o_ach, 2),
             "team_target": round(team_target, 2), "team_achieved": round(team_ach, 2),
             "is_manager": has_team,
-            # true = this number came from an assigned target, not CTC × multiplier
+            # true = a target was actually assigned to this person
             "assigned": e.user_id in assigned,
             "target": round(target, 2), "achieved": round(achieved, 2),
             "progress": round(min(100, achieved / target * 100), 1) if target else 0,
@@ -145,7 +146,7 @@ def compute_targets(month, year):
     tree = [n for n in (node(e, set()) for e in roots) if n]
     tree.sort(key=lambda n: n["level_order"])
 
-    total_target = round(sum(own_target(e) for e in emps), 2)
+    total_target = round(sum(assigned.get(e.user_id, 0.0) for e in emps), 2)
     total_ach = round(sum(by_user.get(e.user_id, 0.0) for e in emps), 2)
     return {
         "month": month, "year": year,
