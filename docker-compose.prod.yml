@@ -32,6 +32,11 @@ services:
       CORS_ALLOWED_ORIGINS: https://${DOMAIN},https://www.${DOMAIN}
       FRONTEND_URL: https://${DOMAIN}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # Twilio — click-to-call + WhatsApp (blank = manual mode, actions only logged)
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
     volumes:
       - static:/app/staticfiles
       - media:/app/media
