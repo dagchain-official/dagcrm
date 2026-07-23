@@ -157,6 +157,45 @@ class TargetBoardSourceTests(TestCase):
         self._assign(25000)
         self.assertEqual(target_for(), 25000.0)
 
+    def test_the_targets_list_is_scoped_and_names_the_assignee(self):
+        from rest_framework.test import APIClient
+
+        from apps.accounts.models import Role as _Role
+        outsider = User.objects.create_user(
+            email="out@dagos.test", name="Outsider", password="x",
+            role=_Role.objects.create(name="Sales Manager"))
+        Employee.objects.create(user=outsider, salary=1000)
+        theirs = self.Target.objects.create(name="Theirs", target_type="revenue",
+                                            value=1, start_date="2026-07-01",
+                                            end_date="2026-07-31")
+        self.TargetAssignment.objects.create(target=theirs, user=outsider)
+        self._assign(25000)
+
+        from apps.accounts.models import ModulePermission
+        ModulePermission.objects.create(role=self.rm.role, module="targets", can_view=True)
+        c = APIClient()
+        c.force_authenticate(user=self.rm)
+        rows = c.get("/api/targets/").data["results"]
+
+        self.assertEqual([r["assigned_to"] for r in rows], ["Rita"])   # not Outsider's
+        self.assertEqual(rows[0]["value"], "25000.00")
+
+    def test_achieved_counts_only_the_assignees_revenue(self):
+        from apps.crm.models import Customer
+        from apps.crm.serializers import TargetSerializer
+        from apps.sales.models import Revenue
+
+        other = User.objects.create_user(email="other@dagos.test", name="Other",
+                                         password="x", role=self.rm.role)
+        mine = Customer.objects.create(name="Mine", assigned_to=self.rm)
+        yours = Customer.objects.create(name="Yours", assigned_to=other)
+        # net_revenue is recomputed on save (gross − commission), so set gross
+        Revenue.objects.create(customer=mine, gross_revenue=4000)
+        Revenue.objects.create(customer=yours, gross_revenue=6000)
+
+        t = self._assign(25000)
+        self.assertEqual(TargetSerializer(t).data["achieved"], 4000.0)
+
     def test_a_target_for_another_month_does_not_leak(self):
         t = self.Target.objects.create(name="June", target_type="revenue", value=99000,
                                        start_date="2026-06-01", end_date="2026-06-30")

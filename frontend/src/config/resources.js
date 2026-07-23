@@ -314,6 +314,7 @@ export const RESOURCES = {
     ],
     columns: [
       { key: "name", label: "Target" },
+      { key: "assigned_to", label: "Assigned to" },
       { key: "target_type", label: "Type", badge: true },
       { key: "value", label: "Target", money: true },
       { key: "achieved", label: "Achieved", money: true },

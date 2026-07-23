@@ -266,31 +266,74 @@ class TargetAssignmentSerializer(serializers.ModelSerializer):
 class TargetSerializer(serializers.ModelSerializer):
     business_name = serializers.CharField(source="business.name", read_only=True)
     assignments = TargetAssignmentSerializer(many=True, read_only=True)
+    assigned_to = serializers.SerializerMethodField()
     achieved = serializers.SerializerMethodField()
     progress_pct = serializers.SerializerMethodField()
 
     class Meta:
         model = Target
         fields = ["id", "name", "target_type", "value", "business", "business_name",
-                  "start_date", "end_date", "assignments", "achieved", "progress_pct"]
+                  "start_date", "end_date", "assignments", "assigned_to",
+                  "achieved", "progress_pct"]
+
+    def get_assigned_to(self, obj):
+        """Who this target is for — the super admin is never named."""
+        names = []
+        for a in obj.assignments.all():
+            if a.user_id and a.user and not a.user.is_superuser:
+                names.append(a.user.name)
+            elif a.team_id and a.team:
+                names.append(f"{a.team.name} (team)")
+            elif a.department_id and a.department:
+                names.append(f"{a.department.department_name} (dept)")
+        return ", ".join(names)
+
+    def _assignee_ids(self, obj):
+        """User ids this target covers — None when it's assigned to nobody, which
+        means it's a company-wide target."""
+        from apps.accounts.models import Team, TeamMember
+        ids, any_assignment = set(), False
+        for a in obj.assignments.all():
+            if a.user_id:
+                ids.add(a.user_id)
+                any_assignment = True
+            elif a.team_id:
+                any_assignment = True
+                ids.update(TeamMember.objects.filter(team_id=a.team_id)
+                           .values_list("user_id", flat=True))
+                leader = Team.objects.filter(id=a.team_id).values_list("leader_id", flat=True).first()
+                if leader:
+                    ids.add(leader)
+        return ids if any_assignment else None
 
     def get_achieved(self, obj):
-        from django.db.models import Count, Sum
+        from django.db.models import Sum
+        from django.db.models.functions import Coalesce
         from apps.sales.models import Revenue
 
+        # Only what the ASSIGNEES brought in — a target set for one RM must not
+        # read the whole company's revenue as its achievement. Attribution is the
+        # same customer -> lead -> assigned_to path the P&L uses.
+        owners = self._assignee_ids(obj)
         rng = {"created_at__date__gte": obj.start_date, "created_at__date__lte": obj.end_date}
         if obj.target_type == "revenue":
             qs = Revenue.objects.filter(**rng)
             if obj.business_id:
                 qs = qs.filter(business_id=obj.business_id)
+            if owners is not None:
+                qs = qs.annotate(
+                    owner=Coalesce("customer__assigned_to", "customer__lead__assigned_to")
+                ).filter(owner__in=owners)
             return float(qs.aggregate(s=Sum("net_revenue"))["s"] or 0)
+
+        leads = Lead.objects.pipeline().filter(created_at__date__gte=obj.start_date,
+                                               created_at__date__lte=obj.end_date)
+        if owners is not None:
+            leads = leads.filter(assigned_to_id__in=owners)
         if obj.target_type == "leads":
-            return Lead.objects.pipeline().filter(created_at__date__gte=obj.start_date,
-                                                  created_at__date__lte=obj.end_date).count()
+            return leads.count()
         if obj.target_type == "conversions":
-            return Lead.objects.pipeline().filter(status="converted",
-                                                  created_at__date__gte=obj.start_date,
-                                                  created_at__date__lte=obj.end_date).count()
+            return leads.filter(status="converted").count()
         return 0
 
     def get_progress_pct(self, obj):

@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -632,9 +632,33 @@ class CommunicationViewSet(viewsets.ModelViewSet):
 
 
 class TargetViewSet(BusinessScopedMixin, viewsets.ModelViewSet):
-    queryset = Target.objects.select_related("business").prefetch_related("assignments").all()
+    queryset = (Target.objects.select_related("business")
+                .prefetch_related("assignments__user", "assignments__team",
+                                  "assignments__department")
+                # explicit order — the model has none, and paginating an
+                # unordered .distinct() queryset can repeat/skip rows
+                .order_by("-end_date", "-id"))
     serializer_class = TargetSerializer
     filterset_fields = ["target_type", "business"]
+
+    def get_queryset(self):
+        """You see your own target and your team's, nothing sideways or above.
+        Admins / Finance / HR see everything. A target assigned to nobody is
+        company-wide, so only an admin view gets it — for anyone else there is
+        no way to tell whose it is."""
+        from apps.accounts.access import is_admin_view, subordinate_user_ids
+        from apps.accounts.models import Team, TeamMember
+
+        qs = super().get_queryset()
+        user = self.request.user
+        role = getattr(getattr(user, "role", None), "name", "")
+        if is_admin_view(user) or role in ("Finance", "HR"):
+            return qs
+        keep = subordinate_user_ids(user, include_self=True)
+        team_ids = set(TeamMember.objects.filter(user_id__in=keep).values_list("team_id", flat=True))
+        team_ids.update(Team.objects.filter(leader_id__in=keep).values_list("id", flat=True))
+        return qs.filter(Q(assignments__user_id__in=keep)
+                         | Q(assignments__team_id__in=team_ids)).distinct()
 
 
 class TargetAssignmentViewSet(viewsets.ModelViewSet):
