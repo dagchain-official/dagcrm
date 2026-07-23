@@ -218,6 +218,35 @@ class UserViewSet(viewsets.ModelViewSet):
         rows.sort(key=lambda r: (rank.get(r["role_name"], 99), r["name"]))
         return Response(rows)
 
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def subordinates(self, request):
+        """People the caller may set a target for — their own team, downwards.
+        Feeds the Assign Target picker so it only offers names the API will
+        actually accept, and needs no `users` module (a Team Leader holds the
+        assign permission but not that module).
+
+        ?scope=business/team includes the caller themselves: a head assigning
+        their own org's target is the normal case. An individual target must
+        still go downwards, so the default leaves them out.
+        """
+        from apps.accounts.access import (ROLE_TO_LEVEL, can_assign_targets,
+                                          subordinate_user_ids)
+        user = request.user
+        if not can_assign_targets(user):
+            return Response([])
+        qs = (User.objects.filter(is_active=True, is_superuser=False)
+              .exclude(role__name="Super Admin").select_related("role"))
+        is_root = user.is_superuser or getattr(getattr(user, "role", None), "name", None) == "Super Admin"
+        if not is_root:
+            include_self = request.query_params.get("scope") in ("business", "team")
+            qs = qs.filter(id__in=subordinate_user_ids(user, include_self=include_self))
+        rank = {r: lvl[1] for r, lvl in ROLE_TO_LEVEL.items()}
+        rows = [{"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", ""),
+                 "label": f"{u.name} — {getattr(u.role, 'name', '') or 'No role'}"}
+                for u in qs]
+        rows.sort(key=lambda r: (rank.get(r["role_name"], 99), r["name"]))
+        return Response(rows)
+
 
 class EmailAccountViewSet(viewsets.ModelViewSet):
     """Self-service: a user manages their own 'from' business mailboxes."""
@@ -290,6 +319,32 @@ class TeamViewSet(viewsets.ModelViewSet):
     queryset = Team.objects.select_related("leader").prefetch_related("members").all()
     serializer_class = TeamSerializer
     search_fields = ["name"]
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def assignable(self, request):
+        """Teams the caller may set a target for: every member (and the leader)
+        has to sit inside their own subtree, which is exactly the check the
+        assign endpoint runs — so the picker can't offer a team that then 403s.
+        Needs no `teams` module, for the same reason as `subordinates`."""
+        from apps.accounts.access import can_assign_targets, subordinate_user_ids
+        user = request.user
+        if not can_assign_targets(user):
+            return Response([])
+        teams = Team.objects.select_related("leader").prefetch_related("members").order_by("name")
+        is_root = user.is_superuser or getattr(getattr(user, "role", None), "name", None) == "Super Admin"
+        reach = None if is_root else subordinate_user_ids(user, include_self=True)
+        rows = []
+        for t in teams:
+            uids = {m.user_id for m in t.members.all()}
+            if t.leader_id:
+                uids.add(t.leader_id)
+            if not uids:
+                continue                      # an empty team has no CTC to target
+            if reach is not None and not uids.issubset(reach):
+                continue
+            rows.append({"id": t.id, "name": t.name,
+                         "label": f"{t.name} ({len(uids)})"})
+        return Response(rows)
 
 
 class TeamMemberViewSet(viewsets.ModelViewSet):

@@ -46,9 +46,13 @@ export default function AssignTarget() {
   }, [incType]);
   const setSlab = (i, k, v) => setSlabs((s) => s.map((r, x) => (x === i ? { ...r, [k]: v } : r)));
 
+  // Scoped pickers: they list only who this user may actually assign to (their
+  // own team, downwards), and they need no `users`/`teams` module — a Team
+  // Leader holds the assign permission but not those modules.
   const refField = scope === "team"
-    ? { ref: "teams", labelKey: "name", label: "Team" }
-    : { ref: "users", labelKey: "name", label: scope === "business" ? "Business Head" : "Employee" };
+    ? { ref: "teams/assignable", labelKey: "label", label: "Team" }
+    : { ref: "users/subordinates", labelKey: "label",
+        label: scope === "business" ? "Business Head" : "Employee" };
 
   useEffect(() => { setId(""); setPreview(null); }, [scope]);
 
@@ -106,7 +110,7 @@ export default function AssignTarget() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="label">{refField.label}</label>
-            <RefSelect field={refField} value={id} onChange={setId} />
+            <RefSelect field={refField} value={id} onChange={setId} filterParam={{ scope }} />
           </div>
           <div>
             <label className="label">Target name (optional)</label>

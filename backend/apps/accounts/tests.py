@@ -82,3 +82,60 @@ class AssignTargetsPermissionTests(TestCase):
                                         password="x", is_superuser=True)
         self.assertTrue(can_assign_targets(boss))
         self.assertTrue(can_assign_to(boss, self.other_rm.id))    # outside any subtree
+
+
+class AssignTargetPickerTests(AssignTargetsPermissionTests):
+    """The Assign Target pickers must offer exactly what the API will accept —
+    and must work for a Team Leader, who holds the assign permission but has
+    neither the `users` nor the `teams` module."""
+
+    def _client(self, user):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        c.force_authenticate(user=user)
+        return c
+
+    def test_a_team_leader_gets_a_populated_people_list(self):
+        tl = self._person("Team Leader", "tl@dagos.test", self.mgr)
+        rm = self._person("Sales Executive", "tlrm@dagos.test", tl, role_obj=self.rm.role)
+        self._grant(tl.role, True)
+
+        res = self._client(tl).get("/api/users/subordinates/")
+        self.assertEqual(res.status_code, 200)          # not 403 — no `users` module needed
+        self.assertEqual([r["id"] for r in res.data], [rm.id])
+
+    def test_the_people_list_stops_at_the_edge_of_the_subtree(self):
+        self._grant(self.mgr.role, True)
+        ids = [r["id"] for r in self._client(self.mgr).get("/api/users/subordinates/").data]
+        self.assertIn(self.rm.id, ids)
+        for outsider in (self.head, self.other_mgr, self.other_rm, self.mgr):
+            self.assertNotIn(outsider.id, ids)
+
+    def test_business_scope_includes_the_caller_but_individual_does_not(self):
+        self._grant(self.mgr.role, True)
+        c = self._client(self.mgr)
+        self.assertNotIn(self.mgr.id,
+                         [r["id"] for r in c.get("/api/users/subordinates/?scope=user").data])
+        self.assertIn(self.mgr.id,
+                      [r["id"] for r in c.get("/api/users/subordinates/?scope=business").data])
+
+    def test_someone_without_the_permission_gets_an_empty_list(self):
+        self._grant(self.rm.role, False)
+        self.assertEqual(self._client(self.rm).get("/api/users/subordinates/").data, [])
+
+    def test_only_teams_fully_inside_the_subtree_are_offered(self):
+        from apps.accounts.models import Team, TeamMember
+        self._grant(self.mgr.role, True)
+
+        mine = Team.objects.create(name="Mine", leader=self.mgr)
+        TeamMember.objects.create(team=mine, user=self.rm)
+        theirs = Team.objects.create(name="Theirs", leader=self.other_mgr)
+        TeamMember.objects.create(team=theirs, user=self.other_rm)
+        mixed = Team.objects.create(name="Mixed", leader=self.mgr)
+        TeamMember.objects.create(team=mixed, user=self.other_rm)   # one outsider
+        Team.objects.create(name="Empty")
+
+        names = [t["name"] for t in self._client(self.mgr).get("/api/teams/assignable/").data]
+        self.assertEqual(names, ["Mine"])
+        for excluded in ("Theirs", "Mixed", "Empty"):
+            self.assertNotIn(excluded, names)
