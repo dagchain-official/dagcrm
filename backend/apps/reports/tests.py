@@ -187,6 +187,7 @@ class TargetBoardSourceTests(TestCase):
 
         other = User.objects.create_user(email="other@dagos.test", name="Other",
                                          password="x", role=self.rm.role)
+        Employee.objects.create(user=other, salary=1000)
         mine = Customer.objects.create(name="Mine", assigned_to=self.rm)
         yours = Customer.objects.create(name="Yours", assigned_to=other)
         # net_revenue is recomputed on save (gross − commission), so set gross
@@ -195,6 +196,32 @@ class TargetBoardSourceTests(TestCase):
 
         t = self._assign(25000)
         self.assertEqual(TargetSerializer(t).data["achieved"], 4000.0)
+
+    def test_a_managers_target_counts_their_teams_revenue(self):
+        """The Targets list, the Target Board and the incentive run must all
+        report the same number for a manager who owns no customers."""
+        from apps.crm.models import Customer
+        from apps.crm.serializers import TargetSerializer
+        from apps.reports.targets import rollup_for_incentives
+        from apps.sales.models import Revenue
+
+        mgr = User.objects.create_user(email="tl@dagos.test", name="Team Lead",
+                                       password="x", role=self.rm.role)
+        mgr_emp = Employee.objects.create(user=mgr, salary=30000)
+        self.emp.manager = mgr
+        self.emp.save(update_fields=["manager"])
+        Revenue.objects.create(
+            customer=Customer.objects.create(name="C", assigned_to=self.rm),
+            gross_revenue=73932.76)
+
+        t = self.Target.objects.create(name="TL", target_type="revenue", value=60000,
+                                       start_date="2026-07-01", end_date="2026-07-31")
+        self.TargetAssignment.objects.create(target=t, user=mgr)
+
+        self.assertEqual(TargetSerializer(t).data["achieved"], 73932.76)   # list
+        self.assertEqual(self._board()["achieved"], 73932.76)              # board (the RM)
+        self.assertEqual(rollup_for_incentives(7, 2026)[mgr_emp.id]["revenue"],
+                         73932.76)                                          # incentives
 
     def test_a_manager_is_graded_on_their_team_not_on_zero(self):
         """A manager owns no customers, so revenue attributed straight to them is

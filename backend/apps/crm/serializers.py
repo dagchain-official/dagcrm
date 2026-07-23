@@ -288,9 +288,25 @@ class TargetSerializer(serializers.ModelSerializer):
                 names.append(f"{a.department.department_name} (dept)")
         return ", ".join(names)
 
+    def _reports_map(self):
+        """manager_user_id -> [user_id], built once per serialisation pass."""
+        cache = getattr(self, "_reports_cache", None)
+        if cache is None:
+            from apps.hr.models import Employee
+            cache = {}
+            for uid, mid in Employee.objects.values_list("user_id", "manager_id"):
+                cache.setdefault(mid, []).append(uid)
+            self._reports_cache = cache
+        return cache
+
     def _assignee_ids(self, obj):
-        """User ids this target covers — None when it's assigned to nobody, which
-        means it's a company-wide target."""
+        """User ids this target covers — the assignees AND everyone under them.
+
+        A manager owns no customers, so counting only the name on the target
+        would show their achievement as 0 while their team is over the line.
+        The org roll-up is what the Target Board and the incentive run use.
+        None = assigned to nobody, i.e. a company-wide target.
+        """
         from apps.accounts.models import Team, TeamMember
         ids, any_assignment = set(), False
         for a in obj.assignments.all():
@@ -304,7 +320,15 @@ class TargetSerializer(serializers.ModelSerializer):
                 leader = Team.objects.filter(id=a.team_id).values_list("leader_id", flat=True).first()
                 if leader:
                     ids.add(leader)
-        return ids if any_assignment else None
+        if not any_assignment:
+            return None
+        reports, stack = self._reports_map(), list(ids)
+        while stack:                                  # walk down the org tree
+            for uid in reports.get(stack.pop(), []):
+                if uid and uid not in ids:
+                    ids.add(uid)
+                    stack.append(uid)
+        return ids
 
     def get_achieved(self, obj):
         from django.db.models import Sum

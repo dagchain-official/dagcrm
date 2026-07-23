@@ -178,7 +178,8 @@ def compute_targets(month, year):
             target = assigned[e.user_id]
         else:
             target = team_target if has_team else o_target
-        achieved = team_ach if has_team else o_ach
+        # a manager's number is their team's PLUS anything they closed themselves
+        achieved = team_ach + o_ach if has_team else o_ach
         return {
             "id": e.id, "user_id": e.user_id,
             "name": e.user.name if e.user else "—",
