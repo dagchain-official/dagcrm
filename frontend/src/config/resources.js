@@ -68,7 +68,9 @@ const PERSON_FIELDS = [
   // Role drives the org level — pick the role and the level follows, so there is
   // no "Org Level" field to keep in step with it.
   { key: "role", label: "Role", type: "ref", ref: "roles", labelKey: "name" },
-  { key: "manager", label: "Reports to (manager)", type: "ref", ref: "users/assignable", labelKey: "name" },
+  // users/managers, NOT users/assignable — a Business Head / Sales Director /
+  // HR lead can be someone's manager even though leads are never assigned to them
+  { key: "manager", label: "Reports to (manager)", type: "ref", ref: "users/managers", labelKey: "label" },
   { key: "department", label: "Department", type: "ref", ref: "departments", labelKey: "department_name" },
   { key: "salary", label: "Salary (monthly)", type: "number" },
   { key: "joining_date", label: "Joining date", type: "date" },

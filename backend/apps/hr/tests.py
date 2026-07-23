@@ -139,6 +139,34 @@ class CommonPersonFormTests(TestCase):
         self.assertFalse(s.is_valid())
         self.assertIn("manager", s.errors)
 
+    def test_nobody_can_report_to_themselves(self):
+        s = EmployeeSerializer(data=self._payload(name="Form J", email="j@dagos.test"))
+        self.assertTrue(s.is_valid(), s.errors)
+        emp = s.save()
+        s2 = EmployeeSerializer(emp, data={"manager": emp.user_id}, partial=True)
+        self.assertFalse(s2.is_valid())
+        self.assertIn("manager", s2.errors)
+
+    def test_managers_endpoint_offers_every_role(self):
+        from rest_framework.test import APIClient
+
+        # a plain Sales Executive fills this dropdown too — it must not need the
+        # `users` module, which RMs don't have
+        rm = User.objects.create_user(email="rm@dagos.test", name="Rita",
+                                      password="x", role=self.role)
+        head = User.objects.create_user(email="bh@dagos.test", name="Big Boss",
+                                        password="x", role=self.head)
+        client = APIClient()
+        client.force_authenticate(user=rm)
+        res = client.get("/api/users/managers/")
+
+        self.assertEqual(res.status_code, 200)
+        ids = [r["id"] for r in res.data]
+        self.assertIn(head.id, ids)                 # Business Head IS offered
+        self.assertIn(rm.id, ids)
+        self.assertLess(ids.index(head.id), ids.index(rm.id))   # top of the org first
+        self.assertEqual(res.data[ids.index(head.id)]["label"], "Big Boss — Business Head")
+
     def test_password_only_edit_leaves_the_hr_profile_alone(self):
         s = UserSerializer(data=self._payload(name="Form F", email="f@dagos.test"))
         self.assertTrue(s.is_valid(), s.errors)

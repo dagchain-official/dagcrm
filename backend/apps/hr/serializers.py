@@ -91,6 +91,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
         # HR staff (or a senior RM leading RMs) is a normal, valid setup.
         level = self._derived_level(attrs) or getattr(self.instance, "hierarchy_level", None)
         manager = attrs.get("manager") or getattr(self.instance, "manager", None)
+        own_user = attrs.get("user") or getattr(self.instance, "user", None)
+        if manager and own_user and manager.id == own_user.id:
+            raise serializers.ValidationError({"manager": "Someone can't report to themselves."})
         if level and manager:
             mgr_emp = Employee.objects.filter(user=manager).select_related("hierarchy_level").first()
             mgr_level = mgr_emp.hierarchy_level if mgr_emp else None

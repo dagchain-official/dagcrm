@@ -198,6 +198,24 @@ class UserViewSet(viewsets.ModelViewSet):
             for u in users
         ])
 
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def managers(self, request):
+        """Who a person can report to — the "Reports to" dropdown on the employee
+        form. This is NOT the lead-assignment list: a Business Head, Sales
+        Director, HR or Finance lead can all be someone's manager even though no
+        lead is ever assigned to them. Ordered top-of-the-org first.
+        (The super admin is never offered — they act through the system.)"""
+        from apps.accounts.access import ROLE_TO_LEVEL
+        users = (User.objects.filter(is_active=True, is_superuser=False)
+                 .exclude(role__name="Super Admin").select_related("role").order_by("name"))
+        rows = [{"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", ""),
+                 # role in the label so two people with similar names are tellable apart
+                 "label": f"{u.name} — {getattr(u.role, 'name', '') or 'No role'}"}
+                for u in users]
+        rank = {r: lvl[1] for r, lvl in ROLE_TO_LEVEL.items()}
+        rows.sort(key=lambda r: (rank.get(r["role_name"], 99), r["name"]))
+        return Response(rows)
+
 
 class EmailAccountViewSet(viewsets.ModelViewSet):
     """Self-service: a user manages their own 'from' business mailboxes."""
