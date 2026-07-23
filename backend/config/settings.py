@@ -161,4 +161,7 @@ NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "1") == "1"  # email on in-app notifica
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")       # voice caller id
+# Common desk number every click-to-call rings when the agent has no phone of
+# their own — the agent answers here, then Twilio bridges the lead.
+TWILIO_DESK_NUMBER = os.getenv("TWILIO_DESK_NUMBER", "")
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")   # e.g. +14155238886

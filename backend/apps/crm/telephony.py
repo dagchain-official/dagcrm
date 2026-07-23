@@ -29,13 +29,14 @@ def make_call(lead_phone, agent_phone=None):
     if not client or not settings.TWILIO_FROM_NUMBER:
         return {"live": False, "note": "Logged (configure Twilio for live calling)"}
     lead = _e164(lead_phone)
-    agent = _e164(agent_phone)
+    # ring the agent's own phone if they have one, else the shared desk number
+    agent = _e164(agent_phone) or _e164(getattr(settings, "TWILIO_DESK_NUMBER", ""))
     if not lead:
         return {"live": False, "error": "Lead has no phone number"}
     if not agent:
-        # without the agent's number we can't bridge the call — don't ring the
-        # lead with a call that just dials themselves.
-        return {"live": False, "note": "Logged — set the agent's phone number to place live calls"}
+        # without a number to ring we can't bridge the call — don't dial the
+        # lead onto themselves.
+        return {"live": False, "note": "Logged — set the desk number (or the agent's phone) for live calls"}
     try:
         call = client.calls.create(
             to=agent, from_=settings.TWILIO_FROM_NUMBER,
