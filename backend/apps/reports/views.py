@@ -512,11 +512,40 @@ def dagchain_account(request):
 @permission_classes([module_required("dagchain-users")])
 def dagchain_by_rm(request):
     """Per-RM DAGChain book — each employee's assigned users with node counts,
-    node spend, rewards, staked, DGC balance and referrals. Scoped by role."""
+    node spend, commission, rewards, staked, DGC balance and referrals. Scoped
+    by role. The three commission rates can be previewed per request with
+    ?validator_pct=&storage_pct=&staking_pct= without saving them."""
     from .dagchain_rm import compute_dagchain_by_rm, scoped_dagchain_by_rm
     emp = request.query_params.get("employee")
-    data = compute_dagchain_by_rm(int(emp) if emp else None)
+    override = {k: request.query_params.get(k)
+                for k in ("validator_pct", "storage_pct", "staking_pct")}
+    data = compute_dagchain_by_rm(int(emp) if emp else None, rate_override=override)
     return Response(scoped_dagchain_by_rm(request.user, data))
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([module_required("dagchain-users")])
+def dagchain_commission_rates(request):
+    """The saved DAGChain commission rates. Anyone who can see the report may
+    read them; only an admin view may change them."""
+    from apps.accounts.access import is_admin_view
+    from apps.integrations.models import DagChainCommissionRate
+    cfg = DagChainCommissionRate.get_solo()
+    if request.method == "PUT":
+        if not is_admin_view(request.user):
+            return Response({"detail": "Only administrators can change commission rates."},
+                            status=403)
+        for field in ("validator_pct", "storage_pct", "staking_pct"):
+            if field in request.data:
+                try:
+                    setattr(cfg, field, round(float(request.data[field] or 0), 2))
+                except (TypeError, ValueError):
+                    return Response({field: "Must be a number."}, status=400)
+        cfg.save()
+    return Response({"validator_pct": float(cfg.validator_pct),
+                     "storage_pct": float(cfg.storage_pct),
+                     "staking_pct": float(cfg.staking_pct),
+                     "can_edit": is_admin_view(request.user)})
 
 
 @api_view(["GET"])

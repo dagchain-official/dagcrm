@@ -131,6 +131,27 @@ class DagChainNode(models.Model):
         return f"{self.kind} · {self.node_key}"
 
 
+class DagChainCommissionRate(models.Model):
+    """Single global config: what an RM earns on their DAGChain users' activity.
+
+    Three separate bases, because a validator node, a storage node and staked
+    DGC are not worth the same to the business. Node rates are a percentage of
+    the node's purchase price (money), so they pay out in the node currency.
+    The staking rate is a percentage of the DGC staked, so it pays out in DGC —
+    the CRM holds no DGC price, so the two are never added together.
+    """
+    validator_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    storage_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    staking_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+    @classmethod
+    def get_solo(cls):
+        return cls.objects.order_by("id").first() or cls.objects.create()
+
+    def __str__(self):
+        return "DAGChain commission rates"
+
+
 class IntegrationLog(models.Model):
     connection = models.ForeignKey(IntegrationConnection, on_delete=models.CASCADE, related_name="logs")
     status = models.CharField(max_length=20)   # success / error / skipped
