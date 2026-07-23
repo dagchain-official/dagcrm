@@ -15,30 +15,48 @@ def _client():
         return None
 
 
+def _e164(num):
+    """Twilio needs E.164 (+123456789) — strip spaces, dashes and brackets."""
+    if not num:
+        return None
+    s = "".join(ch for ch in str(num) if ch.isdigit() or ch == "+")
+    return s or None
+
+
 def make_call(lead_phone, agent_phone=None):
     """Click-to-call: ring the agent, then dial the lead."""
     client = _client()
     if not client or not settings.TWILIO_FROM_NUMBER:
         return {"live": False, "note": "Logged (configure Twilio for live calling)"}
+    lead = _e164(lead_phone)
+    agent = _e164(agent_phone)
+    if not lead:
+        return {"live": False, "error": "Lead has no phone number"}
+    if not agent:
+        # without the agent's number we can't bridge the call — don't ring the
+        # lead with a call that just dials themselves.
+        return {"live": False, "note": "Logged — set the agent's phone number to place live calls"}
     try:
-        target = agent_phone or lead_phone
         call = client.calls.create(
-            to=target, from_=settings.TWILIO_FROM_NUMBER,
-            twiml=f"<Response><Dial>{lead_phone}</Dial></Response>",
+            to=agent, from_=settings.TWILIO_FROM_NUMBER,
+            twiml=f"<Response><Dial>{lead}</Dial></Response>",
         )
         return {"live": True, "sid": call.sid}
     except Exception as e:
-        return {"live": False, "error": str(e)[:120]}
+        return {"live": False, "error": str(e)[:160]}
 
 
 def send_whatsapp(lead_phone, body):
     client = _client()
     if not client or not settings.TWILIO_WHATSAPP_FROM:
         return {"live": False, "note": "Logged (configure Twilio WhatsApp to send live)"}
+    lead = _e164(lead_phone)
+    if not lead:
+        return {"live": False, "error": "Lead has no phone number"}
     try:
         msg = client.messages.create(
-            from_=f"whatsapp:{settings.TWILIO_WHATSAPP_FROM}",
-            to=f"whatsapp:{lead_phone}", body=body,
+            from_=f"whatsapp:{_e164(settings.TWILIO_WHATSAPP_FROM)}",
+            to=f"whatsapp:{lead}", body=body,
         )
         return {"live": True, "sid": msg.sid}
     except Exception as e:
