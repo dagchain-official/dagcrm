@@ -111,7 +111,10 @@ export const NAV = [
   {
     group: "Administration",
     items: [
-      { to: "/m/users", label: "Users", icon: Users },
+      // "Users" is deliberately NOT listed — a user and an employee are the same
+      // person and both pages share one form, so HR → People is the single place
+      // to add or edit someone. The /m/users route and the /users/ API still
+      // exist (every assign/manager/leader dropdown reads them).
       { to: "/m/roles", label: "Roles", icon: Shield },
       { to: "/m/teams", label: "Teams", icon: UsersRound },
       { to: "/permissions", label: "Permission Matrix", icon: ShieldCheck },

@@ -197,11 +197,7 @@ export const TOUR = [
   },
 
   // ---- Administration ----
-  {
-    route: "/m/users",
-    label: "Users",
-    content: "Create and manage user accounts, their roles and managers.",
-  },
+  // (no "Users" step — that page is off the sidebar; people are added from HR → People)
   {
     route: "/m/roles",
     label: "Roles",
