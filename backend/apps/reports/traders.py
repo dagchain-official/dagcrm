@@ -31,8 +31,9 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
     if not mids:
         return empty
 
-    qs = MetricEntry.objects.filter(metric_id__in=mids, employee__isnull=False,
-                                    customer__isnull=False)
+    qs = (MetricEntry.objects.filter(metric_id__in=mids, employee__isnull=False,
+                                     customer__isnull=False)
+          .exclude(employee__user__is_superuser=True))   # never surface the super admin
     if employee_id:
         qs = qs.filter(employee_id=employee_id)
     rows = qs.values("employee_id", "employee__user_id", "employee__user__name",

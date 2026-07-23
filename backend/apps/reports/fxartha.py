@@ -19,6 +19,13 @@ def _trades_metric_ids():
     return list(MetricDefinition.objects.filter(name__iexact="Trades Taken").values_list("id", flat=True))
 
 
+def _owner_name(user):
+    """Owner (RM) name for display — the super admin is never surfaced."""
+    if not user or getattr(user, "is_superuser", False):
+        return None
+    return user.name
+
+
 def _fxartha_customers():
     """FXArtha traders only. `exclude(external_id="")` alone also catches DAGChain
     users (they carry an external_id too), so drop anyone with a linked DAGChain
@@ -68,7 +75,7 @@ def compute_fxartha_traders(date_from=None, date_to=None, q=None):
 
         rows.append({
             "customer_id": c.id, "name": c.name, "email": c.email, "phone": c.phone,
-            "country": c.country, "rm": getattr(c.assigned_to, "name", None),
+            "country": c.country, "rm": _owner_name(c.assigned_to),
             "date": acct_date.isoformat() if acct_date else None,
             "lots": round(float(lots), 2),
             "trades": int(trades),
@@ -167,8 +174,8 @@ def fxartha_account_detail(customer):
         }
     return {
         "customer_id": customer.id,
-        "rm": getattr(customer.assigned_to, "name", None),
-        "rm_id": customer.assigned_to_id,
+        "rm": _owner_name(customer.assigned_to),
+        "rm_id": None if getattr(customer.assigned_to, "is_superuser", False) else customer.assigned_to_id,
         "account": account,
         "accounts_detail": [acct_view(x) for x in accounts],
         "orders": orders,

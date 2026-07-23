@@ -19,16 +19,19 @@ def compute_dagchain_by_rm(employee_id=None):
         spend=Sum("purchase_price"), rewards=Sum("rewards_earned"),
         staked=Sum("staked_amount"))}
 
-    emp_by_user = {e.user_id: e for e in Employee.objects.select_related("user")}
+    # the super admin is never surfaced as an owner anywhere
+    emp_by_user = {e.user_id: e for e in
+                   Employee.objects.select_related("user").exclude(user__is_superuser=True)}
     custs = Customer.objects.filter(dagchain__isnull=False).select_related("assigned_to", "dagchain")
 
     by_emp, emp_meta = defaultdict(list), {}
     for c in custs:
-        emp = emp_by_user.get(c.assigned_to_id) if c.assigned_to_id else None
+        owner = c.assigned_to if (c.assigned_to_id and not c.assigned_to.is_superuser) else None
+        emp = emp_by_user.get(owner.id) if owner else None
         if employee_id and (not emp or emp.id != employee_id):
             continue
         key = emp.id if emp else 0
-        emp_meta[key] = (c.assigned_to_id, getattr(c.assigned_to, "name", None) or "Unassigned")
+        emp_meta[key] = (getattr(owner, "id", None), getattr(owner, "name", None) or "Unassigned")
         prof, na = c.dagchain, node_agg.get(c.id, {})
         by_emp[key].append({
             "customer_id": c.id, "customer_name": c.name,

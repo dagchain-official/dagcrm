@@ -154,7 +154,13 @@ class LeadActivitySerializer(serializers.ModelSerializer):
 class LeadSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source="source.name", read_only=True)
     business_name = serializers.CharField(source="business.name", read_only=True)
-    assigned_name = serializers.CharField(source="assigned_to.name", read_only=True)
+    assigned_name = serializers.SerializerMethodField()
+
+    def get_assigned_name(self, obj):
+        """Owner name — the super admin is never revealed to anyone."""
+        u = getattr(obj, "assigned_to", None)
+        return None if (not u or u.is_superuser) else u.name
+
     interests = LeadInterestSerializer(many=True, read_only=True)
     activity_count = serializers.IntegerField(source="activities.count", read_only=True)
 
@@ -189,7 +195,13 @@ class LeadSerializer(serializers.ModelSerializer):
 class OpportunitySerializer(serializers.ModelSerializer):
     lead_name = serializers.CharField(source="lead.name", read_only=True)
     product_name = serializers.CharField(source="product.name", read_only=True)
-    assigned_name = serializers.CharField(source="assigned_to.name", read_only=True)
+    assigned_name = serializers.SerializerMethodField()
+
+    def get_assigned_name(self, obj):
+        """Owner name — the super admin is never revealed to anyone."""
+        u = getattr(obj, "assigned_to", None)
+        return None if (not u or u.is_superuser) else u.name
+
 
     class Meta:
         model = Opportunity
@@ -209,7 +221,13 @@ class CustomerProductSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     products = CustomerProductSerializer(many=True, read_only=True)
-    assigned_name = serializers.CharField(source="assigned_to.name", read_only=True)
+    assigned_name = serializers.SerializerMethodField()
+
+    def get_assigned_name(self, obj):
+        """Owner name — the super admin is never revealed to anyone."""
+        u = getattr(obj, "assigned_to", None)
+        return None if (not u or u.is_superuser) else u.name
+
 
     class Meta:
         model = Customer

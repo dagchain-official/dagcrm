@@ -503,7 +503,7 @@ def dagchain_account(request):
         "customer_id": cust.id,
         "name": prof.display_name or cust.name or (prof.email or "DAGChain User"),
         "email": prof.email or cust.email or "",
-        "rm": getattr(cust.assigned_to, "name", None),
+        "rm": None if getattr(cust.assigned_to, "is_superuser", False) else getattr(cust.assigned_to, "name", None),
         "profile": profile, "nodes": [node_row(n) for n in nodes], "totals": totals,
     })
 
