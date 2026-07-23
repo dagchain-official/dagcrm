@@ -114,8 +114,9 @@ ROLE_MATRIX = {
                        "leave-types payrolls incentives incentive-rules cost-categories employee-costs "
                        "target-multipliers performance-weights incentive-slabs activity-incentives "
                        "formula-rules")),
-        # businesses + products are read-only lookups the incentive-rule form needs
-        **_view(_split("users reports businesses products")),
+        # read-only lookups the HR forms need: roles (New Employee -> Role
+        # dropdown), users, and businesses/products for the incentive-rule form
+        **_view(_split("roles users reports businesses products")),
     },
     "Finance": {
         **_full(_split("revenues expenses commissions payrolls cost-categories employee-costs "
