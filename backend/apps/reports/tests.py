@@ -83,6 +83,57 @@ class DagChainCommissionTests(TestCase):
         self.assertEqual(row["node_spend"], 10019.0)        # revenue still reported
 
 
+class TradersLotsBookTests(TestCase):
+    """Lots & Commission is the RM's BOOK: every trader assigned to them, not
+    only the ones who happen to have traded."""
+
+    def setUp(self):
+        from apps.crm.models import MetricDefinition, MetricEntry
+        self.MetricEntry = MetricEntry
+        self.metric = MetricDefinition.objects.create(name="Lots Traded")
+        role = Role.objects.create(name="Sales Executive")
+        self.rm = User.objects.create_user(email="rm3@dagos.test", name="Himanshu",
+                                           password="x", role=role)
+        self.emp = Employee.objects.create(user=self.rm, salary=1000)
+
+    def _trader(self, name, lots=None):
+        from apps.crm.models import Customer
+        c = Customer.objects.create(name=name, external_id=f"fx-{name}",
+                                    assigned_to=self.rm)
+        if lots is not None:
+            self.MetricEntry.objects.create(metric=self.metric, customer=c,
+                                            employee=self.emp, value=lots,
+                                            date="2026-07-10")
+        return c
+
+    def test_traders_with_no_lots_still_count_on_the_book(self):
+        from apps.reports.traders import compute_traders_lots
+        for i in range(8):
+            self._trader(f"traded-{i}", lots=i + 1)
+        for i in range(6):
+            self._trader(f"never-traded-{i}")          # no lots row at all
+
+        data = compute_traders_lots(7, 2026, rate=2)
+        me = next(e for e in data["employees"] if e["employee_id"] == self.emp.id)
+
+        self.assertEqual(me["trader_count"], 14)       # not 8
+        self.assertEqual(data["grand"]["traders"], 14)
+        self.assertEqual(me["lots_total"], 36.0)       # 1+2+…+8
+        self.assertEqual(me["commission_total"], 72.0)
+
+        zero = [t for t in me["traders"] if t["lots_total"] == 0]
+        self.assertEqual(len(zero), 6)
+        self.assertEqual(zero[0]["commission_total"], 0)
+
+    def test_a_trader_with_no_rm_is_listed_as_unassigned(self):
+        from apps.crm.models import Customer
+        from apps.reports.traders import compute_traders_lots
+        Customer.objects.create(name="Orphan", external_id="fx-orphan")
+
+        names = {e["name"] for e in compute_traders_lots(7, 2026)["employees"]}
+        self.assertIn("Unassigned", names)
+
+
 class TargetBoardSourceTests(TestCase):
     """The board shows ONLY targets that were actually assigned. No assignment
     means no target — delete one and it leaves the board entirely, rather than

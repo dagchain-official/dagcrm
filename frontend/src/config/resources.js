@@ -221,7 +221,9 @@ export const RESOURCES = {
       { key: "phone", label: "Phone" },
       { key: "country", label: "Country", type: "select", options: COUNTRY_OPTIONS, dialTo: "phone" },
       { key: "source", label: "Source", type: "ref", ref: "lead-sources/social", labelKey: "name" },
-      { key: "assigned_to", label: "Assign to", type: "ref", ref: "users/assignable", labelKey: "name" },
+      // hidden from a Sales Executive — they work their own leads and the API
+      // stamps a new lead onto whoever created it
+      { key: "assigned_to", label: "Assign to", type: "ref", ref: "users/assignable", labelKey: "name", assignerOnly: true },
       { key: "status", label: "Status", type: "select", options: sel("new", "contacted", "qualified", "converted", "lost") },
     ],
   },

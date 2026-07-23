@@ -166,6 +166,14 @@ export default function ResourceTable({ resource: propResource }) {
     [cfg]
   );
 
+  // `assignerOnly` fields (e.g. a lead's "Assign to") are dropped for someone who
+  // can't hand work to others — the API forces those onto the creator anyway, so
+  // showing the picker would just promise something it won't honour.
+  const formFields = useMemo(
+    () => (cfg?.fields || []).filter((f) => !f.assignerOnly || user?.can_assign_leads),
+    [cfg, user]
+  );
+
   if (!cfg) return <EmptyState title="Unknown module" hint={resource} />;
 
   const fetchAll = async () => {
@@ -383,7 +391,7 @@ export default function ResourceTable({ resource: propResource }) {
               <Calculator size={15} /> Auto-Calculate
             </button>
           )}
-          {canCreate && (resource !== "leads" || user?.can_assign_leads) && (
+          {canCreate && (
             <button className="btn-primary" data-tour="rt-new" onClick={() => setModal({ mode: "create", row: blank })}>
               <Plus size={16} /> New
             </button>
@@ -488,7 +496,7 @@ export default function ResourceTable({ resource: propResource }) {
       <Modal open={!!modal} onClose={() => setModal(null)}
         title={`${modal?.mode === "edit" ? "Edit" : "New"} ${singular(cfg.title)}`}>
         {modal && (
-          <DataForm fields={cfg.fields} initial={modal.row} submitting={saving} autofill={cfg.autofill}
+          <DataForm fields={formFields} initial={modal.row} submitting={saving} autofill={cfg.autofill}
             onSubmit={save} onCancel={() => setModal(null)} />
         )}
       </Modal>
