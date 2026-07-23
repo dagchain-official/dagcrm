@@ -16,11 +16,20 @@ def _client():
 
 
 def _e164(num):
-    """Twilio needs E.164 (+123456789) — strip spaces, dashes and brackets."""
+    """Twilio needs E.164 (+919876543210). Strips spaces/dashes/brackets and
+    adds the default country code to bare local numbers (e.g. 8435257954)."""
     if not num:
         return None
     s = "".join(ch for ch in str(num) if ch.isdigit() or ch == "+")
-    return s or None
+    if not s:
+        return None
+    if s.startswith("+"):
+        return s
+    s = s.lstrip("0")                      # drop trunk prefix (0XXXXXXXXXX)
+    cc = (getattr(settings, "TWILIO_DEFAULT_COUNTRY_CODE", "") or "").strip()
+    if cc and len(s) <= 10:                # bare local number -> prepend country code
+        return (cc if cc.startswith("+") else "+" + cc) + s
+    return "+" + s                         # already carries a country code
 
 
 def make_call(lead_phone, agent_phone=None):

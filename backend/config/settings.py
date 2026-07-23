@@ -164,4 +164,6 @@ TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")       # voice caller id
 # Common desk number every click-to-call rings when the agent has no phone of
 # their own — the agent answers here, then Twilio bridges the lead.
 TWILIO_DESK_NUMBER = os.getenv("TWILIO_DESK_NUMBER", "")
+# Country code added to bare local numbers (leads often have no +CC).
+TWILIO_DEFAULT_COUNTRY_CODE = os.getenv("TWILIO_DEFAULT_COUNTRY_CODE", "+91")
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")   # e.g. +14155238886
