@@ -90,11 +90,11 @@ export default function TradersLots() {
         <Stat icon={Coins} label="Commission (all-time)" value={money(g.commission_total)} tint="bg-amber-100 text-amber-600" />
       </div>
       <p className="text-xs text-ink-400 -mt-2 flex flex-wrap items-center gap-1">
-        Rate = <b className="text-ink-600">{money(d.rate)}</b> per lot — set in
-        <Link to="/hr/payroll" className="inline-flex items-center gap-1 text-brand-600 font-medium hover:underline">
-          <Settings2 size={12} /> Activity Incentives
+        Universal rate = <b className="text-ink-600">{money(d.rate)}</b> per lot — set it (and per-RM overrides) in
+        <Link to="/commission-rules" className="inline-flex items-center gap-1 text-brand-600 font-medium hover:underline">
+          <Settings2 size={12} /> Commission Rules
         </Link>
-        (metric “Lots Traded”). Enter a rate in the box above to change the preview only · Month = {MONTHS[month - 1]} {year}.
+        . Enter a rate in the box above to preview a different one · Month = {MONTHS[month - 1]} {year}.
       </p>
 
       {/* employee → traders */}

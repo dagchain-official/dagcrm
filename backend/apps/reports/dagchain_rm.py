@@ -3,10 +3,10 @@ nodes, node spend (revenue), commission, rewards, staked, DGC balance and
 referrals. Mirrors the FX Artha "Lots & Commission" report and is scoped the
 same way (admins/Finance/HR see all; a manager sees their subtree; an RM sees own).
 
-Commission runs on THREE separate bases, each with its own rate: validator node
-purchases, storage node purchases, and staked DGC. The two node rates pay out in
-money; the staking rate pays out in DGC, so it is reported in its own column and
-never added into the money total.
+Commission is PER PRODUCT: each node pays its package's rate (percent of the
+node's purchase price), with a per-RM override where set. Staking pays its own
+rate (percent of the DGC staked). Node commission is money; staking commission
+is DGC, so it stays in its own column and is never added into the money total.
 """
 from collections import defaultdict
 
@@ -19,38 +19,26 @@ SUM_KEYS = ["validator_nodes", "storage_nodes", "node_spend", "validator_spend",
             "ref_earnings"]
 
 
-def _rates(override=None):
-    """Configured commission rates, with an optional per-request preview override."""
-    from apps.integrations.models import DagChainCommissionRate
-    cfg = DagChainCommissionRate.get_solo()
-    out = {"validator_pct": float(cfg.validator_pct), "storage_pct": float(cfg.storage_pct),
-           "staking_pct": float(cfg.staking_pct)}
-    for k, v in (override or {}).items():
-        if k in out and v not in (None, ""):
-            try:
-                out[k] = float(v)
-            except (TypeError, ValueError):
-                pass
-    return out
-
-
 def compute_dagchain_by_rm(employee_id=None, rate_override=None):
     from apps.crm.models import Customer
     from apps.hr.models import Employee
     from apps.integrations.models import DagChainNode
 
-    rates = _rates(rate_override)
-    v_pct, s_pct, st_pct = (rates["validator_pct"] / 100, rates["storage_pct"] / 100,
-                            rates["staking_pct"] / 100)
+    from .commission import load_rules, rate_for
 
+    universal, overrides = load_rules("dagchain")
+
+    # per-customer node roll-up, plus per-(customer, kind, package) spend so each
+    # package can be paid at its own rate
     node_agg = {n["customer_id"]: n for n in DagChainNode.objects.values("customer_id").annotate(
         val=Count("id", filter=Q(kind="validator")),
         sto=Count("id", filter=Q(kind="storage")),
         spend=Sum("purchase_price"), rewards=Sum("rewards_earned"),
-        staked=Sum("staked_amount"),
-        # split by kind — a validator and a storage node pay different commission
-        val_spend=Sum("purchase_price", filter=Q(kind="validator")),
-        sto_spend=Sum("purchase_price", filter=Q(kind="storage")))}
+        staked=Sum("staked_amount"))}
+    pkg_spend = defaultdict(lambda: defaultdict(float))   # customer_id -> {(kind,pkg): spend}
+    for r in (DagChainNode.objects.exclude(package="")
+              .values("customer_id", "kind", "package").annotate(s=Sum("purchase_price"))):
+        pkg_spend[r["customer_id"]][(r["kind"], r["package"])] += float(r["s"] or 0)
 
     # the super admin is never surfaced as an owner anywhere
     emp_by_user = {e.user_id: e for e in
@@ -66,13 +54,21 @@ def compute_dagchain_by_rm(employee_id=None, rate_override=None):
         key = emp.id if emp else 0
         emp_meta[key] = (getattr(owner, "id", None), getattr(owner, "name", None) or "Unassigned")
         prof, na = c.dagchain, node_agg.get(c.id, {})
-        val_spend = float(na.get("val_spend") or 0)
-        sto_spend = float(na.get("sto_spend") or 0)
+        emp_id = emp.id if emp else None
+        # each package paid at its own rate; unassigned (key 0) earns nothing
+        val_spend = sto_spend = comm_validator = comm_storage = 0.0
+        for (kind, pkg), spend in pkg_spend.get(c.id, {}).items():
+            pct = rate_for(universal, overrides, pkg, emp_id) / 100 if emp_id else 0.0
+            if kind == "validator":
+                val_spend += spend
+                comm_validator += spend * pct
+            else:
+                sto_spend += spend
+                comm_storage += spend * pct
         # real contract staking from the profile (per-node stakedAmount is 0);
         # fall back to the node figure only if the profile has none
         staked = float(prof.staked_amount or 0) or float(na.get("staked") or 0)
-        comm_validator = val_spend * v_pct
-        comm_storage = sto_spend * s_pct
+        st_pct = rate_for(universal, overrides, "staking", emp_id) / 100 if emp_id else 0.0
         by_emp[key].append({
             "customer_id": c.id, "customer_name": c.name,
             "validator_nodes": na.get("val") or 0, "storage_nodes": na.get("sto") or 0,
@@ -103,7 +99,7 @@ def compute_dagchain_by_rm(employee_id=None, rate_override=None):
 
     grand = totals(employees, SUM_KEYS)
     grand["customers"] = sum(e["customer_count"] for e in employees)
-    return {"employees": employees, "grand": grand, "rates": rates}
+    return {"employees": employees, "grand": grand}
 
 
 def scoped_dagchain_by_rm(user, data):
@@ -115,4 +111,4 @@ def scoped_dagchain_by_rm(user, data):
     emps = [e for e in data["employees"] if e["user_id"] in keep]
     grand = {k: round(sum(e[k] for e in emps), 2) for k in SUM_KEYS}
     grand["customers"] = sum(e["customer_count"] for e in emps)
-    return {"employees": emps, "grand": grand, "rates": data.get("rates", {})}
+    return {"employees": emps, "grand": grand}

@@ -33,10 +33,21 @@ def lots_rate():
 def compute_traders_lots(month, year, rate=None, employee_id=None):
     from apps.hr.models import Employee
 
+    from .commission import load_rules, rate_for
     from .fxartha import _fxartha_customers
 
     mids = _lots_metric_ids()
-    rate = lots_rate() if rate is None else float(rate)
+    # a per-lot rate, per RM: a passed `rate` previews one rate for everyone;
+    # otherwise each RM's override, else the universal rule, else the legacy
+    # Activity-Incentive rate so nothing changes until a rule is set.
+    preview = None if rate is None else float(rate)
+    universal, overrides = load_rules("fxartha")
+    fallback = lots_rate()
+
+    def rate_of(emp_id):
+        if preview is not None:
+            return preview
+        return rate_for(universal, overrides, "lots", emp_id, fallback=fallback)
 
     # lots per trader, whoever recorded them — the book follows the trader
     tot, mon = defaultdict(float), defaultdict(float)
@@ -61,11 +72,12 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
             continue
         key = emp.id if emp else 0
         emp_meta[key] = (getattr(owner, "id", None), getattr(owner, "name", None) or "Unassigned")
+        r = rate_of(emp.id if emp else None)
         lm, lt = mon.get(c.id, 0.0), tot.get(c.id, 0.0)
         by_emp[key].append({
             "customer_id": c.id, "customer_name": c.name,
             "lots_month": round(lm, 2), "lots_total": round(lt, 2),
-            "commission_month": round(lm * rate, 2), "commission_total": round(lt * rate, 2),
+            "commission_month": round(lm * r, 2), "commission_total": round(lt * r, 2),
         })
 
     employees = []
@@ -73,12 +85,14 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
         traders.sort(key=lambda t: t["lots_total"], reverse=True)
         lm = sum(t["lots_month"] for t in traders)
         lt = sum(t["lots_total"] for t in traders)
+        cm = sum(t["commission_month"] for t in traders)
+        ct = sum(t["commission_total"] for t in traders)
         user_id, name = emp_meta[key]
         employees.append({
-            "employee_id": key, "user_id": user_id, "name": name,
+            "employee_id": key, "user_id": user_id, "name": name, "rate": rate_of(key or None),
             "trader_count": len(traders), "traders": traders,
             "lots_month": round(lm, 2), "lots_total": round(lt, 2),
-            "commission_month": round(lm * rate, 2), "commission_total": round(lt * rate, 2),
+            "commission_month": round(cm, 2), "commission_total": round(ct, 2),
         })
     employees.sort(key=lambda e: e["lots_total"], reverse=True)
 
@@ -89,7 +103,11 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
         "commission_month": round(sum(e["commission_month"] for e in employees), 2),
         "commission_total": round(sum(e["commission_total"] for e in employees), 2),
     }
-    return {"month": month, "year": year, "rate": rate, "employees": employees, "grand": grand}
+    # a single headline rate only makes sense in preview mode; otherwise rates
+    # vary per RM, so report the universal one for the caption
+    headline = preview if preview is not None else (universal.get("lots", fallback))
+    return {"month": month, "year": year, "rate": headline,
+            "employees": employees, "grand": grand}
 
 
 def scoped_traders_lots(user, data):

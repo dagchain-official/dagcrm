@@ -472,10 +472,25 @@ def dagchain_account(request):
 
     nodes = list(DagChainNode.objects.filter(customer=cust).order_by("kind", "-purchase_price"))
 
+    # commission this user earns for their RM — per node package, at the owner's
+    # effective rate (override else universal), so clicking a user shows exactly
+    # where their commission comes from
+    from apps.hr.models import Employee
+
+    from .commission import load_rules, rate_for
+    universal, overrides = load_rules("dagchain")
+    owner_emp = (Employee.objects.filter(user_id=cust.assigned_to_id).first()
+                 if cust.assigned_to_id else None)
+    owner_emp_id = owner_emp.id if owner_emp else None
+
     def f(v):
         return float(v or 0)
 
+    def node_pct(n):
+        return rate_for(universal, overrides, n.package, owner_emp_id) if owner_emp_id else 0.0
+
     def node_row(n):
+        pct = node_pct(n)
         return {
             "id": n.id, "kind": n.kind, "node_key": n.node_key, "package": n.package,
             "purchase_price": f(n.purchase_price), "currency": n.currency,
@@ -485,6 +500,7 @@ def dagchain_account(request):
             "effective_apy": f(n.effective_apy), "capacity": n.capacity,
             "is_staked": n.is_staked, "staked_amount": f(n.staked_amount),
             "staking_requirement": f(n.staking_requirement), "opened_at": n.opened_at,
+            "commission_pct": pct, "commission": round(f(n.purchase_price) * pct / 100, 2),
         }
 
     profile = {
@@ -511,6 +527,11 @@ def dagchain_account(request):
         "staked": f(prof.staked_amount) or sum(f(n.staked_amount) for n in nodes),
         "staked_stakes": prof.staked_stakes,
         "staked_nodes": sum(1 for n in nodes if n.is_staked),
+        # node commission (money) + staking commission (DGC) for this user's RM
+        "commission": round(sum(f(n.purchase_price) * node_pct(n) / 100 for n in nodes), 2),
+        "comm_staking": round(
+            f(prof.staked_amount) * (rate_for(universal, overrides, "staking", owner_emp_id)
+                                     if owner_emp_id else 0.0) / 100, 4),
     }
     return Response({
         "customer_id": cust.id,
@@ -525,40 +546,65 @@ def dagchain_account(request):
 @permission_classes([module_required("dagchain-users")])
 def dagchain_by_rm(request):
     """Per-RM DAGChain book — each employee's assigned users with node counts,
-    node spend, commission, rewards, staked, DGC balance and referrals. Scoped
-    by role. The three commission rates can be previewed per request with
-    ?validator_pct=&storage_pct=&staking_pct= without saving them."""
+    node spend, per-product commission, rewards, staked, DGC balance and
+    referrals. Scoped by role. Rates come from the Commission Rules config."""
     from .dagchain_rm import compute_dagchain_by_rm, scoped_dagchain_by_rm
     emp = request.query_params.get("employee")
-    override = {k: request.query_params.get(k)
-                for k in ("validator_pct", "storage_pct", "staking_pct")}
-    data = compute_dagchain_by_rm(int(emp) if emp else None, rate_override=override)
+    data = compute_dagchain_by_rm(int(emp) if emp else None)
     return Response(scoped_dagchain_by_rm(request.user, data))
 
 
 @api_view(["GET", "PUT"])
-@permission_classes([module_required("dagchain-users")])
-def dagchain_commission_rates(request):
-    """The saved DAGChain commission rates. Anyone who can see the report may
-    read them; only an admin view may change them."""
-    from apps.accounts.access import is_admin_view
-    from apps.integrations.models import DagChainCommissionRate
-    cfg = DagChainCommissionRate.get_solo()
+def commission_rules(request):
+    """Commission rates per product, with per-RM overrides. Read = the product
+    list (with each product's universal rate) plus every override, and the RMs
+    a rate can be set for. Write = upsert one rule (admin only).
+
+    PUT body: {platform, product_key, rate, employee?}. employee omitted/null =
+    the universal rate; an id = that RM's override. rate blank/"" deletes it.
+    """
+    from apps.accounts.access import (is_admin_view, subordinate_user_ids,
+                                      ASSIGNABLE_LEAD_ROLES)
+    from apps.hr.models import Employee
+    from apps.integrations.models import CommissionRule
+
+    from .commission import commission_products, load_rules
+
+    can_edit = is_admin_view(request.user)
     if request.method == "PUT":
-        if not is_admin_view(request.user):
-            return Response({"detail": "Only administrators can change commission rates."},
-                            status=403)
-        for field in ("validator_pct", "storage_pct", "staking_pct"):
-            if field in request.data:
-                try:
-                    setattr(cfg, field, round(float(request.data[field] or 0), 2))
-                except (TypeError, ValueError):
-                    return Response({field: "Must be a number."}, status=400)
-        cfg.save()
-    return Response({"validator_pct": float(cfg.validator_pct),
-                     "storage_pct": float(cfg.storage_pct),
-                     "staking_pct": float(cfg.staking_pct),
-                     "can_edit": is_admin_view(request.user)})
+        if not can_edit:
+            return Response({"detail": "Only administrators can change commission rates."}, status=403)
+        platform = request.data.get("platform")
+        key = request.data.get("product_key")
+        if platform not in ("fxartha", "dagchain") or not key:
+            return Response({"detail": "platform and product_key are required."}, status=400)
+        emp_id = request.data.get("employee") or None
+        raw = request.data.get("rate")
+        if raw in (None, ""):
+            CommissionRule.objects.filter(platform=platform, product_key=key,
+                                          employee_id=emp_id).delete()
+        else:
+            try:
+                rate = round(float(raw), 4)
+            except (TypeError, ValueError):
+                return Response({"rate": "Must be a number."}, status=400)
+            CommissionRule.objects.update_or_create(
+                platform=platform, product_key=key, employee_id=emp_id,
+                defaults={"rate": rate})
+
+    products = commission_products()
+    # the RMs an override can target — sales roles who own a book, never the admin
+    emps = (Employee.objects.filter(user__role__name__in=ASSIGNABLE_LEAD_ROLES)
+            .exclude(user__is_superuser=True).select_related("user"))
+    _, fx_over = load_rules("fxartha")
+    _, dc_over = load_rules("dagchain")
+    return Response({
+        "products": products,
+        "employees": [{"id": e.id, "name": e.user.name} for e in emps],
+        "overrides": {"fxartha": {str(k): v for k, v in fx_over.items()},
+                      "dagchain": {str(k): v for k, v in dc_over.items()}},
+        "can_edit": can_edit,
+    })
 
 
 @api_view(["GET"])

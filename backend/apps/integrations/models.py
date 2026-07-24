@@ -156,6 +156,34 @@ class DagChainCommissionRate(models.Model):
         return "DAGChain commission rates"
 
 
+class CommissionRule(models.Model):
+    """One commission rate for a product, optionally overridden for one RM.
+
+    platform + product_key identify what pays:
+      fxartha  · "lots"            -> a per-LOT amount ($)
+      dagchain · <node package>    -> a PERCENT of the node's purchase price
+      dagchain · "staking"         -> a PERCENT of the DGC the user staked
+
+    employee = NULL is the UNIVERSAL rate (everyone). A row with an employee is
+    that RM's OVERRIDE, used in place of the universal one for their book. The
+    node package key is the package stored ON the node (not the current catalogue
+    name) so a rate always matches the nodes people actually bought.
+    """
+    PLATFORMS = [("fxartha", "FX Artha"), ("dagchain", "DAGChain")]
+    platform = models.CharField(max_length=20, choices=PLATFORMS)
+    product_key = models.CharField(max_length=120)
+    employee = models.ForeignKey("hr.Employee", on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name="commission_rules")
+    rate = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+
+    class Meta:
+        unique_together = ("platform", "product_key", "employee")
+
+    def __str__(self):
+        who = self.employee_id or "universal"
+        return f"{self.platform}:{self.product_key} [{who}] = {self.rate}"
+
+
 class IntegrationLog(models.Model):
     connection = models.ForeignKey(IntegrationConnection, on_delete=models.CASCADE, related_name="logs")
     status = models.CharField(max_length=20)   # success / error / skipped

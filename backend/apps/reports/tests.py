@@ -5,13 +5,21 @@ from django.test import TestCase
 from apps.accounts.models import Role
 from apps.crm.models import Customer
 from apps.hr.models import Employee
-from apps.integrations.models import DagChainCommissionRate, DagChainNode, DagChainProfile
+from apps.integrations.models import CommissionRule, DagChainNode, DagChainProfile
 from apps.reports.dagchain_rm import compute_dagchain_by_rm
 
 User = get_user_model()
 
 
+def _rule(platform, key, rate, employee=None):
+    return CommissionRule.objects.create(platform=platform, product_key=key,
+                                         rate=rate, employee=employee)
+
+
 class DagChainCommissionTests(TestCase):
+    """Commission is PER PRODUCT (the node's package), universal with a per-RM
+    override, plus a staking rate paid in DGC."""
+
     def setUp(self):
         role = Role.objects.create(name="Sales Executive")
         self.rm = User.objects.create_user(email="rm@dagos.test", name="Rita",
@@ -19,73 +27,56 @@ class DagChainCommissionTests(TestCase):
         self.emp = Employee.objects.create(user=self.rm)
         self.cust = Customer.objects.create(name="Punit Saini", external_id="dc-1",
                                             assigned_to=self.rm)
-        DagChainProfile.objects.create(customer=self.cust, dgc_balance=2)
-        # 3 validator nodes @ 3000, 1 storage @ 1019, 500 DGC staked in total
+        DagChainProfile.objects.create(customer=self.cust, dgc_balance=2, staked_amount=500)
+        # 3 "Pioneer Tier" validators @ 3000, 1 "Starter" storage @ 1019
         for i in range(3):
             DagChainNode.objects.create(customer=self.cust, external_id=f"v{i}",
-                                        kind="validator", purchase_price=3000,
-                                        staked_amount=100)
+                                        kind="validator", package="Pioneer Tier",
+                                        purchase_price=3000)
         DagChainNode.objects.create(customer=self.cust, external_id="s0", kind="storage",
-                                    purchase_price=1019, staked_amount=200)
+                                    package="Starter Storage", purchase_price=1019)
 
-        rates = DagChainCommissionRate.get_solo()
-        rates.validator_pct, rates.storage_pct, rates.staking_pct = 5, 2, 10
-        rates.save()
+        _rule("dagchain", "Pioneer Tier", 5)
+        _rule("dagchain", "Starter Storage", 2)
+        _rule("dagchain", "staking", 10)
 
     def _row(self, **kw):
         data = compute_dagchain_by_rm(**kw)
         return data, data["employees"][0]["customers"][0]
 
-    def test_each_base_is_paid_at_its_own_rate(self):
+    def test_each_product_is_paid_at_its_own_rate(self):
         data, row = self._row()
-
         self.assertEqual(row["validator_spend"], 9000.0)
         self.assertEqual(row["storage_spend"], 1019.0)
-        self.assertEqual(row["node_spend"], 10019.0)
-
         self.assertEqual(row["comm_validator"], 450.0)      # 9000 * 5%
         self.assertEqual(row["comm_storage"], 20.38)        # 1019 * 2%
         self.assertEqual(row["commission"], 470.38)         # money total
         self.assertEqual(row["comm_staking"], 50.0)         # 500 DGC * 10%, paid in DGC
-
-        # staking commission is DGC and must NOT be folded into the money total
+        # DGC commission must NOT be folded into the money total
         self.assertNotEqual(row["commission"], row["commission"] + row["comm_staking"])
-        self.assertEqual(data["rates"],
-                         {"validator_pct": 5.0, "storage_pct": 2.0, "staking_pct": 10.0})
 
-    def test_real_contract_staking_wins_over_the_node_figure(self):
-        # once the profile carries the real contract stake, that is what pays —
-        # per-node stakedAmount is only a fallback for un-synced data
-        self.cust.dagchain.staked_amount = 25
-        self.cust.dagchain.save(update_fields=["staked_amount"])
+    def test_a_per_rm_override_beats_the_universal_rate(self):
+        _rule("dagchain", "Pioneer Tier", 8, employee=self.emp)   # Rita gets 8%
         _, row = self._row()
-        self.assertEqual(row["staked"], 25.0)
-        self.assertEqual(row["comm_staking"], 2.5)          # 25 * 10%
+        self.assertEqual(row["comm_validator"], 720.0)      # 9000 * 8%, not 5%
+        self.assertEqual(row["comm_storage"], 20.38)        # storage still universal 2%
+
+    def test_a_product_with_no_rule_pays_nothing(self):
+        CommissionRule.objects.filter(product_key="Starter Storage").delete()
+        _, row = self._row()
+        self.assertEqual(row["comm_storage"], 0)
+        self.assertEqual(row["comm_validator"], 450.0)      # the others still pay
 
     def test_totals_roll_up_to_the_employee_and_the_grand_row(self):
         data, row = self._row()
         emp = data["employees"][0]
         self.assertEqual(emp["commission"], row["commission"])
-        self.assertEqual(emp["comm_staking"], row["comm_staking"])
         self.assertEqual(data["grand"]["commission"], row["commission"])
         self.assertEqual(data["grand"]["comm_staking"], row["comm_staking"])
 
-    def test_a_preview_override_does_not_touch_the_saved_rates(self):
-        _, row = self._row(rate_override={"validator_pct": "10"})
-        self.assertEqual(row["comm_validator"], 900.0)      # previewed at 10%
-        self.assertEqual(row["comm_storage"], 20.38)        # saved rate still used
-        self.assertEqual(float(DagChainCommissionRate.get_solo().validator_pct), 5.0)
-
-    def test_blank_and_junk_overrides_fall_back_to_the_saved_rate(self):
-        for bad in ("", None, "abc"):
-            with self.subTest(value=bad):
-                _, row = self._row(rate_override={"validator_pct": bad})
-                self.assertEqual(row["comm_validator"], 450.0)
-
-    def test_zero_rates_mean_zero_commission(self):
-        rates = DagChainCommissionRate.get_solo()
-        rates.validator_pct = rates.storage_pct = rates.staking_pct = 0
-        rates.save()
+    def test_an_unassigned_book_earns_no_commission(self):
+        self.cust.assigned_to = None
+        self.cust.save(update_fields=["assigned_to"])
         _, row = self._row()
         self.assertEqual(row["commission"], 0)
         self.assertEqual(row["comm_staking"], 0)
@@ -141,6 +132,76 @@ class TradersLotsBookTests(TestCase):
 
         names = {e["name"] for e in compute_traders_lots(7, 2026)["employees"]}
         self.assertIn("Unassigned", names)
+
+    def test_per_lot_commission_uses_the_universal_rate_then_the_rm_override(self):
+        from apps.reports.traders import compute_traders_lots
+        self._trader("A", lots=10)
+
+        # universal $2/lot
+        _rule("fxartha", "lots", 2)
+        me = compute_traders_lots(7, 2026)["employees"][0]
+        self.assertEqual(me["rate"], 2.0)
+        self.assertEqual(me["commission_total"], 20.0)
+
+        # Himanshu overridden to $5/lot
+        _rule("fxartha", "lots", 5, employee=self.emp)
+        me = compute_traders_lots(7, 2026)["employees"][0]
+        self.assertEqual(me["rate"], 5.0)
+        self.assertEqual(me["commission_total"], 50.0)
+
+
+class CommissionRulesEndpointTests(TestCase):
+    def setUp(self):
+        from rest_framework.test import APIClient
+        admin = User.objects.create_user(email="a@dagos.test", name="Admin",
+                                         password="x", is_superuser=True)
+        role = Role.objects.create(name="Sales Executive")
+        self.rm = User.objects.create_user(email="rm@dagos.test", name="Rita",
+                                           password="x", role=role)
+        self.emp = Employee.objects.create(user=self.rm)
+        Customer.objects.create(name="N", external_id="dc-x", assigned_to=self.rm)
+        DagChainNode.objects.create(customer=Customer.objects.first(), external_id="n1",
+                                    kind="validator", package="Pioneer Tier", purchase_price=3000)
+        self.client_ = APIClient()
+        self.client_.force_authenticate(user=admin)
+
+    def test_products_list_includes_the_node_package_and_lots(self):
+        res = self.client_.get("/api/reports/commission-rules/")
+        self.assertEqual(res.status_code, 200)
+        dc_keys = [p["key"] for p in res.data["products"]["dagchain"]]
+        self.assertIn("Pioneer Tier", dc_keys)
+        self.assertIn("staking", dc_keys)
+        self.assertEqual([p["key"] for p in res.data["products"]["fxartha"]], ["lots"])
+        self.assertEqual([e["id"] for e in res.data["employees"]], [self.emp.id])
+
+    def test_put_sets_universal_and_override_then_delete_clears(self):
+        from apps.integrations.models import CommissionRule
+        self.client_.put("/api/reports/commission-rules/",
+                         {"platform": "dagchain", "product_key": "Pioneer Tier", "rate": 5},
+                         format="json")
+        self.client_.put("/api/reports/commission-rules/",
+                         {"platform": "dagchain", "product_key": "Pioneer Tier",
+                          "employee": self.emp.id, "rate": 8}, format="json")
+        self.assertEqual(CommissionRule.objects.count(), 2)
+
+        res = self.client_.get("/api/reports/commission-rules/")
+        universal = next(p for p in res.data["products"]["dagchain"] if p["key"] == "Pioneer Tier")
+        self.assertEqual(universal["rate"], 5.0)
+        self.assertEqual(res.data["overrides"]["dagchain"][str(self.emp.id)]["Pioneer Tier"], 8.0)
+
+        # blank rate deletes the rule
+        self.client_.put("/api/reports/commission-rules/",
+                         {"platform": "dagchain", "product_key": "Pioneer Tier", "rate": ""},
+                         format="json")
+        self.assertFalse(CommissionRule.objects.filter(product_key="Pioneer Tier",
+                                                       employee__isnull=True).exists())
+
+    def test_a_non_admin_cannot_change_rates(self):
+        from rest_framework.test import APIClient
+        c = APIClient(); c.force_authenticate(user=self.rm)
+        res = c.put("/api/reports/commission-rules/",
+                    {"platform": "fxartha", "product_key": "lots", "rate": 9}, format="json")
+        self.assertEqual(res.status_code, 403)
 
 
 class TargetBoardSourceTests(TestCase):

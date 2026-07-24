@@ -107,6 +107,8 @@ export default function DagChainAccount() {
             ["Claimed Rewards", num(t.claimed_rewards)],
             ["Total Staked (DGC)", num(t.staked)],
             ["Staked Nodes", `${t.staked_nodes || 0} of ${t.nodes || 0}`],
+            ["RM Commission", money(t.commission)],
+            ["Staking Comm (DGC)", num(t.comm_staking)],
             ["Joined", dt(p.joined_at)],
           ].map(([k, v]) => (
             <div key={k}>
@@ -154,6 +156,7 @@ export default function DagChainAccount() {
                   <th className="py-2.5 px-4 text-right">Earned</th>
                   <th className="py-2.5 px-4 text-right">Pending</th>
                   <th className="py-2.5 px-4 text-right">Staked</th>
+                  <th className="py-2.5 px-4 text-right" title="RM commission on this node (price × its rate)">Commission</th>
                   <th className="py-2.5 px-4">Capacity</th>
                   <th className="py-2.5 px-4">Opened</th>
                 </tr>
@@ -175,6 +178,7 @@ export default function DagChainAccount() {
                     <td className="py-2 px-4 text-right tabular-nums text-amber-600">{num(n.rewards_earned)}</td>
                     <td className="py-2 px-4 text-right tabular-nums text-ink-500">{num(n.pending_rewards)}</td>
                     <td className="py-2 px-4 text-right tabular-nums text-violet-600">{n.staked_amount ? num(n.staked_amount) : (n.staking_requirement ? `0 / ${num(n.staking_requirement)}` : "—")}</td>
+                    <td className="py-2 px-4 text-right tabular-nums font-semibold text-teal-600" title={n.commission_pct ? `${n.commission_pct}% of price` : "No rate set"}>{n.commission ? money(n.commission) : "—"}</td>
                     <td className="py-2 px-4 text-ink-500">{n.kind === "storage" ? (n.capacity || "—") : "—"}</td>
                     <td className="py-2 px-4 text-ink-500 whitespace-nowrap">{dt(n.opened_at)}</td>
                   </tr>

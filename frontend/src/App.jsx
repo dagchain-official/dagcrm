@@ -16,6 +16,7 @@ import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
 import ConfigHub from "./pages/ConfigHub";
 import KpiBoard from "./pages/KpiBoard";
 import TradersLots from "./pages/TradersLots";
+import CommissionRules from "./pages/CommissionRules";
 import FxArthaTraders from "./pages/FxArthaTraders";
 import FxArthaOverview from "./pages/FxArthaOverview";
 import FxArthaAccount from "./pages/FxArthaAccount";
@@ -102,6 +103,7 @@ export default function App() {
         <Route path="dagchain-account/:id" element={<DagChainAccount />} />
         <Route path="dagchain-nodes" element={<DagChainNodes />} />
         <Route path="dagchain-rm" element={<DagChainByRm />} />
+        <Route path="commission-rules" element={<CommissionRules />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="formula-builder" element={<FormulaBuilder />} />

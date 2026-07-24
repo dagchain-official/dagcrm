@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Boxes, ChevronRight, Users, Coins, Server, HardDrive, Percent, Check } from "lucide-react";
+import { Boxes, ChevronRight, Users, Coins, Server, HardDrive, SlidersHorizontal } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Spinner, EmptyState } from "../components/ui";
@@ -8,14 +8,6 @@ import { Spinner, EmptyState } from "../components/ui";
 const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 4 });
 const int = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-
-// the three commission bases — a validator node, a storage node and staked DGC
-// are each worth something different, so each carries its own rate
-const RATES = [
-  { key: "validator_pct", label: "Validator", hint: "% of validator node purchase" },
-  { key: "storage_pct", label: "Storage", hint: "% of storage node purchase" },
-  { key: "staking_pct", label: "Staking", hint: "% of staked DGC — pays out in DGC" },
-];
 
 function Stat({ icon: Icon, label, value, tint }) {
   return (
@@ -33,37 +25,21 @@ export default function DagChainByRm() {
   const [employee, setEmployee] = useState("");
   const [employees, setEmployees] = useState([]);
   const [open, setOpen] = useState({});
-  const [rates, setRates] = useState(null);       // what's typed in the boxes
-  const [canEdit, setCanEdit] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     api.get("/employees/").then((r) => {
       const list = r.data?.results || r.data || [];
       setEmployees(list.map((e) => ({ id: e.id, name: e.user_name || e.name })));
     }).catch(() => setEmployees([]));
-    api.get("/reports/dagchain-commission-rates/").then((r) => {
-      const { can_edit, ...pcts } = r.data;
-      setRates(pcts);
-      setCanEdit(!!can_edit);
-    }).catch(() => setRates({ validator_pct: 0, storage_pct: 0, staking_pct: 0 }));
   }, []);
 
-  // typing a rate re-runs the report as a preview; Save makes it the default
-  const rateKey = JSON.stringify(rates);
   usePolling(() => {
-    const params = { ...(rates || {}) };
+    const params = {};
     if (employee !== "") params.employee = employee;
     api.get("/reports/dagchain-rm/", { params })
       .then((r) => { setD(r.data); setErr(""); })
       .catch(() => setErr("Failed to load DAGChain RM report."));
-  }, 8000, [employee, rateKey]);
-
-  const saveRates = () => {
-    api.put("/reports/dagchain-commission-rates/", rates)
-      .then(() => { setSaved(true); setTimeout(() => setSaved(false), 2000); })
-      .catch(() => setErr("Could not save the commission rates."));
-  };
+  }, 8000, [employee]);
 
   if (err) return <EmptyState title="No access" hint={err} />;
   if (!d) return <Spinner label="Loading DAGChain book…" />;
@@ -81,42 +57,16 @@ export default function DagChainByRm() {
           </h1>
           <p className="text-sm text-ink-400">Each employee's assigned DAGChain users — nodes, node revenue, commission, rewards, DGC balance &amp; referrals</p>
         </div>
-        <select className="input !w-auto" value={employee} onChange={(e) => setEmployee(e.target.value)}>
-          <option value="">All employees</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-        </select>
-      </div>
-
-      {/* commission rules — one rate per base */}
-      {rates && (
-        <div className="card p-4 flex flex-wrap items-end gap-4">
-          <div className="flex items-center gap-1.5 text-sm font-bold text-ink-800">
-            <Percent size={15} className="text-brand-600" /> Commission rates
-          </div>
-          {RATES.map((r) => (
-            <div key={r.key} title={r.hint}>
-              <label className="block text-[11px] uppercase tracking-wide text-ink-400 font-semibold mb-1">{r.label}</label>
-              <div className="flex items-center gap-1 chip !py-1.5">
-                <input className="w-14 bg-transparent outline-none text-sm tabular-nums" type="number"
-                  step="0.01" min="0" disabled={!canEdit} value={rates[r.key] ?? 0}
-                  onChange={(e) => setRates((s) => ({ ...s, [r.key]: e.target.value }))} />
-                <span className="text-ink-400 text-xs">%</span>
-              </div>
-            </div>
-          ))}
-          {canEdit && (
-            <button onClick={saveRates} className="btn-primary !py-2 !px-4 text-sm inline-flex items-center gap-1.5">
-              {saved ? <><Check size={14} /> Saved</> : "Save rates"}
-            </button>
-          )}
-          <p className="text-xs text-ink-400 basis-full">
-            Validator &amp; storage rates are a % of what the user paid for the node (money).
-            The staking rate is a % of the DGC they staked, so it pays out in <b>DGC</b> and is
-            kept in its own column — the CRM has no DGC price to add the two together.
-            {canEdit ? " Typing a rate previews it; Save makes it the default." : " Only an administrator can change these."}
-          </p>
+        <div className="flex items-center gap-2">
+          <Link to="/commission-rules" className="chip !py-2 text-sm inline-flex items-center gap-1.5" title="Set commission per product + per-RM">
+            <SlidersHorizontal size={14} /> Commission rules
+          </Link>
+          <select className="input !w-auto" value={employee} onChange={(e) => setEmployee(e.target.value)}>
+            <option value="">All employees</option>
+            {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+          </select>
         </div>
-      )}
+      </div>
 
       {/* grand totals */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
