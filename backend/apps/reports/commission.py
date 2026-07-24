@@ -44,27 +44,53 @@ def fxartha_lots_universal():
     return lots_rate()
 
 
+# FX Artha's built-in commissionable bases. "amount" = a $ per lot; "percent" =
+# a percent of that money base (brokerage, net deposit). Each computes from data
+# the sync already stores per trader.
+FXARTHA_BASES = [
+    {"key": "lots", "label": "Lots", "unit": "$ / lot", "basis": "amount"},
+    {"key": "brokerage", "label": "Brokerage", "unit": "% of brokerage", "basis": "percent"},
+    {"key": "deposit", "label": "Deposit", "unit": "% of net deposit", "basis": "percent"},
+]
+_FX_BUILTIN = {b["key"] for b in FXARTHA_BASES}
+
+
+def fxartha_products():
+    universal, _ = load_rules("fxartha")
+    out = [{**b, "rate": universal.get(b["key"], 0.0)} for b in FXARTHA_BASES]
+    # anything the admin added by hand (a custom base) — kept so its rate persists
+    for k, v in sorted(universal.items()):
+        if k not in _FX_BUILTIN:
+            out.append({"key": k, "label": k, "unit": "$ / lot", "basis": "amount",
+                        "rate": v, "custom": True})
+    return out
+
+
 def dagchain_products():
-    """The DAGChain products that can carry a rate: every DISTINCT node package
-    actually present (matched against the node, not the catalogue), grouped by
-    kind, plus staking. Each carries its current universal rate."""
+    """DAGChain products that can carry a rate: every DISTINCT node package
+    actually present (matched on the node, not the catalogue), grouped by kind,
+    plus staking, plus any package an admin added by hand (e.g. a tier not yet
+    sold). Each carries its current universal rate."""
     from apps.integrations.models import DagChainNode
     universal, _ = load_rules("dagchain")
-    out = []
+    out, seen = [], set()
     for kind in ("validator", "storage"):
         pkgs = (DagChainNode.objects.filter(kind=kind).exclude(package="")
                 .values_list("package", flat=True).distinct().order_by("package"))
         for pkg in pkgs:
+            seen.add(pkg)
             out.append({"key": pkg, "label": pkg, "kind": kind, "unit": "% of price",
                         "rate": universal.get(pkg, 0.0)})
     out.append({"key": "staking", "label": "Staking", "kind": "staking",
                 "unit": "% of DGC", "rate": universal.get("staking", 0.0)})
+    seen.add("staking")
+    for k, v in sorted(universal.items()):
+        if k not in seen:
+            out.append({"key": k, "label": k, "kind": "custom", "unit": "% of price",
+                        "rate": v, "custom": True})
     return out
 
 
 def commission_products():
     """All settable commission products, per platform, with their universal rate."""
-    fx_universal, _ = load_rules("fxartha")
-    fxartha = [{"key": "lots", "label": "Lots", "unit": "$ / lot",
-                "rate": fx_universal.get("lots", 0.0)}]
-    return {"fxartha": fxartha, "dagchain": dagchain_products()}
+    return {"fxartha": fxartha_products(), "dagchain": dagchain_products()}

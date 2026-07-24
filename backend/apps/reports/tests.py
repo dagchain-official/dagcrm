@@ -171,7 +171,8 @@ class CommissionRulesEndpointTests(TestCase):
         dc_keys = [p["key"] for p in res.data["products"]["dagchain"]]
         self.assertIn("Pioneer Tier", dc_keys)
         self.assertIn("staking", dc_keys)
-        self.assertEqual([p["key"] for p in res.data["products"]["fxartha"]], ["lots"])
+        self.assertEqual([p["key"] for p in res.data["products"]["fxartha"]],
+                         ["lots", "brokerage", "deposit"])
         self.assertEqual([e["id"] for e in res.data["employees"]], [self.emp.id])
 
     def test_put_sets_universal_and_override_then_delete_clears(self):

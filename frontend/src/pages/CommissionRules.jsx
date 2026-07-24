@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Coins, Percent, ChevronDown, ChevronRight, Check, Info } from "lucide-react";
+import { Coins, ChevronDown, ChevronRight, Check, Info, Plus, X } from "lucide-react";
 import api from "../api/client";
 import { Spinner, EmptyState } from "../components/ui";
 import { useToast } from "../context/ToastContext";
@@ -13,6 +13,9 @@ export default function CommissionRules() {
   const [err, setErr] = useState("");
   const [platform, setPlatform] = useState("fxartha");
   const [open, setOpen] = useState({});          // product key -> overrides expanded
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newRate, setNewRate] = useState("");
 
   const load = () => api.get("/reports/commission-rules/")
     .then((r) => { setD(r.data); setErr(""); })
@@ -35,6 +38,17 @@ export default function CommissionRules() {
       .catch(() => toast.error("Could not save"));
   };
 
+  const addProduct = () => {
+    const name = newName.trim();
+    if (!name) return;
+    api.put("/reports/commission-rules/", { platform, product_key: name, rate: newRate || 0 })
+      .then(() => {
+        toast.success("Product added");
+        setAdding(false); setNewName(""); setNewRate(""); load();
+      })
+      .catch(() => toast.error("Could not add"));
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -44,14 +58,45 @@ export default function CommissionRules() {
         <p className="text-sm text-ink-400">A rate per product, with an optional per-RM override. Applies to every existing record the moment you save — no backfill.</p>
       </div>
 
-      <div className="flex gap-1 p-1 bg-ink-100 rounded-xl w-fit">
-        {[["fxartha", "FX Artha"], ["dagchain", "DAGChain"]].map(([k, l]) => (
-          <button key={k} onClick={() => setPlatform(k)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${platform === k ? "bg-ink-0 text-brand-700 shadow-sm" : "text-ink-500 hover:text-ink-700"}`}>
-            {l}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 p-1 bg-ink-100 rounded-xl w-fit">
+          {[["fxartha", "FX Artha"], ["dagchain", "DAGChain"]].map(([k, l]) => (
+            <button key={k} onClick={() => { setPlatform(k); setAdding(false); }}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${platform === k ? "bg-ink-0 text-brand-700 shadow-sm" : "text-ink-500 hover:text-ink-700"}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {canEdit && !adding && (
+          <button onClick={() => setAdding(true)} className="btn-primary !py-2 !px-4 text-sm inline-flex items-center gap-1.5">
+            <Plus size={15} /> Add product
           </button>
-        ))}
+        )}
       </div>
+
+      {adding && (
+        <div className="card p-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="label">
+              {platform === "dagchain" ? "Node package / tier name" : "Product / base name"}
+            </label>
+            <input className="input" value={newName} autoFocus placeholder={platform === "dagchain" ? "e.g. Standard Tier" : "e.g. Insurance"}
+              onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProduct()} />
+          </div>
+          <div>
+            <label className="label">Rate {platform === "fxartha" ? "($)" : "(%)"}</label>
+            <input className="input !w-28" type="number" step="0.01" min="0" value={newRate}
+              onChange={(e) => setNewRate(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProduct()} />
+          </div>
+          <button onClick={addProduct} className="btn-primary !py-2.5 !px-4 text-sm">Add</button>
+          <button onClick={() => { setAdding(false); setNewName(""); setNewRate(""); }} className="chip !py-2.5 text-sm inline-flex items-center gap-1"><X size={14} /> Cancel</button>
+          <p className="text-xs text-ink-400 basis-full">
+            {platform === "dagchain"
+              ? "Matches nodes by this exact package name — use it to pre-set a rate for a tier that isn't sold yet."
+              : "A custom base only pays once its data is wired; the built-in Lots, Brokerage and Deposit already compute."}
+          </p>
+        </div>
+      )}
 
       {!canEdit && (
         <div className="card p-3 flex items-center gap-2 text-sm text-ink-500">

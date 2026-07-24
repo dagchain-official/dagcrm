@@ -31,7 +31,11 @@ def lots_rate():
 
 
 def compute_traders_lots(month, year, rate=None, employee_id=None):
+    from django.db.models import Sum
+
+    from apps.crm.models import AumEntry
     from apps.hr.models import Employee
+    from apps.sales.models import Revenue
 
     from .commission import load_rules, rate_for
     from .fxartha import _fxartha_customers
@@ -44,10 +48,14 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
     universal, overrides = load_rules("fxartha")
     fallback = lots_rate()
 
-    def rate_of(emp_id):
+    def lot_rate_of(emp_id):
         if preview is not None:
             return preview
         return rate_for(universal, overrides, "lots", emp_id, fallback=fallback)
+
+    def pct_of(emp_id, key):
+        # brokerage / deposit rates are only ever from the rules (no legacy source)
+        return rate_for(universal, overrides, key, emp_id) / 100
 
     # lots per trader, whoever recorded them — the book follows the trader
     tot, mon = defaultdict(float), defaultdict(float)
@@ -59,6 +67,14 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
             d = r["date"]
             if d and d.month == month and d.year == year:
                 mon[r["customer_id"]] += v
+
+    # brokerage and net-deposit per trader — cumulative money bases (no monthly
+    # split), so their commission lands in the all-time total only
+    brok = {r["customer_id"]: float(r["s"] or 0) for r in
+            Revenue.objects.values("customer_id").annotate(s=Sum("gross_revenue"))}
+    aum = defaultdict(float)
+    for r in (AumEntry.objects.values("customer_id", "entry_type").annotate(s=Sum("amount"))):
+        aum[r["customer_id"]] += float(r["s"] or 0) * (1 if r["entry_type"] == "deposit" else -1)
 
     # the super admin is never surfaced as an owner anywhere
     emp_by_user = {e.user_id: e for e in
@@ -72,12 +88,17 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
             continue
         key = emp.id if emp else 0
         emp_meta[key] = (getattr(owner, "id", None), getattr(owner, "name", None) or "Unassigned")
-        r = rate_of(emp.id if emp else None)
+        eid = emp.id if emp else None
+        r = lot_rate_of(eid)
         lm, lt = mon.get(c.id, 0.0), tot.get(c.id, 0.0)
+        # commission = lots × per-lot + brokerage % + net-deposit %
+        extra = (brok.get(c.id, 0.0) * pct_of(eid, "brokerage")
+                 + max(aum.get(c.id, 0.0), 0.0) * pct_of(eid, "deposit")) if eid else 0.0
         by_emp[key].append({
             "customer_id": c.id, "customer_name": c.name,
             "lots_month": round(lm, 2), "lots_total": round(lt, 2),
-            "commission_month": round(lm * r, 2), "commission_total": round(lt * r, 2),
+            "commission_month": round(lm * r, 2),
+            "commission_total": round(lt * r + extra, 2),
         })
 
     employees = []
@@ -89,7 +110,7 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
         ct = sum(t["commission_total"] for t in traders)
         user_id, name = emp_meta[key]
         employees.append({
-            "employee_id": key, "user_id": user_id, "name": name, "rate": rate_of(key or None),
+            "employee_id": key, "user_id": user_id, "name": name, "rate": lot_rate_of(key or None),
             "trader_count": len(traders), "traders": traders,
             "lots_month": round(lm, 2), "lots_total": round(lt, 2),
             "commission_month": round(cm, 2), "commission_total": round(ct, 2),
@@ -105,7 +126,7 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
     }
     # a single headline rate only makes sense in preview mode; otherwise rates
     # vary per RM, so report the universal one for the caption
-    headline = preview if preview is not None else (universal.get("lots", fallback))
+    headline = preview if preview is not None else universal.get("lots", fallback)
     return {"month": month, "year": year, "rate": headline,
             "employees": employees, "grand": grand}
 
