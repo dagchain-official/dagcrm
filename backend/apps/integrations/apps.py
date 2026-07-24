@@ -25,9 +25,10 @@ class IntegrationsConfig(AppConfig):
 
 
 def _autosync_loop():
-    """Every AUTO_SYNC_INTERVAL seconds, pull connected FXArtha connections so
-    deposits/withdrawals, revenue, AUM and contribution update on their own."""
-    interval = int(os.environ.get("AUTO_SYNC_INTERVAL", "60"))  # default 1 min
+    """Every AUTO_SYNC_INTERVAL seconds, pull the connected poll connectors
+    (FXArtha AND DAGChain) so revenue, deposits, nodes, staking, AUM and
+    contribution update on their own — no manual "Sync" click needed."""
+    interval = int(os.environ.get("AUTO_SYNC_INTERVAL", "300"))  # default 5 min
     time.sleep(20)  # let the server finish booting
     while True:
         try:
@@ -37,11 +38,34 @@ def _autosync_loop():
         time.sleep(interval)
 
 
+# a fixed key so every worker contends for the SAME Postgres advisory lock
+_SYNC_LOCK_KEY = 918273645
+
+
 def _run_sync_once():
-    from django.db import close_old_connections
+    """One sync pass, guarded by a Postgres advisory lock so that with several
+    gunicorn workers only ONE actually syncs each tick (the others skip). The
+    lock is released the moment this pass ends, so if the holder dies another
+    worker simply picks up the next tick."""
+    from django.db import close_old_connections, connection
+
     close_old_connections()
-    from .models import IntegrationConnection
-    from .services_fxartha import sync_fxartha
-    for conn in IntegrationConnection.objects.filter(platform="fxartha", status="connected"):
-        sync_fxartha(conn)
-    close_old_connections()
+    with connection.cursor() as cur:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", [_SYNC_LOCK_KEY])
+        if not cur.fetchone()[0]:
+            return                       # another worker is syncing this tick
+    try:
+        from .models import IntegrationConnection
+        from .services_dagchain import sync_dagchain
+        from .services_fxartha import sync_fxartha
+        syncers = {"fxartha": sync_fxartha, "dagchain": sync_dagchain}
+        for conn in IntegrationConnection.objects.filter(
+                platform__in=syncers, status="connected"):
+            try:
+                syncers[conn.platform](conn)
+            except Exception:  # noqa: BLE001 — one bad connection can't stop the rest
+                pass
+    finally:
+        with connection.cursor() as cur:
+            cur.execute("SELECT pg_advisory_unlock(%s)", [_SYNC_LOCK_KEY])
+        close_old_connections()
