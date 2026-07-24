@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Coins, ChevronDown, ChevronRight, Check, Info, Plus, X } from "lucide-react";
+import { Coins, ChevronDown, ChevronRight, Check, Info, Plus, X, Trash2 } from "lucide-react";
 import api from "../api/client";
 import { Spinner, EmptyState } from "../components/ui";
 import { useToast } from "../context/ToastContext";
@@ -38,6 +38,23 @@ export default function CommissionRules() {
     api.put("/reports/commission-rules/", { platform, product_key, rate, employee })
       .then(() => { toast.success("Saved"); load(); })
       .catch(() => toast.error("Could not save"));
+  };
+
+  // clears a product's rate (and every per-RM override). A custom product then
+  // disappears from the list; a built-in one just drops back to "no rate".
+  const clearProduct = (p) => {
+    if (!canEdit) return;
+    const msg = p.custom
+      ? `Delete "${p.label}"? Its rate and all overrides will be removed.`
+      : `Clear the rate for "${p.label}" (and all its per-RM overrides)?`;
+    if (!window.confirm(msg)) return;
+    const empIds = employees.filter((e) => overrides[e.id]?.[p.key] != null).map((e) => e.id);
+    Promise.all([
+      api.put("/reports/commission-rules/", { platform, product_key: p.key, rate: "", employee: null }),
+      ...empIds.map((id) => api.put("/reports/commission-rules/",
+        { platform, product_key: p.key, rate: "", employee: id })),
+    ]).then(() => { toast.success(p.custom ? "Deleted" : "Cleared"); load(); })
+      .catch(() => toast.error("Could not delete"));
   };
 
   const addProduct = () => {
@@ -131,6 +148,12 @@ export default function CommissionRules() {
                   {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                   Per-RM{overriddenCount ? ` (${overriddenCount})` : ""}
                 </button>
+                {canEdit && (
+                  <button onClick={() => clearProduct(p)} title={p.custom ? "Delete product" : "Clear rate"}
+                    className="grid place-items-center w-8 h-8 rounded-lg text-ink-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
               {isOpen && (
                 <div className="border-t border-ink-100 divide-y divide-ink-50">
