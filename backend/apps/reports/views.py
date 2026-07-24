@@ -398,6 +398,7 @@ def dagchain_overview(request):
         "profiles": prof,
         "node_revenue": float(DagChainNode.objects.aggregate(s=Sum("purchase_price"))["s"] or 0),
         "staking": staking,
+        "products": cfg.get("products") or {},
         "node_staking": {
             "staked": float(node_stake["staked"] or 0),
             "requirement": float(node_stake["requirement"] or 0),

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   Boxes, Users, Server, HardDrive, Coins, Activity, RefreshCcw, ArrowRight, Layers,
-  Lock, ExternalLink,
+  Lock, ExternalLink, Package, Percent,
 } from "lucide-react";
 import { useState } from "react";
 import api from "../api/client";
@@ -48,6 +48,10 @@ export default function DagChainOverview() {
   const st = d.staking || {};                 // contract-level staking
   const nst = d.node_staking || {};           // per-node staking (separate)
   const tranches = st.tranches || [];
+  const prods = d.products || {};
+  const validators = prods.validators || [];
+  const storage = prods.storage || [];
+  const aprRates = prods.apr_rates || [];
   const shortAddr = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "—");
   const byKind = Object.fromEntries((d.nodes_by_kind || []).map((k) => [k.kind, k]));
   const val = byKind.validator || {};
@@ -155,6 +159,89 @@ export default function DagChainOverview() {
           </div>
         )}
       </div>
+
+      {/* products & pricing — the node catalogue pulled from DAGChain */}
+      {(validators.length > 0 || storage.length > 0 || aprRates.length > 0) && (
+        <div className="grid lg:grid-cols-2 gap-5">
+          <div className="card p-5">
+            <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2"><Package size={18} className="text-brand-600" /> Node Products &amp; Pricing</h3>
+            {validators.length > 0 && (
+              <>
+                <p className="text-[11px] uppercase tracking-wide text-ink-400 font-semibold mb-1">Validator tiers</p>
+                <div className="overflow-x-auto mb-4">
+                  <table className="w-full text-sm min-w-[380px]">
+                    <thead><tr className="text-left text-ink-400 text-[11px] uppercase border-b border-ink-100">
+                      <th className="py-1.5 pr-3 font-semibold">Tier</th>
+                      <th className="py-1.5 px-3 font-semibold text-right">Price</th>
+                      <th className="py-1.5 px-3 font-semibold text-right">Sold / Total</th>
+                      <th className="py-1.5 pl-3 font-semibold text-right">Status</th>
+                    </tr></thead>
+                    <tbody>
+                      {validators.map((t) => (
+                        <tr key={t.package_id || t.name} className="border-b border-ink-50">
+                          <td className="py-1.5 pr-3 font-medium text-ink-800">{t.name}</td>
+                          <td className="py-1.5 px-3 text-right tabular-nums text-ink-700">{money(t.price)}</td>
+                          <td className="py-1.5 px-3 text-right tabular-nums text-ink-500">{num(t.sold)} / {num(t.total)}</td>
+                          <td className="py-1.5 pl-3 text-right"><span className={`badge ${t.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-500"}`}>{(t.status || "").replace("_", " ") || "—"}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+            {storage.length > 0 && (
+              <>
+                <p className="text-[11px] uppercase tracking-wide text-ink-400 font-semibold mb-1">Storage packages</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[380px]">
+                    <thead><tr className="text-left text-ink-400 text-[11px] uppercase border-b border-ink-100">
+                      <th className="py-1.5 pr-3 font-semibold">Package</th>
+                      <th className="py-1.5 px-3 font-semibold text-right">Price / GB</th>
+                      <th className="py-1.5 pl-3 font-semibold text-right">Capacity (GB)</th>
+                    </tr></thead>
+                    <tbody>
+                      {storage.map((p) => (
+                        <tr key={p.name} className="border-b border-ink-50">
+                          <td className="py-1.5 pr-3 font-medium text-ink-800">{p.name}</td>
+                          <td className="py-1.5 px-3 text-right tabular-nums text-ink-700">{money(p.price_per_gb)}</td>
+                          <td className="py-1.5 pl-3 text-right tabular-nums text-ink-500">{num(p.min_gb)} – {num(p.max_gb)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+          {aprRates.length > 0 && (
+            <div className="card p-5">
+              <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2"><Percent size={18} className="text-emerald-600" /> Reward Rates (APR)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[360px]">
+                  <thead><tr className="text-left text-ink-400 text-[11px] uppercase border-b border-ink-100">
+                    <th className="py-1.5 pr-3 font-semibold">Node</th>
+                    <th className="py-1.5 px-3 font-semibold">Tier</th>
+                    <th className="py-1.5 px-3 font-semibold text-right">APR</th>
+                    <th className="py-1.5 pl-3 font-semibold text-right">Min lock</th>
+                  </tr></thead>
+                  <tbody>
+                    {aprRates.map((r, i) => (
+                      <tr key={i} className="border-b border-ink-50">
+                        <td className="py-1.5 pr-3 text-ink-600">{r.kind}</td>
+                        <td className="py-1.5 px-3 font-medium text-ink-800">{r.tier}</td>
+                        <td className="py-1.5 px-3 text-right tabular-nums font-semibold text-emerald-600">{r.apr}%</td>
+                        <td className="py-1.5 pl-3 text-right tabular-nums text-ink-500">{num(r.min_lock_days)}d</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* platform + community */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">

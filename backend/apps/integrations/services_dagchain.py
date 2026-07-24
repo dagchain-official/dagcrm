@@ -243,6 +243,56 @@ def _sync_staking(client):
     }
 
 
+_BYTES_PER_GB = 1073741824
+
+
+def _sync_products(client):
+    """DAGChain's node catalogue + reward rates — read-only reference data.
+
+      /admin/validator-tiers   -> validator node tiers (name, price, keys)
+      /admin/storage-packages  -> storage node packages (price/GB, capacity)
+      /rewards/apr-rates       -> reward APR per tier (validator + storage)
+
+    Returned as a snapshot for the Overview; nothing is stored per-row.
+    """
+    def _res(path):
+        try:
+            return (client.get(path) or {}).get("result", {}) or {}
+        except (RuntimeError, requests.RequestException):
+            return {}
+
+    vt = _res("/admin/validator-tiers").get("tiers", [])
+    sp = _res("/admin/storage-packages").get("packages", [])
+    apr = _res("/rewards/apr-rates")
+
+    validators = [{
+        "name": t.get("name"), "package_id": t.get("packageId"),
+        "price": _num(t.get("price")),
+        "total": int(_num(t.get("totalKeys"))), "sold": int(_num(t.get("soldKeys"))),
+        "available": int(_num(t.get("availableNodes") or t.get("totalKeys"))),
+        "status": t.get("status") or "",
+    } for t in vt if t.get("isActive", True)]
+
+    storage = [{
+        "name": p.get("name"),
+        "price_per_gb": round(_num(p.get("pricePerByte")) * _BYTES_PER_GB, 4),
+        "min_gb": round(_num(p.get("minCapacityBytes")) / _BYTES_PER_GB, 2),
+        "max_gb": round(_num(p.get("maxCapacityBytes")) / _BYTES_PER_GB, 2),
+        "units": p.get("allowedUnits") or [],
+        "status": p.get("status") or "",
+    } for p in sp if (p.get("status") or "").lower() != "inactive"]
+
+    def _apr_rows(block, kind):
+        return [{"kind": kind, "tier": name.title(),
+                 "apr": _num(v.get("effectiveApr")),
+                 "min_lock_days": int(_num(v.get("minLockPeriod")))}
+                for name, v in (block or {}).items()]
+    apr_rates = _apr_rows(apr.get("validator"), "Validator") + \
+        _apr_rows(apr.get("storage"), "Storage")
+
+    return {"validators": validators, "storage": storage, "apr_rates": apr_rates}
+
+
 def sync_dagchain(conn):
     from apps.crm.models import Business
     from .models import IntegrationLog
@@ -273,21 +323,28 @@ def sync_dagchain(conn):
         for node in client.paginate("/admin/storage-nodes"):
             revenue_rows += int(_sync_node(node, business, "storage"))
 
-        # contract-level staking — tolerate its absence so a staking outage never
-        # fails the whole sync (users/nodes still update)
+        # contract-level staking + the product catalogue — tolerate their absence
+        # so one endpoint being down never fails the whole sync
         try:
             staking = _sync_staking(client)
         except (RuntimeError, requests.RequestException) as e:
             staking = cfg.get("staking")     # keep the last good snapshot
             IntegrationLog.objects.create(connection=conn, status="skipped",
                                           message=f"staking: {str(e)[:200]}")
+        try:
+            products = _sync_products(client)
+        except (RuntimeError, requests.RequestException) as e:
+            products = cfg.get("products")
+            IntegrationLog.objects.create(connection=conn, status="skipped",
+                                          message=f"products: {str(e)[:200]}")
     except (RuntimeError, requests.RequestException) as e:
         IntegrationLog.objects.create(connection=conn, status="error", message=str(e)[:300])
         return {"error": str(e)}
 
     conn.status = "connected"
     conn.config = {**cfg, "dashboard": dashboard, "node_stats": node_stats,
-                   "staking": staking, "last_sync": timezone.now().isoformat()}
+                   "staking": staking, "products": products,
+                   "last_sync": timezone.now().isoformat()}
     conn.total_leads = users
     conn.last_lead_at = timezone.now()
     conn.save()

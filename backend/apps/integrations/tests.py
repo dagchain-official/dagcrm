@@ -3,7 +3,7 @@ from django.test import TestCase
 
 from apps.crm.models import Customer
 from apps.integrations.models import DagChainProfile
-from apps.integrations.services_dagchain import _sync_staking
+from apps.integrations.services_dagchain import _sync_products, _sync_staking
 
 
 class _FakeClient:
@@ -19,6 +19,58 @@ class _FakeClient:
 
     def paginate(self, path, limit=100):
         yield from self._stakes
+
+
+class _ProductClient:
+    """Serves canned product-catalogue responses keyed by path."""
+
+    def __init__(self, by_path):
+        self._by_path = by_path
+
+    def get(self, path, params=None):
+        return {"result": self._by_path.get(path, {})}
+
+
+class ProductCatalogTests(TestCase):
+    def test_tiers_packages_and_apr_are_normalised(self):
+        client = _ProductClient({
+            "/admin/validator-tiers": {"tiers": [
+                {"name": "Elite Tier", "packageId": "validator_elite_tier", "price": 5999,
+                 "totalKeys": 3000, "soldKeys": 4, "availableNodes": 2996,
+                 "status": "active", "isActive": True},
+                {"name": "Old Tier", "price": 1, "isActive": False},   # dropped
+            ]},
+            "/admin/storage-packages": {"packages": [
+                {"name": "Starter Storage Node", "pricePerByte": 1.862645149230957e-08,
+                 "minCapacityBytes": 1073741824, "maxCapacityBytes": 1073741824000,
+                 "allowedUnits": ["GB"], "status": "active"},
+                {"name": "Dead", "pricePerByte": 0, "status": "inactive"},   # dropped
+            ]},
+            "/rewards/apr-rates": {
+                "validator": {"basic": {"effectiveApr": 15, "minLockPeriod": 180}},
+                "storage": {"starter": {"effectiveApr": 12, "minLockPeriod": 90}},
+            },
+        })
+        snap = _sync_products(client)
+
+        self.assertEqual([v["name"] for v in snap["validators"]], ["Elite Tier"])
+        v = snap["validators"][0]
+        self.assertEqual((v["price"], v["sold"], v["available"]), (5999.0, 4, 2996))
+
+        self.assertEqual([s["name"] for s in snap["storage"]], ["Starter Storage Node"])
+        s = snap["storage"][0]
+        self.assertEqual(s["price_per_gb"], 20.0)          # pricePerByte * 1 GiB
+        self.assertEqual(s["min_gb"], 1.0)
+        self.assertEqual(s["max_gb"], 1000.0)
+
+        self.assertEqual(snap["apr_rates"], [
+            {"kind": "Validator", "tier": "Basic", "apr": 15.0, "min_lock_days": 180},
+            {"kind": "Storage", "tier": "Starter", "apr": 12.0, "min_lock_days": 90},
+        ])
+
+    def test_a_missing_catalogue_endpoint_is_tolerated(self):
+        snap = _sync_products(_ProductClient({}))     # every path returns {}
+        self.assertEqual(snap, {"validators": [], "storage": [], "apr_rates": []})
 
 
 def _profile(uid, name):
