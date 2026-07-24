@@ -29,7 +29,9 @@ export default function CommissionRules() {
   const employees = d.employees || [];
   const overrides = d.overrides[platform] || {};      // {emp_id: {key: rate}}
   const canEdit = d.can_edit;
-  const unit = (p) => (platform === "fxartha" ? "$ / lot" : p.unit);
+  // a $ amount for a per-lot base, otherwise a percent
+  const isAmount = (p) => p.basis === "amount";
+  const suffix = (p) => (isAmount(p) ? "$" : "%");
 
   const save = (product_key, rate, employee) => {
     if (!canEdit) return;
@@ -116,12 +118,12 @@ export default function CommissionRules() {
             <div key={p.key} className="card overflow-hidden">
               <div className="flex flex-wrap items-center gap-3 p-4">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-ink-900 truncate">{p.label}</p>
-                  <p className="text-xs text-ink-400">{p.kind ? `${p.kind} · ` : ""}{unit(p)}</p>
+                  <p className="font-bold text-ink-900 truncate">{p.label}{p.custom && <span className="ml-1.5 badge bg-ink-100 text-ink-500">custom</span>}</p>
+                  <p className="text-xs text-ink-400">{p.kind && p.kind !== "custom" ? `${p.kind} · ` : ""}{p.unit}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-ink-400">Universal</span>
-                  <RateInput value={p.rate} disabled={!canEdit} suffix={platform === "fxartha" ? "$" : "%"}
+                  <RateInput value={p.rate} disabled={!canEdit} suffix={suffix(p)}
                     onSave={(v) => save(p.key, v, null)} />
                 </div>
                 <button onClick={() => setOpen((o) => ({ ...o, [p.key]: !o[p.key] }))}
@@ -137,7 +139,7 @@ export default function CommissionRules() {
                     <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
                       <span className="flex-1 text-sm text-ink-700">{e.name}</span>
                       <RateInput value={overrides[e.id]?.[p.key]} disabled={!canEdit}
-                        placeholder={`${p.rate}`} suffix={platform === "fxartha" ? "$" : "%"}
+                        placeholder={`${p.rate}`} suffix={suffix(p)}
                         onSave={(v) => save(p.key, v, e.id)} />
                     </div>
                   ))}
