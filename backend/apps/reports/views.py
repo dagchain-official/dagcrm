@@ -378,8 +378,16 @@ def dagchain_overview(request):
         rewards=Sum("rewards_earned"), blocks=Sum("blocks_validated"))
     prof = DagChainProfile.objects.aggregate(
         users=Count("id"), dgc=Sum("dgc_balance"),
-        refs=Sum("referral_count"), earn=Sum("total_referral_earnings"))
-    stake = DagChainNode.objects.aggregate(
+        refs=Sum("referral_count"), earn=Sum("total_referral_earnings"),
+        staked=Sum("staked_amount"))
+    # Contract-level staking (the "Staking Management" screen): owner, reward pool,
+    # DGCC staked and the tranche/stage table, pulled by the sync. The old per-node
+    # stakedAmount is kept only as a fallback for a connection synced before this.
+    staking = dict(cfg.get("staking") or {})
+    staking.setdefault("total_staked", float(prof["staked"] or 0))
+    staking.setdefault("stakers", DagChainProfile.objects.filter(staked_amount__gt=0).count())
+    # node-level staking (a node's own DGC lock) is separate from the contract
+    node_stake = DagChainNode.objects.aggregate(
         staked=Sum("staked_amount"), requirement=Sum("staking_requirement"))
     return Response({
         "dashboard": cfg.get("dashboard", {}),
@@ -389,9 +397,10 @@ def dagchain_overview(request):
         "nodes_by_kind": list(nodes),
         "profiles": prof,
         "node_revenue": float(DagChainNode.objects.aggregate(s=Sum("purchase_price"))["s"] or 0),
-        "staking": {
-            "staked": float(stake["staked"] or 0),
-            "requirement": float(stake["requirement"] or 0),
+        "staking": staking,
+        "node_staking": {
+            "staked": float(node_stake["staked"] or 0),
+            "requirement": float(node_stake["requirement"] or 0),
             "staked_nodes": DagChainNode.objects.filter(is_staked=True).count(),
         },
     })
@@ -487,6 +496,7 @@ def dagchain_account(request):
         "validator_nodes_count": prof.validator_nodes_count,
         "storage_nodes_count": prof.storage_nodes_count,
         "login_count": prof.login_count, "joined_at": prof.joined_at,
+        "staked_amount": f(prof.staked_amount), "staked_stakes": prof.staked_stakes,
     }
     totals = {
         "nodes": len(nodes),
@@ -496,7 +506,9 @@ def dagchain_account(request):
         "rewards_earned": sum(f(n.rewards_earned) for n in nodes),
         "pending_rewards": sum(f(n.pending_rewards) for n in nodes),
         "claimed_rewards": sum(f(n.claimed_rewards) for n in nodes),
-        "staked": sum(f(n.staked_amount) for n in nodes),
+        # real contract stake for this user (per-node stakedAmount is 0)
+        "staked": f(prof.staked_amount) or sum(f(n.staked_amount) for n in nodes),
+        "staked_stakes": prof.staked_stakes,
         "staked_nodes": sum(1 for n in nodes if n.is_staked),
     }
     return Response({

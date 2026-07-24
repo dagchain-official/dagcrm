@@ -185,6 +185,64 @@ def _sync_node(node, business, kind):
     return False
 
 
+def _sync_staking(client):
+    """Contract-level staking (the DAGChain "Staking Management" screen).
+
+      /admin/staking-contract/info -> contract owner, reward pool, DGCC staked,
+                                      and the tranche/stage table (APY per stage)
+      /admin/staking-list          -> one row per registered stake (per user)
+
+    Per-user staked totals land on the DagChainProfile so an RM's book and the
+    staking-basis commission reflect real stakes. Returns a snapshot for the
+    Overview. This is a DIFFERENT staking from a node's own stakedAmount.
+    """
+    from collections import defaultdict
+
+    from .models import DagChainProfile
+
+    info = client.get("/admin/staking-contract/info") or {}
+    # this endpoint returns the fields at the top level, not under "result"
+    info = info.get("result", info)
+
+    per_user, per_user_count = defaultdict(float), defaultdict(int)
+    total_staked, active = 0.0, 0
+    for s in client.paginate("/admin/staking-list"):
+        amt = _num(s.get("stakedAmount"))
+        total_staked += amt
+        status = (s.get("status") or "").lower()
+        if status in ("active", "locked"):
+            active += 1
+        owner = s.get("userId")
+        uid = owner.get("_id") if isinstance(owner, dict) else owner
+        if uid:
+            per_user[uid] += amt
+            per_user_count[uid] += 1
+
+    # reset everyone first so a withdrawn stake drops back to 0, then set stakers
+    DagChainProfile.objects.exclude(external_id__in=per_user.keys()).filter(
+        staked_amount__gt=0).update(staked_amount=0, staked_stakes=0)
+    for uid, amt in per_user.items():
+        DagChainProfile.objects.filter(external_id=uid).update(
+            staked_amount=round(amt, 6), staked_stakes=per_user_count[uid])
+
+    tranches = [{
+        "id": t.get("trancheId"), "label": t.get("label"),
+        "days": t.get("durationDays"), "apy": t.get("dgccApyPercent"),
+        "active": bool(t.get("isActive")),
+    } for t in (info.get("tranches") or [])]
+    return {
+        "contract_address": info.get("contractAddress"),
+        "explorer_url": info.get("explorerUrl"),
+        "owner": info.get("owner"),
+        "chain_id": info.get("chainId"),
+        "total_staked": _num(info.get("totalDgccStaked")) or round(total_staked, 6),
+        "reward_pool": _num(info.get("rewardPoolBalance")),
+        "registrations": active,
+        "stakers": len(per_user),
+        "tranches": tranches,
+    }
+
+
 def sync_dagchain(conn):
     from apps.crm.models import Business
     from .models import IntegrationLog
@@ -214,13 +272,22 @@ def sync_dagchain(conn):
             revenue_rows += int(_sync_node(node, business, "validator"))
         for node in client.paginate("/admin/storage-nodes"):
             revenue_rows += int(_sync_node(node, business, "storage"))
+
+        # contract-level staking — tolerate its absence so a staking outage never
+        # fails the whole sync (users/nodes still update)
+        try:
+            staking = _sync_staking(client)
+        except (RuntimeError, requests.RequestException) as e:
+            staking = cfg.get("staking")     # keep the last good snapshot
+            IntegrationLog.objects.create(connection=conn, status="skipped",
+                                          message=f"staking: {str(e)[:200]}")
     except (RuntimeError, requests.RequestException) as e:
         IntegrationLog.objects.create(connection=conn, status="error", message=str(e)[:300])
         return {"error": str(e)}
 
     conn.status = "connected"
     conn.config = {**cfg, "dashboard": dashboard, "node_stats": node_stats,
-                   "last_sync": timezone.now().isoformat()}
+                   "staking": staking, "last_sync": timezone.now().isoformat()}
     conn.total_leads = users
     conn.last_lead_at = timezone.now()
     conn.save()

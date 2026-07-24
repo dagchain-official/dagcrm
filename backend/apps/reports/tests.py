@@ -53,6 +53,15 @@ class DagChainCommissionTests(TestCase):
         self.assertEqual(data["rates"],
                          {"validator_pct": 5.0, "storage_pct": 2.0, "staking_pct": 10.0})
 
+    def test_real_contract_staking_wins_over_the_node_figure(self):
+        # once the profile carries the real contract stake, that is what pays —
+        # per-node stakedAmount is only a fallback for un-synced data
+        self.cust.dagchain.staked_amount = 25
+        self.cust.dagchain.save(update_fields=["staked_amount"])
+        _, row = self._row()
+        self.assertEqual(row["staked"], 25.0)
+        self.assertEqual(row["comm_staking"], 2.5)          # 25 * 10%
+
     def test_totals_roll_up_to_the_employee_and_the_grand_row(self):
         data, row = self._row()
         emp = data["employees"][0]

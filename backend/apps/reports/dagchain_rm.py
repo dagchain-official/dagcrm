@@ -68,7 +68,9 @@ def compute_dagchain_by_rm(employee_id=None, rate_override=None):
         prof, na = c.dagchain, node_agg.get(c.id, {})
         val_spend = float(na.get("val_spend") or 0)
         sto_spend = float(na.get("sto_spend") or 0)
-        staked = float(na.get("staked") or 0)
+        # real contract staking from the profile (per-node stakedAmount is 0);
+        # fall back to the node figure only if the profile has none
+        staked = float(prof.staked_amount or 0) or float(na.get("staked") or 0)
         comm_validator = val_spend * v_pct
         comm_storage = sto_spend * s_pct
         by_emp[key].append({

@@ -88,6 +88,10 @@ class DagChainProfile(models.Model):
     validator_nodes_count = models.PositiveIntegerField(default=0)
     storage_nodes_count = models.PositiveIntegerField(default=0)
     login_count = models.PositiveIntegerField(default=0)
+    # contract-level staking (from /admin/staking-list), aggregated per user —
+    # this is the real "Staking Management" staking, NOT per-node stakedAmount
+    staked_amount = models.DecimalField(max_digits=22, decimal_places=6, default=0)
+    staked_stakes = models.PositiveIntegerField(default=0)   # number of active registrations
     joined_at = models.DateTimeField(null=True, blank=True)
     synced_at = models.DateTimeField(auto_now=True)
 
