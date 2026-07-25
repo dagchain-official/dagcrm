@@ -149,3 +149,22 @@ class TeamRequest(models.Model):
 
     def __str__(self):
         return f"{self.requested_by} wants {self.member} ({self.status})"
+
+
+class CompanySettings(models.Model):
+    """Single company-wide config (the Excel "Settings" list). One row only —
+    read via get_solo(). Editable by an admin from the Settings page."""
+    currency = models.CharField(max_length=8, default="USD")
+    workdays_per_month = models.PositiveIntegerField(default=22)
+    default_incentive_rate = models.DecimalField(max_digits=6, decimal_places=4, default=0.03)
+    training_pass_mark = models.DecimalField(max_digits=5, decimal_places=2, default=0.80)
+    first_contact_sla_min = models.PositiveIntegerField(default=15)
+    company_health_target = models.DecimalField(max_digits=5, decimal_places=2, default=0.85)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def get_solo(cls):
+        return cls.objects.order_by("id").first() or cls.objects.create()
+
+    def __str__(self):
+        return "Company settings"

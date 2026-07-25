@@ -44,6 +44,8 @@ def me_payload(user):
     data["modules"] = role_permissions(user)
     data["can_assign_leads"] = can_assign_leads(user)
     data["can_assign_targets"] = can_assign_targets(user)
+    from .models import CompanySettings
+    data["currency"] = CompanySettings.get_solo().currency
     data["business_ids"] = ids  # null = all
     data["businesses"] = [{"id": b.id, "name": b.name} for b in businesses]
     data["onboarded"] = user.onboarded

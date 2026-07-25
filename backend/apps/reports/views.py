@@ -203,12 +203,49 @@ def dashboard_summary(request):
 
 
 def _health_status(score):
-    """The Excel's bands: >=85% Healthy, >=60% Watch, else Critical."""
-    if score >= 0.85:
+    """Bands relative to the configured company-health target: at/above target =
+    Healthy, within 25 points below = Watch, lower = Critical."""
+    from apps.accounts.models import CompanySettings
+    target = float(CompanySettings.get_solo().company_health_target or 0.85)
+    if score >= target:
         return "Healthy"
-    if score >= 0.6:
+    if score >= target - 0.25:
         return "Watch"
     return "Critical"
+
+
+@api_view(["GET", "PUT"])
+def company_settings(request):
+    """Company-wide settings (the Excel Settings list). Anyone signed in may read
+    them; only an admin view may change them."""
+    from apps.accounts.access import is_admin_view
+    from apps.accounts.models import CompanySettings
+    cfg = CompanySettings.get_solo()
+    can_edit = is_admin_view(request.user)
+    if request.method == "PUT":
+        if not can_edit:
+            return Response({"detail": "Only administrators can change settings."}, status=403)
+        num = {"workdays_per_month": int, "default_incentive_rate": float,
+               "training_pass_mark": float, "first_contact_sla_min": int,
+               "company_health_target": float}
+        for field, cast in num.items():
+            if field in request.data and request.data[field] not in (None, ""):
+                try:
+                    setattr(cfg, field, cast(request.data[field]))
+                except (TypeError, ValueError):
+                    return Response({field: "Must be a number."}, status=400)
+        if request.data.get("currency"):
+            cfg.currency = str(request.data["currency"]).upper()[:8]
+        cfg.save()
+    return Response({
+        "currency": cfg.currency,
+        "workdays_per_month": cfg.workdays_per_month,
+        "default_incentive_rate": float(cfg.default_incentive_rate),
+        "training_pass_mark": float(cfg.training_pass_mark),
+        "first_contact_sla_min": cfg.first_contact_sla_min,
+        "company_health_target": float(cfg.company_health_target),
+        "can_edit": can_edit,
+    })
 
 
 @api_view(["GET"])

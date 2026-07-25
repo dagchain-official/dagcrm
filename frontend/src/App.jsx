@@ -17,6 +17,7 @@ import ConfigHub from "./pages/ConfigHub";
 import KpiBoard from "./pages/KpiBoard";
 import TradersLots from "./pages/TradersLots";
 import CommissionRules from "./pages/CommissionRules";
+import Settings from "./pages/Settings";
 import FxArthaTraders from "./pages/FxArthaTraders";
 import FxArthaOverview from "./pages/FxArthaOverview";
 import FxArthaAccount from "./pages/FxArthaAccount";
@@ -103,6 +104,7 @@ export default function App() {
         <Route path="dagchain-nodes" element={<DagChainNodes />} />
         <Route path="dagchain-rm" element={<DagChainByRm />} />
         <Route path="commission-rules" element={<CommissionRules />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="performance" element={<Performance />} />
         <Route path="incentive-board" element={<IncentiveBoard />} />
         <Route path="formula-builder" element={<FormulaBuilder />} />

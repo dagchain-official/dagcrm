@@ -25,6 +25,7 @@ export const moduleOf = (to) => {
   if (to === "/formula-board" || to === "/aum-board" || to === "/contribution-board") return "reports";
   if (to === "/targets" || to === "/assign-target") return "targets";
   if (to === "/commission-rules") return "reports";
+  if (to === "/settings") return "__admin__";
   if (to === "/team-requests") return "teams";
   if (to === "/hr/people") return "employees";
   if (to === "/hr/hierarchy") return "employees";
@@ -118,6 +119,7 @@ export const NAV = [
       { to: "/m/teams", label: "Teams", icon: UsersRound },
       { to: "/permissions", label: "Permission Matrix", icon: ShieldCheck },
       { to: "/config", label: "Configuration", icon: Settings2 },
+      { to: "/settings", label: "Settings", icon: Settings2 },
       { to: "/commission-rules", label: "Commission Rules", icon: Coins },
       { to: "/integrations", label: "Integration Hub", icon: Plug },
       { to: "/reports", label: "Reports", icon: BarChart3 },
