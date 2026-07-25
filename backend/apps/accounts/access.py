@@ -66,7 +66,7 @@ ROLE_DASHBOARD = {
 
 # ---- Every CRUD module key (matches frontend resource + viewset map) ----
 MODULES = [
-    "leads", "lead-activities", "opportunities", "proposals", "customers", "communications",
+    "leads", "lead-activities", "opportunities", "customers", "communications",
     "targets", "metric-definitions", "metric-entries", "aum-entries",
     "contribution-entries", "contribution-weights",
     "revenues", "businesses", "products", "lead-sources", "tickets",

@@ -37,7 +37,6 @@ export const moduleOf = (to) => {
   if (to === "/aum") return "aum-entries";
   if (to === "/contribution") return "contribution-entries";
   if (to === "/config") return "businesses";
-  if (to === "/proposals") return "proposals";
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
 };
@@ -59,7 +58,6 @@ export const NAV = [
       { to: "/m/leads", label: "Leads", icon: UserPlus },
       { to: "/m/lead-activities", label: "Lead Activities", icon: Activity },
       { to: "/m/opportunities", label: "Opportunities", icon: Target },
-      { to: "/proposals", label: "Proposals", icon: FileText },
       { to: "/m/customers", label: "Customers", icon: UserCheck },
       { to: "/m/communications", label: "Communications", icon: MessageSquare },
       { to: "/targets", label: "Targets", icon: Crosshair },

@@ -3,14 +3,13 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Package, LifeBuoy,
   MessageSquare, Calendar, Ticket as TicketIcon, Activity, UserPlus, Clock,
-  Plus, Upload, FileText, Download, Paperclip, FileSignature, UserCog,
+  Plus, Upload, FileText, Download, Paperclip, UserCog,
   CandlestickChart, ArrowDownToLine, ArrowUpFromLine, Wallet, Coins, TrendingDown,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal } from "../components/ui";
 import DataForm from "../components/DataForm";
-import ProposalBuilder, { blankProposal } from "../components/ProposalBuilder";
 import { STATUS_COLORS } from "../config/resources";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -87,7 +86,6 @@ export default function Customer360() {
   const [err, setErr] = useState(false);
   const [qa, setQa] = useState(null); // quick-action key
   const [saving, setSaving] = useState(false);
-  const [proposal, setProposal] = useState(null);
   const [reassign, setReassign] = useState(false);   // reassign modal open
   const [assignables, setAssignables] = useState([]);
   const [newOwner, setNewOwner] = useState("");
@@ -209,7 +207,6 @@ export default function Customer360() {
         <button className="chip" onClick={() => setQa("communication")}><MessageSquare size={15} /> Add Communication</button>
         <button className="chip" onClick={() => setQa("ticket")}><TicketIcon size={15} /> New Ticket</button>
         <button className="chip" onClick={() => setQa("revenue")}><DollarSign size={15} /> Add Revenue</button>
-        <button className="chip" onClick={() => setProposal({ ...blankProposal(), contactType: "customer", customer: id, title: `Proposal for ${c.name}` })}><FileSignature size={15} /> Create Proposal</button>
         <label className="chip cursor-pointer">
           <Upload size={15} /> Upload File
           <input type="file" className="hidden" onChange={upload} />
@@ -474,11 +471,6 @@ export default function Customer360() {
           </p>
         </div>
       </Modal>
-
-      {proposal && (
-        <ProposalBuilder initial={proposal} onClose={() => setProposal(null)}
-          onSaved={() => { setProposal(null); load(); }} />
-      )}
     </div>
   );
 }

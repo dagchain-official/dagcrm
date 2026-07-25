@@ -4,7 +4,7 @@ import api, { ai } from "../api/client";
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState([
-    { role: "ai", text: "Hi! I'm your DAGOS assistant — ask me anything about your data: leads, revenue, pipeline, proposals, tickets, employees, expenses… Try \"summary\" for a quick snapshot." },
+    { role: "ai", text: "Hi! I'm your DAGOS assistant — ask me anything about your data: leads, revenue, pipeline, tickets, employees, expenses… Try \"summary\" for a quick snapshot." },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -66,7 +66,7 @@ export default function AIAssistant() {
             <div ref={endRef} />
           </div>
           <div className="px-3 pt-2 flex flex-wrap gap-2">
-            {["summary", "Lead conversion rate", "Revenue by business", "Open tickets by priority", "Proposals sent vs accepted"].map((s) => (
+            {["summary", "Lead conversion rate", "Revenue by business", "Open tickets by priority", "Top performers"].map((s) => (
               <button key={s} onClick={() => send(s)} disabled={sending}
                 className="text-xs px-2.5 py-1 rounded-full bg-ink-100 text-ink-600 hover:bg-brand-50 hover:text-brand-700">
                 {s}

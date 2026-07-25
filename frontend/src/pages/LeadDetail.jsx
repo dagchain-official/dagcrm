@@ -7,7 +7,6 @@ import {
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal, ScorePill } from "../components/ui";
-import ProposalBuilder, { blankProposal } from "../components/ProposalBuilder";
 import { STATUS_COLORS } from "../config/resources";
 import { useToast } from "../context/ToastContext";
 
@@ -36,7 +35,6 @@ export default function LeadDetail() {
   const [subject, setSubject] = useState("");
   const [emailAccounts, setEmailAccounts] = useState([]);
   const [emailFrom, setEmailFrom] = useState("");
-  const [proposal, setProposal] = useState(null);
   const [history, setHistory] = useState([]);   // past messages/emails in the thread
   const [histLoading, setHistLoading] = useState(false);
 
@@ -86,7 +84,7 @@ export default function LeadDetail() {
       await load();
       const t = data.telephony;
       const liveNote = t?.note ? ` — ${t.note}` : t?.live ? " (live)" : "";
-      toast.success(`${type === "call" ? "Call placed" : type === "whatsapp" ? "WhatsApp sent" : type === "email" ? "Email sent" : "Proposal sent"}${liveNote}`);
+      toast.success(`${type === "call" ? "Call placed" : type === "whatsapp" ? "WhatsApp sent" : type === "email" ? "Email sent" : "Logged"}${liveNote}`);
       if (data.lead.status !== prev) toast.info(`Status auto-advanced: ${prev} → ${data.lead.status}`);
       if (type === "whatsapp" || type === "email") {
         // keep the chat modal open so the conversation can continue — clear the
@@ -109,7 +107,6 @@ export default function LeadDetail() {
   const rank = FUNNEL.indexOf(l.status);
 
   const onAction = (type) => {
-    if (type === "proposal") return setProposal({ ...blankProposal(), contactType: "lead", lead: id, title: `Proposal for ${l.name}` });
     if (type === "whatsapp" || type === "email") return setMsgModal({ type });
     engage(type);
   };
@@ -167,7 +164,6 @@ export default function LeadDetail() {
           <ActionBtn type="call" icon={Phone} label="Call" cls="bg-emerald-50 text-emerald-700 hover:bg-emerald-100" />
           <ActionBtn type="whatsapp" icon={MessageCircle} label="WhatsApp" cls="bg-green-50 text-green-700 hover:bg-green-100" />
           <ActionBtn type="email" icon={Mail} label="Email" cls="bg-blue-50 text-blue-700 hover:bg-blue-100" />
-          <ActionBtn type="proposal" icon={FileText} label="Send Proposal" cls="bg-violet-50 text-violet-700 hover:bg-violet-100" />
         </div>
       </div>
 
@@ -264,11 +260,6 @@ export default function LeadDetail() {
           </div>
         )}
       </Modal>
-
-      {proposal && (
-        <ProposalBuilder initial={proposal} onClose={() => setProposal(null)}
-          onSaved={() => { setProposal(null); load(); }} />
-      )}
     </div>
   );
 }

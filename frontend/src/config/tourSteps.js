@@ -46,13 +46,7 @@ export const TOUR = [
     route: "/m/opportunities",
     label: "Opportunities",
     content:
-      "Leads that have turned into deals. Track the stage (proposal → negotiation → won) and expected revenue here.",
-  },
-  {
-    route: "/proposals",
-    label: "Proposals",
-    content:
-      "Build a quotation/proposal — line items, tax/discount, and a PDF. Once accepted, the customer and revenue are created automatically.",
+      "Leads that have turned into deals. Track the stage (negotiation → won) and expected revenue here.",
   },
   {
     route: "/m/customers",
@@ -251,7 +245,7 @@ const RESOURCE_STEPS = [
 // generic /m/* list screens; custom pages carry their own `next` in PAGE_TOURS.
 const NEXT = {
   "/m/leads": { label: "Opportunities", route: "/m/opportunities" },
-  "/m/opportunities": { label: "Proposals", route: "/proposals" },
+  "/m/opportunities": { label: "Customers", route: "/m/customers" },
   "/m/customers": { label: "Communications", route: "/m/communications" },
   "/m/revenues": { label: "Finance (P&L)", route: "/finance" },
   "/m/tickets": { label: "Customers", route: "/m/customers" },
@@ -324,17 +318,6 @@ const PAGE_TOURS = {
       { selector: '[data-tour="kpi-period"]', title: "Choose the period", content: "Pick the month and year — every KPI is recalculated for that period, rolled up the org tree." },
     ],
     next: { label: "Traders & Lots", route: "/traders-lots" },
-  },
-
-  // Proposals
-  "/proposals": {
-    steps: [
-      { selector: '[data-tour="prop-new"]', title: "Build a proposal", content: "Open the proposal builder — add line items, tax and discount, then generate a PDF. Once accepted, the customer and revenue are created automatically." },
-      { selector: '[data-tour="prop-search"]', title: "Search proposals", content: "Find an existing proposal by title or reference." },
-      { selector: '[data-tour="prop-stats"]', title: "At a glance", content: "How many proposals are total, sent and still in draft." },
-      { selector: '[data-tour="prop-list"]', title: "Manage proposals", content: "Send, accept, reject, download, revise or delete each proposal from the list." },
-    ],
-    next: { label: "Customers", route: "/m/customers" },
   },
 
   // Org hierarchy

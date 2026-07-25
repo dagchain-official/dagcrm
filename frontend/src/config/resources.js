@@ -231,7 +231,7 @@ export const RESOURCES = {
     title: "Lead Activities", endpoint: "lead-activities", search: false,
     filters: [
       { key: "lead", label: "Lead", ref: "leads", labelKey: "name" },
-      { key: "activity_type", label: "Type", options: sel("call", "whatsapp", "email", "meeting", "note", "proposal") },
+      { key: "activity_type", label: "Type", options: sel("call", "whatsapp", "email", "meeting", "note") },
     ],
     columns: [
       { key: "lead_name", label: "Lead" },
@@ -251,7 +251,7 @@ export const RESOURCES = {
   opportunities: {
     title: "Opportunities", endpoint: "opportunities", search: true,
     filters: [
-      { key: "stage", label: "Stage", options: sel("proposal", "negotiation", "won", "lost", "active") },
+      { key: "stage", label: "Stage", options: sel("negotiation", "won", "lost", "active") },
       { key: "status", label: "Status", options: sel("open", "closed") },
     ],
     columns: [
@@ -266,7 +266,7 @@ export const RESOURCES = {
       { key: "lead", label: "Lead", type: "ref", ref: "leads", labelKey: "name", required: true },
       { key: "product", label: "Product", type: "ref", ref: "products", labelKey: "name" },
       { key: "assigned_to", label: "Owner", type: "ref", ref: "users", labelKey: "name" },
-      { key: "stage", label: "Stage", type: "select", options: sel("proposal", "negotiation", "won", "lost", "active") },
+      { key: "stage", label: "Stage", type: "select", options: sel("negotiation", "won", "lost", "active") },
       { key: "expected_revenue", label: "Expected revenue", type: "number" },
       { key: "status", label: "Status", type: "select", options: sel("open", "closed") },
     ],
