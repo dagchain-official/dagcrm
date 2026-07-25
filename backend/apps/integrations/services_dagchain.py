@@ -106,7 +106,9 @@ def _sync_user(item, rm_user):
         defaults={
             "name": name,
             "email": item.get("email") or "",
-            "phone": item.get("phoneCountryCode") or "",
+            # `phone` is the real number (e.g. +971551253698); phoneCountryCode is
+            # just a dial code and defaults to +1, so it must not be used as the phone.
+            "phone": item.get("phone") or "",
         },
     )
     # seed the owner once; never clobber a manual reassignment
@@ -175,13 +177,19 @@ def _sync_node(node, business, kind):
             "opened_at": _dt(node.get("createdAt")),
         },
     )
-    if cust and price:
+    # Only a COMPLETED payment is real revenue. Many nodes sit at "waiting" or
+    # "failed" (abandoned checkouts) — counting those inflated revenue. Delete any
+    # revenue row for a node that isn't paid, so the correction is retroactive.
+    rev_key = f"dag-{kind[:3]}:{nid}"
+    paid = (node.get("paymentStatus") or "").lower() == "completed"
+    if cust and price and paid:
         Revenue.objects.update_or_create(
-            external_id=f"dag-{kind[:3]}:{nid}",
+            external_id=rev_key,
             defaults={"customer": cust, "business": business,
                       "gross_revenue": price, "commission": 0},
         )
         return True
+    Revenue.objects.filter(external_id=rev_key).delete()
     return False
 
 
