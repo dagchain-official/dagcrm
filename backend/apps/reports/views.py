@@ -308,10 +308,20 @@ def team_dashboard(request):
 
 @api_view(["GET"])
 def hr_dashboard(request):
-    """HR — people, attendance, leaves, payroll, incentives."""
+    """HR — people, attendance, leaves, payroll, incentives + learning health."""
     today = timezone.localdate()
     month = today.month
     year = today.year
+
+    # HR & Learning strip (mirrors the Excel monitor). Average KPI = mean target
+    # attainment across employees; Critical = attainment below the 60% band.
+    # Training / assessment need a Training module the CRM doesn't have yet -> 0.
+    inc = compute_incentives(month, year)["rows"]
+    attain = [min(1.0, r["revenue"] / r["target"]) for r in inc if r["target"]]
+    avg_kpi = round(sum(attain) / len(attain), 4) if attain else 0.0
+    active_emps = Employee.objects.filter(user__status="active").count() or Employee.objects.count()
+    critical = sum(1 for a in attain if a < 0.6)
+
     return Response({
         "total_employees": Employee.objects.count(),
         "present_today": Attendance.objects.filter(date=today, status="present").count(),
@@ -323,6 +333,14 @@ def hr_dashboard(request):
         "headcount_by_dept": list(
             Employee.objects.values("department__department_name").annotate(count=Count("id")).order_by("-count")
         ),
+        "learning": {
+            "active_employees": active_emps,
+            "average_kpi": avg_kpi,
+            "training_compliance": 0.0,     # needs a Training module (not built)
+            "assessment_pass_rate": 0.0,
+            "overdue_training": 0,
+            "critical_employees": critical,
+        },
     })
 
 

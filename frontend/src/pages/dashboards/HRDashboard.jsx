@@ -4,6 +4,7 @@ import {
 } from "recharts";
 import {
   Users, UserCheck, CalendarOff, Wallet, MoreHorizontal, ArrowUpRight,
+  Gauge, GraduationCap, ClipboardCheck, Clock, AlertTriangle,
 } from "lucide-react";
 import api from "../../api/client";
 import usePolling from "../../hooks/usePolling";
@@ -11,6 +12,18 @@ import { Spinner } from "../../components/ui";
 
 const PIE_COLORS = ["#f59e0b", "#22c55e", "#ef4444"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
+const num = (v) => Number(v || 0).toLocaleString();
+const pct = (v) => `${(Number(v || 0) * 100).toFixed(1)}%`;
+
+function Mini({ icon: Icon, label, value, color }) {
+  return (
+    <div className="card p-5">
+      <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}><Icon size={20} /></div>
+      <p className="text-3xl font-extrabold text-ink-900 mt-4 tabular-nums">{value}</p>
+      <p className="text-sm text-ink-400 mt-0.5">{label}</p>
+    </div>
+  );
+}
 
 function Kpi({ icon: Icon, label, value, trend, color }) {
   return (
@@ -68,6 +81,22 @@ export default function HRDashboard() {
         <Kpi icon={UserCheck} label="Present Today" value={d.present_today} trend={`${d.total_employees} total staff`} color="bg-emerald-100 text-emerald-600" />
         <Kpi icon={CalendarOff} label="Pending Leaves" value={d.pending_leaves} trend={`${d.on_leave_today} on leave today`} color="bg-amber-100 text-amber-600" />
         <Kpi icon={Wallet} label="Payroll This Month" value={money(d.payroll_this_month)} trend={`${money(d.incentives_this_month)} incentives`} color="bg-violet-100 text-violet-600" />
+      </div>
+
+      {/* HR & Learning — employee health, learning compliance & assessment risk */}
+      <div>
+        <h3 className="font-bold text-ink-900 mb-3">HR &amp; Learning</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+          <Mini icon={UserCheck} label="Active Employees" value={num(d.learning?.active_employees)} color="bg-brand-100 text-brand-600" />
+          <Mini icon={Gauge} label="Average KPI" value={pct(d.learning?.average_kpi)} color="bg-amber-100 text-amber-600" />
+          <Mini icon={GraduationCap} label="Training Compliance" value={pct(d.learning?.training_compliance)} color="bg-indigo-100 text-indigo-600" />
+          <Mini icon={ClipboardCheck} label="Assessment Pass Rate" value={pct(d.learning?.assessment_pass_rate)} color="bg-sky-100 text-sky-600" />
+          <Mini icon={Clock} label="Overdue Training" value={num(d.learning?.overdue_training)} color="bg-emerald-100 text-emerald-600" />
+          <Mini icon={AlertTriangle} label="Critical Employees" value={num(d.learning?.critical_employees)} color="bg-rose-100 text-rose-500" />
+        </div>
+        <p className="text-xs text-ink-400 mt-2">
+          Training Compliance, Assessment Pass Rate &amp; Overdue Training read 0 until a Training / Assessment module is added.
+        </p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
