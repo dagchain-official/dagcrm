@@ -404,6 +404,7 @@ export const RESOURCES = {
   },
   "training-modules": {
     title: "Training Modules", endpoint: "training-modules", search: true,
+    detailPath: "/hr/training/module",
     filters: [
       { key: "active", label: "Active", options: sel("true", "false") },
     ],
