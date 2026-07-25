@@ -280,9 +280,20 @@ def company_health(request):
 
 @api_view(["GET"])
 def team_dashboard(request):
-    """Team Leader — data for the leader's direct reports."""
-    team = User.objects.filter(manager=request.user)
-    team_ids = list(team.values_list("id", flat=True)) + [request.user.id]
+    """Team Leader — data for the leader's direct reports. An admin/manager may
+    pass ?user=<leader id> to view that leader's team (within their reach)."""
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
+    leader = request.user
+    target = request.query_params.get("user")
+    if target and str(target) != str(leader.id):
+        try:
+            tid = int(target)
+        except (TypeError, ValueError):
+            tid = None
+        if tid and (is_admin_view(leader) or tid in subordinate_user_ids(leader, include_self=True)):
+            leader = User.objects.filter(id=tid, is_superuser=False).first() or leader
+    team = User.objects.filter(manager=leader)
+    team_ids = list(team.values_list("id", flat=True)) + [leader.id]
     leads = Lead.objects.pipeline().filter(assigned_to_id__in=team_ids)
     opps = Opportunity.objects.filter(assigned_to_id__in=team_ids)
     members = [

@@ -26,6 +26,13 @@ const MAP = {
 const SWITCHER_ROLES = ["admin", "sales-manager", "team-leader", "finance"];
 // Roles that may drill into any one employee's dashboard.
 const EMPLOYEE_VIEW_ROLES = ["admin", "sales-manager", "team-leader"];
+// An employee's RBAC role -> which dashboard they'd normally land on, so picking
+// an HR person shows the HR dashboard, Finance shows Finance, etc.
+const ROLE_TO_DASH = {
+  "Super Admin": "admin", "Business Head": "admin", "Sales Director": "admin",
+  "Sales Manager": "sales-manager", "Team Leader": "team-leader",
+  "Sales Executive": "sales-exec", "Support": "support", "HR": "hr", "Finance": "finance",
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -83,9 +90,20 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-      {emp ? <UserDashboard userId={emp} />
+      {emp ? <EmployeeDash userId={emp} person={people.find((u) => String(u.id) === String(emp))} />
         : biz ? <BusinessDashboard businessId={biz} />
           : <RoleDash />}
     </div>
   );
+}
+
+// Render the selected employee's role-appropriate dashboard. Sales-exec is
+// personal and Team Leader is that leader's team (both scoped by ?user=); the
+// company views (HR / Finance / Admin / Sales Manager / Support) render as-is.
+function EmployeeDash({ userId, person }) {
+  const key = ROLE_TO_DASH[person?.role_name] || "sales-exec";
+  if (key === "sales-exec") return <UserDashboard userId={userId} />;
+  if (key === "team-leader") return <TeamLeaderDashboard userId={userId} />;
+  const Comp = MAP[key] || UserDashboard;
+  return <Comp />;
 }

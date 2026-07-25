@@ -32,14 +32,15 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
   );
 }
 
-export default function TeamLeaderDashboard() {
+export default function TeamLeaderDashboard({ userId }) {
   const [d, setD] = useState(null);
 
   usePolling(() => {
-    api.get("/reports/team-dashboard/").then((r) => setD(r.data)).catch(() => {});
-  });
+    const url = userId ? `/reports/team-dashboard/?user=${userId}` : "/reports/team-dashboard/";
+    api.get(url).then((r) => setD(r.data)).catch(() => {});
+  }, 6000, [userId]);
 
-  if (!d) return <Spinner label="Loading your team…" />;
+  if (!d) return <Spinner label="Loading team…" />;
 
   const statusData = (d.leads_by_status || []).map((s) => ({ name: s.status, count: s.count }));
 
