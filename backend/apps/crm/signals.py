@@ -8,7 +8,7 @@ closes it won — all without the RM touching the status field.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import LeadActivity
+from .models import Lead, LeadActivity
 
 # funnel order (bigger = further along)
 RANK = {
@@ -58,3 +58,13 @@ def advance_lead_status(lead, activity):
 def on_activity(sender, instance, created, **kwargs):
     if created:
         advance_lead_status(instance.lead, instance)
+
+
+@receiver(post_save, sender=Lead)
+def on_lead_converted(sender, instance, **kwargs):
+    """The moment a lead is Closed Won, make sure it has a Customer — linking it
+    to the person's live FX Artha / DAGChain account if one exists, so their real
+    purchases and revenue surface on the customer and keep updating via sync."""
+    if instance.status == "converted":
+        from .linking import ensure_customer_for_lead
+        ensure_customer_for_lead(instance)

@@ -5,6 +5,7 @@ import {
   MessageSquare, Calendar, Ticket as TicketIcon, Activity, UserPlus, Clock,
   Plus, Upload, FileText, Download, Paperclip, UserCog,
   CandlestickChart, ArrowDownToLine, ArrowUpFromLine, Wallet, Coins, TrendingDown,
+  ShoppingBag, Boxes,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -51,6 +52,11 @@ const date = (v) => (v ? new Date(v).toLocaleDateString("en-GB", { day: "numeric
 const dt = (v) => (v ? new Date(v).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 const TABS = ["Overview", "Products", "Revenue", "Tickets", "Communications", "Documents", "Timeline"];
+
+const PLATFORM_BADGE = {
+  "FX Artha": "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
+  DAGChain: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+};
 
 const EVENT_ICON = {
   revenue: { icon: DollarSign, tint: "bg-emerald-100 text-emerald-600" },
@@ -148,6 +154,10 @@ export default function Customer360() {
   const k = d.kpis;
   const tr = d.trading || {};
   const num = (v) => Number(v || 0).toLocaleString();
+  const purchases = d.purchases || [];
+  const visibleTabs = purchases.length
+    ? ["Overview", "Purchases", ...TABS.slice(1)]
+    : TABS;
 
   const Timeline = ({ items }) => (
     <div className="space-y-1">
@@ -186,7 +196,14 @@ export default function Customer360() {
             {c.name?.[0]?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-extrabold text-ink-900">{c.name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-extrabold text-ink-900">{c.name}</h1>
+              {d.platform && (
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${PLATFORM_BADGE[d.platform] || "bg-ink-100 text-ink-600"}`}>
+                  {d.platform} account
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-ink-500">
               {c.email && <span className="inline-flex items-center gap-1.5"><Mail size={14} /> {c.email}</span>}
               {c.phone && <span className="inline-flex items-center gap-1.5"><Phone size={14} /> {c.phone}</span>}
@@ -270,7 +287,7 @@ export default function Customer360() {
 
       {/* tabs */}
       <div className="flex gap-1 p-1 bg-ink-100 rounded-xl w-full sm:w-fit overflow-x-auto">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition
               ${tab === t ? "bg-ink-0 text-brand-700 shadow-sm" : "text-ink-500 hover:text-ink-700"}`}>
@@ -315,6 +332,55 @@ export default function Customer360() {
             </Section>
           </div>
         </div>
+      )}
+
+      {/* PLATFORM PURCHASES — what the client actually bought on FX Artha / DAGChain */}
+      {tab === "Purchases" && (
+        <Section>
+          <div className="flex items-center gap-2 mb-4">
+            <ShoppingBag size={18} className="text-brand-600" />
+            <h3 className="font-bold text-ink-900">Platform Purchases</h3>
+            {d.platform && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PLATFORM_BADGE[d.platform] || "bg-ink-100 text-ink-600"}`}>{d.platform}</span>
+            )}
+          </div>
+          <p className="text-xs text-ink-400 mb-4">
+            Matched to this customer from their {d.platform} login. Every new purchase is added automatically as the platform syncs.
+          </p>
+          <div className="space-y-3">
+            {purchases.map((p, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-ink-50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="grid place-items-center w-10 h-10 rounded-xl bg-brand-100 text-brand-600 shrink-0">
+                    <Boxes size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-ink-800 truncate">{p.product}</p>
+                    <p className="text-xs text-ink-400">
+                      {p.platform}{p.date ? ` · ${date(p.date)}` : ""}
+                      {p.kind === "fx" && p.lots ? ` · ${num(p.lots)} lots` : ""}
+                      {p.kind === "node" && p.rewards ? ` · ${money(p.rewards)} rewards` : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-lg font-extrabold text-ink-900 tabular-nums">{money(p.price)}</p>
+                  {p.kind === "fx"
+                    ? <p className="text-[11px] text-emerald-600 font-semibold">{money(p.brokerage)} brokerage</p>
+                    : <Badge value={p.status} map={STATUS_COLORS} />}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-5 pt-4 border-t border-ink-100">
+            <span className="text-sm font-semibold text-ink-500">
+              {d.platform === "FX Artha" ? "Total deposit" : "Total purchased"}
+            </span>
+            <span className="text-xl font-extrabold text-ink-900 tabular-nums">
+              {money(purchases.reduce((s, p) => s + Number(p.price || 0), 0))}
+            </span>
+          </div>
+        </Section>
       )}
 
       {/* PRODUCTS */}

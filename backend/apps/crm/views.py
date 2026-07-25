@@ -542,6 +542,32 @@ class CustomerViewSet(viewsets.ModelViewSet):
         con = ContributionEntry.objects.filter(customer=customer).aggregate(
             b=Sum("brokerage"), i=Sum("insurance"), s=Sum("staking"), tl=Sum("trading_loss"))
 
+        # Platform purchases — what this person actually bought on FX Artha /
+        # DAGChain, matched to the CRM customer when their lead converted. Each is
+        # a real product with a price; the price flows into revenue via the sync.
+        from apps.integrations.models import DagChainNode
+        from apps.crm.linking import platform_of
+        platform = platform_of(customer)
+        purchases = []
+        for n in customer.dagchain_nodes.all().order_by("-opened_at"):
+            purchases.append({
+                "platform": "DAGChain",
+                "product": n.package or f"{n.kind.title()} Node",
+                "price": n.purchase_price, "currency": n.currency or "USD",
+                "status": n.status or n.payment_status or "active",
+                "rewards": n.rewards_earned, "date": n.opened_at, "kind": "node",
+            })
+        # FX Artha traders don't buy a discrete product — the account itself is the
+        # product: the client's deposit is what they put in, brokerage is FX Artha's
+        # earning (our revenue). Show both, as the client asked, for clarity.
+        if platform == "FX Artha" and (deposits or total_gross):
+            purchases.append({
+                "platform": "FX Artha", "product": "FX Artha Trading Account",
+                "price": deposits, "currency": "USD", "status": "active",
+                "brokerage": total_gross, "lots": lots_traded,
+                "date": customer.created_at, "kind": "fx",
+            })
+
         # unified timeline (newest first)
         timeline = []
         for r in revenues:
@@ -584,6 +610,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "staking": con["s"] or 0,
                 "trading_loss": con["tl"] or 0,
             },
+            "platform": platform,
+            "purchases": purchases,
             "products": CustomerProductSerializer(products, many=True).data,
             "revenues": RevenueSerializer(revenues, many=True).data,
             "tickets": TicketSerializer(tickets, many=True).data,
