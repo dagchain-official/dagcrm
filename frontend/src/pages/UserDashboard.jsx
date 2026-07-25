@@ -6,7 +6,6 @@ import {
   Trophy, Activity, ChevronRight, DollarSign,
 } from "lucide-react";
 import api from "../api/client";
-import { useAuth } from "../context/AuthContext";
 import { Badge, ScorePill, Spinner } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
 import KpiScorecard from "../components/KpiScorecard";
@@ -48,7 +47,6 @@ function CardHead({ title, to }) {
 }
 
 export default function UserDashboard() {
-  const { user } = useAuth();
   const [d, setD] = useState(null);
 
   useEffect(() => {
@@ -65,19 +63,6 @@ export default function UserDashboard() {
 
   return (
     <div className="space-y-5">
-      {/* greeting banner */}
-      <div className="card p-6 bg-gradient-to-r from-brand-600 to-brand-500 text-white border-0 relative overflow-hidden">
-        <div className="absolute -top-10 -right-6 w-48 h-48 rounded-full bg-white/10" />
-        <div className="relative">
-          <p className="text-sm text-white/80">My Workspace</p>
-          <h1 className="text-2xl font-extrabold mt-1">Hi {user?.name?.split(" ")[0]}, here's your day 👋</h1>
-          <p className="text-sm text-white/80 mt-1">
-            You have <b>{d.my_followups_due}</b> follow-up{d.my_followups_due !== 1 ? "s" : ""} coming up and{" "}
-            <b>{d.my_open_opportunities}</b> open deal{d.my_open_opportunities !== 1 ? "s" : ""}.
-          </p>
-        </div>
-      </div>
-
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Kpi icon={UserPlus} label="My Leads" value={d.my_leads} trend={`${d.my_new_leads} new`} color="bg-orange-100 text-orange-600" />
