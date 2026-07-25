@@ -381,6 +381,45 @@ def hr_dashboard(request):
     })
 
 
+def _pnl_rows(gross, net, commissions, expenses, payroll):
+    """The P&L health table (Excel monitor), computed live. Data-driven: the
+    frontend just renders whatever rows come back, so adding a metric here makes
+    it appear on the dashboard with no UI change.
+
+    `rate` rows are shown as a percentage; the rest as money. `status` bands:
+    a profit/margin is Healthy when >= 0, Critical below; a rate uses 90/70;
+    pure cost lines (Direct Cost, Operating Expenses) are informational.
+    """
+    collected = gross                      # no partial-collection tracking yet
+    revenue = net
+    direct_cost = commissions
+    gross_profit = revenue - direct_cost
+    operating_expenses = expenses + payroll
+    net_operating_profit = gross_profit - operating_expenses
+    collection_rate = (collected / gross) if gross else 0.0
+    gross_margin = (gross_profit / gross) if gross else 0.0
+    net_margin = (net_operating_profit / gross) if gross else 0.0
+
+    def sign(v):
+        return "Healthy" if v >= 0 else "Critical"
+
+    def rate_band(v):
+        return "Healthy" if v >= 0.9 else ("Watch" if v >= 0.7 else "Critical")
+
+    return [
+        {"metric": "Gross Sales", "amount": round(gross, 2), "rate": False, "status": "Healthy"},
+        {"metric": "Collected", "amount": round(collected, 2), "rate": False, "status": "Healthy"},
+        {"metric": "Revenue", "amount": round(revenue, 2), "rate": False, "status": sign(revenue)},
+        {"metric": "Direct Cost", "amount": round(direct_cost, 2), "rate": False, "status": "Healthy"},
+        {"metric": "Gross Profit", "amount": round(gross_profit, 2), "rate": False, "status": sign(gross_profit)},
+        {"metric": "Operating Expenses", "amount": round(operating_expenses, 2), "rate": False, "status": "Healthy"},
+        {"metric": "Net Operating Profit", "amount": round(net_operating_profit, 2), "rate": False, "status": sign(net_operating_profit)},
+        {"metric": "Collection Rate", "amount": round(collection_rate, 4), "rate": True, "status": rate_band(collection_rate)},
+        {"metric": "Gross Margin", "amount": round(gross_margin, 4), "rate": True, "status": sign(gross_margin)},
+        {"metric": "Net Margin", "amount": round(net_margin, 4), "rate": True, "status": sign(net_margin)},
+    ]
+
+
 @api_view(["GET"])
 def finance_dashboard(request):
     """Finance — revenue, expenses, commissions, profit."""
@@ -399,6 +438,8 @@ def finance_dashboard(request):
         "total_commissions": commissions,
         "payroll_this_month": payroll,
         "profit": profit,
+        "pnl": _pnl_rows(float(gross), float(net), float(commissions),
+                         float(expenses), float(payroll)),
         "revenue_by_business": [
             {"business": d["business__name"] or "Unknown", "net": d["net"] or 0}
             for d in rev.values("business__name").annotate(net=Sum("net_revenue")).order_by("-net")

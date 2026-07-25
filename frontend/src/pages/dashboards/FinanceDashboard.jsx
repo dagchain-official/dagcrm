@@ -11,6 +11,8 @@ import { Spinner } from "../../components/ui";
 
 const PIE_COLORS = ["#6366f1", "#f59e0b", "#22c55e", "#fb7185", "#8b5cf6", "#06b6d4"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
+const pct = (v) => `${(Number(v || 0) * 100).toFixed(2)}%`;
+const BAND = { Healthy: "bg-emerald-50 text-emerald-700", Watch: "bg-amber-50 text-amber-700", Critical: "bg-rose-50 text-rose-600" };
 
 function Kpi({ icon: Icon, label, value, trend, color }) {
   return (
@@ -43,6 +45,7 @@ export default function FinanceDashboard() {
 
   const revenueByBusiness = d.revenue_by_business || [];
   const expensesByType = d.expenses_by_type || [];
+  const pnl = d.pnl || [];
 
   return (
     <div className="space-y-5">
@@ -69,6 +72,37 @@ export default function FinanceDashboard() {
         <Kpi icon={Receipt} label="Expenses" value={money(d.total_expenses)} color="bg-rose-100 text-rose-500" />
         <Kpi icon={Handshake} label="Commissions" value={money(d.total_commissions)} color="bg-amber-100 text-amber-600" />
       </div>
+
+      {/* P&L — revenue, collection, cost and profit health (data-driven) */}
+      {pnl.length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900 mb-4">P&amp;L — Profit Health</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm max-w-2xl">
+              <thead>
+                <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide border-b border-ink-100">
+                  <th className="py-2 pr-4 font-semibold">Metric</th>
+                  <th className="py-2 px-4 font-semibold text-right">Amount / Rate</th>
+                  <th className="py-2 pl-4 font-semibold text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pnl.map((row) => (
+                  <tr key={row.metric} className="border-b border-ink-50">
+                    <td className="py-2.5 pr-4 font-medium text-ink-800">{row.metric}</td>
+                    <td className="py-2.5 px-4 text-right tabular-nums text-ink-900">
+                      {row.rate ? pct(row.amount) : money(row.amount)}
+                    </td>
+                    <td className="py-2.5 pl-4 text-right">
+                      <span className={`badge ${BAND[row.status] || "bg-ink-100 text-ink-500"}`}>{row.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* charts */}
       <div className="grid lg:grid-cols-2 gap-5">
