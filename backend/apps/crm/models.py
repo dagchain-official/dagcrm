@@ -117,10 +117,26 @@ class LeadActivity(models.Model):
              ("email", "Email"), ("callback", "Callback"), ("followup", "Follow-up"),
              ("meeting", "Meeting"), ("document_collection", "Document Collection"),
              ("service_call", "Service Call"), ("note", "Note")]
+    # call result — drives the lead status (see signals.advance_lead_status)
+    OUTCOME = [
+        ("connected", "Connected"), ("no_answer", "No Answer"), ("busy", "Busy"),
+        ("voicemail", "Voicemail"), ("wrong_number", "Wrong Number"),
+        ("interested", "Interested"), ("callback", "Callback Requested"),
+        ("meeting_booked", "Meeting Booked"), ("not_interested", "Not Interested"),
+        ("converted", "Converted"),
+    ]
+    MEETING_STATUS = [
+        ("scheduled", "Scheduled"), ("confirmed", "Confirmed"), ("completed", "Completed"),
+        ("cancelled", "Cancelled"), ("no_show", "No Show"), ("rescheduled", "Rescheduled"),
+    ]
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="activities")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     activity_type = models.CharField(max_length=20, choices=TYPES, default="call")
-    remarks = models.TextField(blank=True)
+    remarks = models.TextField(blank=True)                    # what was discussed
+    duration_min = models.DecimalField(max_digits=7, decimal_places=2, default=0)   # call length
+    outcome = models.CharField(max_length=20, choices=OUTCOME, blank=True)
+    meeting_status = models.CharField(max_length=20, choices=MEETING_STATUS, blank=True)
+    meeting_at = models.DateTimeField(null=True, blank=True)   # scheduled meeting time
     followup_date = models.DateField(null=True, blank=True)
     next_action = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

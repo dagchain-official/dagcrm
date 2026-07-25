@@ -199,7 +199,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         from .telephony import make_call, send_whatsapp
 
         lead = self.get_object()
-        kind = request.data.get("type", "note")          # call|whatsapp|email|proposal|note
+        kind = request.data.get("type", "note")          # call|whatsapp|email|meeting|note
         remarks = request.data.get("remarks", "")
         message = request.data.get("message", "")
         subject = request.data.get("subject", "")
@@ -208,11 +208,21 @@ class LeadViewSet(viewsets.ModelViewSet):
         if user and user.is_superuser:
             user = None  # founder's actions not tracked as activity
 
+        def _num(v):
+            try:
+                return round(float(v or 0), 2)
+            except (TypeError, ValueError):
+                return 0
+
         labels = {"call": "Call placed", "whatsapp": "WhatsApp sent", "email": "Email sent",
-                  "proposal": "Proposal sent", "meeting": "Meeting", "note": "Note"}
+                  "meeting": "Meeting", "note": "Note"}
         activity = LeadActivity.objects.create(
             lead=lead, user=user, activity_type=kind,
             remarks=remarks or labels.get(kind, kind),
+            duration_min=_num(request.data.get("duration_min")),
+            outcome=request.data.get("outcome") or "",
+            meeting_status=request.data.get("meeting_status") or "",
+            meeting_at=request.data.get("meeting_at") or None,
         )
         lead.refresh_from_db()               # status may have auto-advanced via signal
         from .scoring import rescore
@@ -229,7 +239,7 @@ class LeadViewSet(viewsets.ModelViewSet):
                 direction="outbound",
                 message=logged,
             )
-        if kind == "call":
+        if kind == "call" and request.data.get("place_call"):
             telephony = make_call(lead.phone, getattr(user, "phone", "") or None)
         elif kind == "whatsapp":
             telephony = send_whatsapp(lead.phone, message or f"Hi {lead.name}, following up.")

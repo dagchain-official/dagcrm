@@ -247,7 +247,10 @@ export const RESOURCES = {
     fields: [
       { key: "lead", label: "Lead", type: "ref", ref: "leads", labelKey: "name", required: true },
       { key: "activity_type", label: "Type", type: "select", options: sel("call", "outbound_call", "inbound_call", "whatsapp", "email", "callback", "followup", "meeting", "document_collection", "service_call", "note") },
-      { key: "remarks", label: "Remarks", type: "textarea" },
+      { key: "outcome", label: "Call outcome (moves lead status)", type: "select", options: sel("", "connected", "interested", "callback", "meeting_booked", "no_answer", "busy", "voicemail", "wrong_number", "not_interested", "converted") },
+      { key: "duration_min", label: "Duration (min)", type: "number" },
+      { key: "meeting_status", label: "Meeting status", type: "select", options: sel("", "scheduled", "confirmed", "completed", "cancelled", "no_show", "rescheduled") },
+      { key: "remarks", label: "Remarks / notes", type: "textarea" },
       { key: "followup_date", label: "Follow-up date", type: "date" },
       { key: "next_action", label: "Next action" },
     ],

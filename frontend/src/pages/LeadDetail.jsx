@@ -32,6 +32,8 @@ export default function LeadDetail() {
   const [err, setErr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msgModal, setMsgModal] = useState(null); // {type}
+  const [callModal, setCallModal] = useState(false);
+  const [meetModal, setMeetModal] = useState(false);
   const [msg, setMsg] = useState("");
   const [subject, setSubject] = useState("");
   const [emailAccounts, setEmailAccounts] = useState([]);
@@ -81,6 +83,11 @@ export default function LeadDetail() {
         message: opts.message || "",
         subject: opts.subject || "",
         email_account: opts.emailAccount || null,
+        remarks: opts.remarks || "",
+        duration_min: opts.duration_min || 0,
+        outcome: opts.outcome || "",
+        meeting_status: opts.meeting_status || "",
+        meeting_at: opts.meeting_at || null,
       });
       await load();
       const t = data.telephony;
@@ -109,6 +116,8 @@ export default function LeadDetail() {
 
   const onAction = (type) => {
     if (type === "whatsapp" || type === "email") return setMsgModal({ type });
+    if (type === "call") return setCallModal(true);
+    if (type === "meeting") return setMeetModal(true);
     engage(type);
   };
   const ActionBtn = ({ type, icon: Icon, label, cls }) => (
@@ -162,9 +171,10 @@ export default function LeadDetail() {
         <h3 className="font-bold text-ink-900 mb-1">Engage</h3>
         <p className="text-xs text-ink-400 mb-4">Every action is logged in the lead activity and the status advances automatically.</p>
         <div className="flex flex-wrap gap-2">
-          <ActionBtn type="call" icon={Phone} label="Call" cls="bg-emerald-50 text-emerald-700 hover:bg-emerald-100" />
+          <ActionBtn type="call" icon={Phone} label="Log Call" cls="bg-emerald-50 text-emerald-700 hover:bg-emerald-100" />
           <ActionBtn type="whatsapp" icon={MessageCircle} label="WhatsApp" cls="bg-green-50 text-green-700 hover:bg-green-100" />
           <ActionBtn type="email" icon={Mail} label="Email" cls="bg-blue-50 text-blue-700 hover:bg-blue-100" />
+          <ActionBtn type="meeting" icon={Calendar} label="Meeting" cls="bg-amber-50 text-amber-700 hover:bg-amber-100" />
         </div>
       </div>
 
@@ -182,9 +192,14 @@ export default function LeadDetail() {
                   {i < d.activities.length - 1 && <div className="w-px flex-1 bg-ink-200 my-1" />}
                 </div>
                 <div className="pb-5 min-w-0">
-                  <p className="text-sm font-semibold text-ink-800 capitalize">{a.activity_type}</p>
+                  <p className="text-sm font-semibold text-ink-800 capitalize flex flex-wrap items-center gap-1.5">
+                    {a.activity_type.replace(/_/g, " ")}
+                    {a.outcome && <span className="badge bg-brand-50 text-brand-700">{a.outcome.replace(/_/g, " ")}</span>}
+                    {a.meeting_status && <span className="badge bg-amber-50 text-amber-700">{a.meeting_status.replace(/_/g, " ")}</span>}
+                    {Number(a.duration_min) > 0 && <span className="text-[11px] font-normal text-ink-400">· {a.duration_min} min</span>}
+                  </p>
                   <p className="text-xs text-ink-500">{a.remarks}</p>
-                  <p className="text-[11px] text-ink-400 mt-0.5">{a.user_name || "—"} · {dt(a.created_at)}</p>
+                  <p className="text-[11px] text-ink-400 mt-0.5">{a.user_name || "—"} · {dt(a.created_at)}{a.meeting_at ? ` · meeting ${dt(a.meeting_at)}` : ""}</p>
                 </div>
               </div>
             );
@@ -261,6 +276,103 @@ export default function LeadDetail() {
           </div>
         )}
       </Modal>
+
+      {callModal && (
+        <CallModal lead={l} busy={busy} onClose={() => setCallModal(false)}
+          onCall={() => engage("call", { place_call: true, remarks: "Call placed" })}
+          onSubmit={(payload) => engage("call", payload).then(() => setCallModal(false))} />
+      )}
+      {meetModal && (
+        <MeetingModal busy={busy} onClose={() => setMeetModal(false)}
+          onSubmit={(payload) => engage("meeting", payload).then(() => setMeetModal(false))} />
+      )}
     </div>
+  );
+}
+
+const OUTCOMES = [
+  ["connected", "Connected"], ["interested", "Interested"], ["callback", "Callback Requested"],
+  ["meeting_booked", "Meeting Booked"], ["no_answer", "No Answer"], ["busy", "Busy"],
+  ["voicemail", "Voicemail"], ["wrong_number", "Wrong Number"], ["not_interested", "Not Interested"],
+  ["converted", "Converted"],
+];
+const MEETING_STATUSES = [
+  ["scheduled", "Scheduled"], ["confirmed", "Confirmed"], ["completed", "Completed"],
+  ["cancelled", "Cancelled"], ["no_show", "No Show"], ["rescheduled", "Rescheduled"],
+];
+
+// Log a call: outcome + duration + notes. The outcome auto-moves the lead's
+// status. "Call now" places a Twilio call as a separate step.
+function CallModal({ lead, busy, onClose, onSubmit, onCall }) {
+  const [outcome, setOutcome] = useState("connected");
+  const [duration, setDuration] = useState("");
+  const [notes, setNotes] = useState("");
+  return (
+    <Modal open onClose={onClose} title={`Log call — ${lead.name}`}>
+      <div className="space-y-3">
+        <div>
+          <label className="label">Outcome</label>
+          <select className="input" value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+            {OUTCOMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Duration (minutes)</label>
+          <input className="input" type="number" step="0.5" min="0" value={duration}
+            onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 5" />
+        </div>
+        <div>
+          <label className="label">What was discussed?</label>
+          <textarea className="input min-h-[90px]" value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes about the call…" />
+        </div>
+        <p className="text-xs text-ink-400">The outcome auto-updates the lead's status (e.g. Interested → Qualified, Meeting Booked → Meeting Booked, Not Interested → Nurture).</p>
+        <div className="flex justify-between gap-2 pt-1">
+          <button className="chip !py-2 inline-flex items-center gap-1.5" disabled={busy || !lead.phone}
+            onClick={onCall} title={lead.phone ? "Place a Twilio call" : "No phone number"}>
+            <Phone size={14} /> Call now
+          </button>
+          <button className="btn-primary" disabled={busy}
+            onClick={() => onSubmit({ outcome, duration_min: duration || 0, remarks: notes })}>
+            {busy ? "Saving…" : "Save log"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Log / schedule a meeting: status + date + notes. The status moves the lead
+// (Scheduled/Confirmed → Meeting Booked, Completed → Meeting Done).
+function MeetingModal({ busy, onClose, onSubmit }) {
+  const [status, setStatus] = useState("scheduled");
+  const [when, setWhen] = useState("");
+  const [notes, setNotes] = useState("");
+  return (
+    <Modal open onClose={onClose} title="Log meeting">
+      <div className="space-y-3">
+        <div>
+          <label className="label">Meeting status</label>
+          <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
+            {MEETING_STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Date &amp; time</label>
+          <input className="input" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        </div>
+        <div>
+          <label className="label">Notes</label>
+          <textarea className="input min-h-[80px]" value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="Agenda / outcome…" />
+        </div>
+        <div className="flex justify-end pt-1">
+          <button className="btn-primary" disabled={busy}
+            onClick={() => onSubmit({ meeting_status: status, meeting_at: when || null, remarks: notes })}>
+            {busy ? "Saving…" : "Save meeting"}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
