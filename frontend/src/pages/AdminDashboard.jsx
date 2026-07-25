@@ -11,6 +11,7 @@ import api, { ai } from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Badge, Spinner } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
+import KpiScorecard from "../components/KpiScorecard";
 
 const DONUT = ["#f97316", "#fb7185", "#8b5cf6", "#6366f1", "#22c55e", "#06b6d4"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
@@ -90,6 +91,9 @@ export default function AdminDashboard() {
         <Kpi icon={Target} label="Open Opportunities" value={kpi.open_opportunities} trend={money(kpi.pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
         <Kpi icon={LifeBuoy} label="Open Tickets" value={kpi.open_tickets} trend="support queue" color="bg-blue-100 text-blue-600" />
       </div>
+
+      {/* company scorecard */}
+      <KpiScorecard data={kpi.kpis} title="Company KPIs · This Month" />
 
       {/* charts row */}
       <div className="grid lg:grid-cols-3 gap-5">

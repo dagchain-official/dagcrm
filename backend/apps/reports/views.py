@@ -39,6 +39,62 @@ def _scoped_revenue(user):
     return qs.filter(business_id__in=ids) if ids is not None else qs
 
 
+def kpi_scorecard(user_ids):
+    """The sales-department scorecard (this month) for a set of users — the same
+    10 fields on every role's dashboard, only the scope changes: one RM for the
+    exec dashboard, a team for the leader/manager, everyone for admin.
+
+    All real data. Talk Time / Training aren't CRM metrics yet, so they read a
+    same-named manual metric if one exists (0 otherwise) — add the metric and the
+    tile fills in with no code change.
+    """
+    from apps.crm.models import MetricDefinition, MetricEntry
+
+    from .incentives import compute_incentives
+    from .pnl import _revenue_by_user
+
+    today = timezone.localdate()
+    m, y = today.month, today.year
+    uids = set(u for u in user_ids if u)
+    leads = Lead.objects.pipeline().filter(assigned_to_id__in=uids,
+                                           created_at__year=y, created_at__month=m)
+    acts = LeadActivity.objects.filter(lead__assigned_to_id__in=uids,
+                                       created_at__year=y, created_at__month=m)
+    by_user, _ = _revenue_by_user(m, y)
+    revenue = round(sum(float(by_user.get(u, 0)) for u in uids), 2)
+
+    emp_ids = set(Employee.objects.filter(user_id__in=uids).values_list("id", flat=True))
+
+    def metric_sum(name):
+        mid = (MetricDefinition.objects.filter(name__iexact=name, status="active")
+               .values_list("id", flat=True).first())
+        if not mid or not emp_ids:
+            return 0.0
+        return float(MetricEntry.objects.filter(metric_id=mid, employee_id__in=emp_ids,
+                                                date__year=y, date__month=m)
+                     .aggregate(s=Sum("value"))["s"] or 0)
+
+    inc = [r for r in compute_incentives(m, y)["rows"] if r["id"] in emp_ids]
+    tot_target = sum(r["target"] for r in inc)
+    overall = round(sum(r["revenue"] for r in inc) / tot_target, 4) if tot_target else 0.0
+    earned = round(sum(r["total"] for r in inc), 2)
+    paid = float(Payroll.objects.filter(month=m, year=y, employee_id__in=emp_ids)
+                 .aggregate(s=Sum("incentive"))["s"] or 0)
+
+    return {
+        "leads": leads.count(),
+        "calls": acts.filter(activity_type="call").count(),
+        "talk_time": metric_sum("Talk Time"),
+        "meetings": acts.filter(activity_type="meeting").count(),
+        "sales": leads.filter(status="converted").count(),
+        "revenue": revenue,
+        "overall_kpi": overall,
+        "incentive_earned": earned,
+        "incentive_paid": round(paid, 2),
+        "training": metric_sum("Training"),
+    }
+
+
 def _fxartha_dashboard():
     """The last-synced FXArtha platform dashboard. Its revenue figures are
     authoritative: our per-trader rows carry commission only (no swap) and are
@@ -87,6 +143,7 @@ def my_dashboard(request):
         "leads_by_status": status_breakdown,
         "recent_leads": recent,
         "upcoming_followups": followups,
+        "kpis": kpi_scorecard([user.id]),
     })
 
 
@@ -115,6 +172,7 @@ def dashboard_summary(request):
     reps.sort(key=lambda r: -r["revenue"])
     return Response({
         "top_reps": reps[:6],
+        "kpis": kpi_scorecard(User.objects.values_list("id", flat=True)),
         "total_leads": Lead.objects.pipeline().count(),
         "new_leads": Lead.objects.pipeline().filter(status="new").count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
@@ -153,6 +211,7 @@ def team_dashboard(request):
         "team_followups": LeadActivity.objects.filter(user_id__in=team_ids).count(),
         "leads_by_status": list(leads.values("status").annotate(count=Count("id")).order_by("status")),
         "members": members,
+        "kpis": kpi_scorecard(team_ids),
     })
 
 
@@ -221,55 +280,14 @@ def support_dashboard(request):
 @api_view(["GET"])
 def sales_dashboard(request):
     """Sales Manager — company-wide sales (no HR/finance)."""
-    from apps.crm.models import LeadActivity, MetricDefinition, MetricEntry, Target
+    from apps.crm.models import Target
     from apps.crm.serializers import TargetSerializer
 
     rev = _scoped_revenue(request.user)
     targets = TargetSerializer(Target.objects.all().order_by("end_date")[:6], many=True).data
-
-    # ---- Team KPIs (this month) — the sales-department scorecard row -----------
-    today = timezone.localdate()
-    m, y = today.month, today.year
-    month_leads = Lead.objects.pipeline().filter(created_at__year=y, created_at__month=m)
-    acts = LeadActivity.objects.filter(created_at__year=y, created_at__month=m)
-
-    def _metric_sum(name):
-        """Team total for a manual metric this month — 0 if that metric doesn't
-        exist yet (e.g. Talk Time / Training can be added later and light up)."""
-        mid = (MetricDefinition.objects.filter(name__iexact=name, status="active")
-               .values_list("id", flat=True).first())
-        if not mid:
-            return 0.0
-        return float(MetricEntry.objects.filter(metric_id=mid, date__year=y, date__month=m)
-                     .aggregate(s=Sum("value"))["s"] or 0)
-
-    month_rev = _money(rev.filter(created_at__year=y, created_at__month=m), "net_revenue")
-    # Overall KPI = the month's target attainment (achieved / target), 0..1
-    from .targets import compute_targets
-    tgt = compute_targets(m, y).get("company", {})
-    overall = round((tgt.get("achieved", 0) / tgt["target"]), 4) if tgt.get("target") else 0.0
-    # incentives: earned = computed this month; paid = persisted on payroll
-    from apps.hr.models import Payroll
-    earned = compute_incentives(m, y).get("grand_total", 0)
-    paid = float(Payroll.objects.filter(month=m, year=y)
-                 .aggregate(s=Sum("incentive"))["s"] or 0)
-
-    team_kpis = {
-        "leads": month_leads.count(),
-        "calls": acts.filter(activity_type="call").count(),
-        "talk_time": _metric_sum("Talk Time"),
-        "meetings": acts.filter(activity_type="meeting").count(),
-        "sales": month_leads.filter(status="converted").count(),
-        "revenue": month_rev,
-        "overall_kpi": overall,
-        "incentive_earned": round(float(earned), 2),
-        "incentive_paid": round(paid, 2),
-        "training": _metric_sum("Training"),
-    }
-
     return Response({
         "targets": targets,
-        "team_kpis": team_kpis,
+        "kpis": kpi_scorecard(User.objects.values_list("id", flat=True)),
         "total_leads": Lead.objects.pipeline().count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),

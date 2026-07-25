@@ -7,6 +7,7 @@ import api from "../../api/client";
 import usePolling from "../../hooks/usePolling";
 import { Spinner, Badge } from "../../components/ui";
 import { STATUS_COLORS } from "../../config/resources";
+import KpiScorecard from "../../components/KpiScorecard";
 
 const DONUT = ["#6366f1", "#22c55e", "#f59e0b", "#fb7185", "#8b5cf6"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
@@ -57,6 +58,9 @@ export default function TeamLeaderDashboard() {
         <Kpi icon={Target} label="Open Deals" value={d.team_open_opportunities} trend={money(d.team_pipeline) + " pipeline"} color="bg-violet-100 text-violet-600" />
         <Kpi icon={CalendarClock} label="Follow-ups" value={d.team_followups} color="bg-rose-100 text-rose-500" />
       </div>
+
+      {/* team scorecard */}
+      <KpiScorecard data={d.kpis} title="Team KPIs · This Month" />
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* team leads donut */}

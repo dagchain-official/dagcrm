@@ -9,6 +9,7 @@ import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { Badge, ScorePill, Spinner } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
+import KpiScorecard from "../components/KpiScorecard";
 
 const DONUT = ["#6366f1", "#22c55e", "#f59e0b", "#fb7185", "#8b5cf6", "#06b6d4"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
@@ -84,6 +85,9 @@ export default function UserDashboard() {
         <Kpi icon={Target} label="My Open Deals" value={d.my_open_opportunities} trend={money(d.my_pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
         <Kpi icon={CalendarClock} label="Follow-ups Due" value={d.my_followups_due} trend={`${d.my_activities_today} done today`} color="bg-rose-100 text-rose-500" />
       </div>
+
+      {/* my scorecard */}
+      <KpiScorecard data={d.kpis} title="My KPIs · This Month" />
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* my leads donut */}
