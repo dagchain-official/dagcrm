@@ -72,6 +72,7 @@ MODULES = [
     "revenues", "businesses", "products", "lead-sources", "tickets",
     "employees", "departments", "hierarchy-levels", "attendance", "employee-activities", "leaves",
     "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
+    "training-modules", "training-assignments", "assessments",
     "target-multipliers", "performance-weights", "incentive-slabs", "activity-incentives",
     "formula-rules", "expenses", "commissions", "users", "roles", "teams", "reports",
     # FX Artha and DAGChain are split per sub-page so each can be granted/denied
@@ -144,7 +145,7 @@ ROLE_MATRIX = {
         **_full(_split("employees departments hierarchy-levels attendance employee-activities leaves "
                        "leave-types payrolls incentives incentive-rules cost-categories employee-costs "
                        "target-multipliers performance-weights incentive-slabs activity-incentives "
-                       "formula-rules")),
+                       "formula-rules training-modules training-assignments assessments")),
         # read-only lookups the HR forms need: roles (New Employee -> Role
         # dropdown), users, and businesses/products for the incentive-rule form
         **_view(_split("roles users reports businesses products")),
@@ -205,6 +206,9 @@ VIEWSET_MODULE = {
     "UserPermissionViewSet": "users",
     "DagChainProfileViewSet": "dagchain-users",
     "DagChainNodeViewSet": "dagchain-nodes",
+    "TrainingModuleViewSet": "training-modules",
+    "TrainingAssignmentViewSet": "training-assignments",
+    "AssessmentViewSet": "assessments",
 }
 
 

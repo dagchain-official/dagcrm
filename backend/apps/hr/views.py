@@ -634,3 +634,33 @@ class PublicJobView(APIView):
         # candidates never see their score — just a confirmation
         return Response({"status": "received",
                          "message": f"Thanks {name}! Your application for {job.title} has been received."})
+
+
+# ---- Training & Learning --------------------------------------------------
+from .models import Assessment, TrainingAssignment, TrainingModule
+from .serializers import (
+    AssessmentSerializer, TrainingAssignmentSerializer, TrainingModuleSerializer,
+)
+
+
+class TrainingModuleViewSet(viewsets.ModelViewSet):
+    queryset = TrainingModule.objects.select_related("owner__user").all()
+    serializer_class = TrainingModuleSerializer
+    filterset_fields = ["category", "mandatory", "active"]
+    search_fields = ["module_id", "title", "category", "audience"]
+
+
+class TrainingAssignmentViewSet(viewsets.ModelViewSet):
+    queryset = (TrainingAssignment.objects
+                .select_related("employee__user", "module").all())
+    serializer_class = TrainingAssignmentSerializer
+    filterset_fields = ["employee", "module", "status"]
+    search_fields = ["employee__user__name", "module__title", "module__module_id"]
+
+
+class AssessmentViewSet(viewsets.ModelViewSet):
+    queryset = (Assessment.objects
+                .select_related("employee__user", "module", "assessor__user").all())
+    serializer_class = AssessmentSerializer
+    filterset_fields = ["employee", "module", "result"]
+    search_fields = ["employee__user__name", "module__title", "certificate_id"]

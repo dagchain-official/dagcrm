@@ -33,6 +33,31 @@ User = get_user_model()
 CALL_TYPES = ["call", "outbound_call", "inbound_call", "callback"]
 
 
+def _training_stats(emp_ids=None):
+    """Training compliance + assessment pass rate for a set of employees (all if
+    None). Compliance = completed / (assigned that aren't exempted). Overdue =
+    not-done assignments past their due date."""
+    from apps.hr.models import Assessment, TrainingAssignment
+    ta = TrainingAssignment.objects.all()
+    ass = Assessment.objects.all()
+    if emp_ids is not None:
+        ta = ta.filter(employee_id__in=emp_ids)
+        ass = ass.filter(employee_id__in=emp_ids)
+    counted = ta.exclude(status="exempted")
+    total = counted.count()
+    completed = counted.filter(status="completed").count()
+    today = timezone.localdate()
+    overdue = counted.exclude(status="completed").filter(due_date__lt=today).count()
+    passed = ass.filter(result="pass").count()
+    ass_total = ass.count()
+    return {
+        "compliance": round(completed / total, 4) if total else 0.0,
+        "pass_rate": round(passed / ass_total, 4) if ass_total else 0.0,
+        "overdue": overdue,
+        "assignments": total,
+    }
+
+
 def _money(qs, field):
     return qs.aggregate(t=Sum(field))["t"] or 0
 
@@ -95,7 +120,8 @@ def kpi_scorecard(user_ids):
         "overall_kpi": overall,
         "incentive_earned": earned,
         "incentive_paid": round(paid, 2),
-        "training": metric_sum("Training"),
+        # training compliance for these people (0..1) — the Training tile
+        "training": _training_stats(emp_ids)["compliance"],
     }
 
 
@@ -284,9 +310,9 @@ def company_health(request):
     total_fu = LeadActivity.objects.filter(followup_date__isnull=False).count()
     execution = (1 - overdue_actions / total_fu) if total_fu else 1.0
 
-    # Learning needs the Training module (not built) -> 0 for now
-    training_compliance = 0.0
-    assessment_pass_rate = 0.0
+    tstats = _training_stats()
+    training_compliance = tstats["compliance"]
+    assessment_pass_rate = tstats["pass_rate"]
     learning = training_compliance
 
     # Customer health proxy: share of customers that actually generate revenue
@@ -399,6 +425,7 @@ def hr_dashboard(request):
     avg_kpi = round(sum(attain) / len(attain), 4) if attain else 0.0
     active_emps = Employee.objects.filter(user__status="active").count() or Employee.objects.count()
     critical = sum(1 for a in attain if a < 0.6)
+    _tstats = _training_stats()
 
     return Response({
         "total_employees": Employee.objects.count(),
@@ -414,9 +441,9 @@ def hr_dashboard(request):
         "learning": {
             "active_employees": active_emps,
             "average_kpi": avg_kpi,
-            "training_compliance": 0.0,     # needs a Training module (not built)
-            "assessment_pass_rate": 0.0,
-            "overdue_training": 0,
+            "training_compliance": _tstats["compliance"],
+            "assessment_pass_rate": _tstats["pass_rate"],
+            "overdue_training": _tstats["overdue"],
             "critical_employees": critical,
         },
     })

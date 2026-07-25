@@ -436,3 +436,85 @@ class Candidate(models.Model):
 
     def __str__(self):
         return f"{self.name} · {self.match_pct}%"
+
+
+# ---- Training & Learning (PART: Training module) --------------------------
+class TrainingModule(models.Model):
+    """The learning catalogue — one row per course/module."""
+    module_id = models.CharField(max_length=20, unique=True)          # TR001
+    title = models.CharField(max_length=200)
+    category = models.CharField(max_length=80, blank=True)
+    audience = models.CharField(max_length=120, blank=True)
+    owner = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name="owned_trainings")
+    delivery_mode = models.CharField(max_length=60, blank=True)
+    duration_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    mandatory = models.BooleanField(default=True)
+    frequency = models.CharField(max_length=40, blank=True)           # Onboarding/Annual/…
+    pass_mark = models.DecimalField(max_digits=5, decimal_places=2, default=0.80)   # 0-1
+    content_summary = models.TextField(blank=True)
+    learning_outcome = models.TextField(blank=True)
+    version = models.CharField(max_length=20, default="1.0")
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["module_id"]
+
+    def __str__(self):
+        return f"{self.module_id} · {self.title}"
+
+
+class TrainingAssignment(models.Model):
+    """An employee's learning plan entry for one module — status + compliance."""
+    STATUS = [
+        ("not_assigned", "Not Assigned"), ("assigned", "Assigned"),
+        ("in_progress", "In Progress"), ("completed", "Completed"),
+        ("overdue", "Overdue"), ("exempted", "Exempted"),
+    ]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="training_assignments")
+    module = models.ForeignKey(TrainingModule, on_delete=models.CASCADE, related_name="assignments")
+    assigned_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="assigned")
+    completion_date = models.DateField(null=True, blank=True)
+    latest_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)   # 0-1
+    attempts = models.PositiveIntegerField(default=0)
+    certificate_expiry = models.DateField(null=True, blank=True)
+    manager_comment = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-assigned_date", "employee_id"]
+
+    def __str__(self):
+        return f"{self.employee_id} · {self.module_id}"
+
+
+class Assessment(models.Model):
+    """One assessment attempt: score, pass/fail, knowledge gap, certificate."""
+    RESULT = [("pass", "Pass"), ("fail", "Fail")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="assessments")
+    module = models.ForeignKey(TrainingModule, on_delete=models.CASCADE, related_name="assessments")
+    assessment_date = models.DateField(null=True, blank=True)
+    attempt_no = models.PositiveIntegerField(default=1)
+    questions = models.PositiveIntegerField(default=0)
+    correct_answers = models.PositiveIntegerField(default=0)
+    score = models.DecimalField(max_digits=5, decimal_places=2, default=0)          # 0-1
+    pass_mark = models.DecimalField(max_digits=5, decimal_places=2, default=0.80)
+    result = models.CharField(max_length=10, choices=RESULT, blank=True)
+    knowledge_gap = models.CharField(max_length=200, blank=True)
+    retest_due = models.DateField(null=True, blank=True)
+    assessor = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="assessed")
+    certificate_id = models.CharField(max_length=40, blank=True)
+
+    class Meta:
+        ordering = ["-assessment_date", "employee_id"]
+
+    def save(self, *args, **kwargs):
+        # derive result from score vs pass mark unless set explicitly
+        if not self.result:
+            self.result = "pass" if float(self.score) >= float(self.pass_mark) else "fail"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee_id} · {self.module_id} · {self.result}"

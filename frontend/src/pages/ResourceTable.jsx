@@ -308,6 +308,8 @@ export default function ResourceTable({ resource: propResource }) {
     if (col.score) return <ScorePill value={v} />;
     if (col.progress) return <Progress value={v} />;
     if (col.money) return <span className="tabular-nums">{money(v)}</span>;
+    if (col.percent) return <span className="tabular-nums">{v == null || v === "" ? "—" : `${(Number(v) * 100).toFixed(0)}%`}</span>;
+    if (col.bool) return v ? "Yes" : "No";
     if (col.datetime) return dt(v);
     return v ?? "—";
   };

@@ -14,6 +14,7 @@ import { PeopleHub, AttendanceHub, CostHub, PayrollHub, RulesHub } from "./pages
 import HierarchyTree from "./pages/HierarchyTree";
 import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
 import ConfigHub from "./pages/ConfigHub";
+import TrainingHub from "./pages/TrainingHub";
 import KpiBoard from "./pages/KpiBoard";
 import TradersLots from "./pages/TradersLots";
 import CommissionRules from "./pages/CommissionRules";
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="targets" element={<TargetsHub />} />
         <Route path="kpi" element={<KpiHub />} />
         <Route path="hr/people" element={<PeopleHub />} />
+        <Route path="hr/training" element={<TrainingHub />} />
         <Route path="hr/hierarchy" element={<HierarchyTree />} />
         <Route path="hr/attendance" element={<AttendanceHub />} />
         <Route path="hr/costs" element={<CostHub />} />

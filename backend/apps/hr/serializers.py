@@ -423,3 +423,68 @@ class CandidateSerializer(serializers.ModelSerializer):
         if obj.resume and request:
             return request.build_absolute_uri(obj.resume.url)
         return None
+
+
+# ---- Training & Learning --------------------------------------------------
+from .models import Assessment, TrainingAssignment, TrainingModule
+
+
+class TrainingModuleSerializer(serializers.ModelSerializer):
+    owner_name = serializers.CharField(source="owner.user.name", read_only=True)
+
+    class Meta:
+        model = TrainingModule
+        fields = ["id", "module_id", "title", "category", "audience", "owner", "owner_name",
+                  "delivery_mode", "duration_hours", "mandatory", "frequency", "pass_mark",
+                  "content_summary", "learning_outcome", "version", "active"]
+
+
+class TrainingAssignmentSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    module_title = serializers.CharField(source="module.title", read_only=True)
+    module_code = serializers.CharField(source="module.module_id", read_only=True)
+    days_to_due = serializers.SerializerMethodField()
+    compliance_flag = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TrainingAssignment
+        fields = ["id", "employee", "employee_name", "module", "module_title", "module_code",
+                  "assigned_date", "due_date", "status", "completion_date", "latest_score",
+                  "attempts", "certificate_expiry", "manager_comment",
+                  "days_to_due", "compliance_flag"]
+
+    def get_days_to_due(self, obj):
+        if not obj.due_date:
+            return None
+        from django.utils import timezone
+        return (obj.due_date - timezone.localdate()).days
+
+    def get_compliance_flag(self, obj):
+        """Compliant when completed; else Overdue / Due Soon / On Track by due date."""
+        if obj.status == "completed":
+            return "Compliant"
+        if obj.status == "exempted":
+            return "Exempted"
+        d = self.get_days_to_due(obj)
+        if d is None:
+            return "—"
+        if d < 0:
+            return "Overdue"
+        if d <= 7:
+            return "Due Soon"
+        return "On Track"
+
+
+class AssessmentSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    module_title = serializers.CharField(source="module.title", read_only=True)
+    module_code = serializers.CharField(source="module.module_id", read_only=True)
+    assessor_name = serializers.CharField(source="assessor.user.name", read_only=True)
+
+    class Meta:
+        model = Assessment
+        fields = ["id", "employee", "employee_name", "module", "module_title", "module_code",
+                  "assessment_date", "attempt_no", "questions", "correct_answers", "score",
+                  "pass_mark", "result", "knowledge_gap", "retest_due", "assessor",
+                  "assessor_name", "certificate_id"]
+        read_only_fields = ["result"]

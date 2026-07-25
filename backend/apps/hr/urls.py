@@ -8,6 +8,7 @@ from .views import (
     IncentiveRuleViewSet, ActivityIncentiveViewSet, FormulaRuleViewSet, IncentiveSlabViewSet,
     IncentiveViewSet, JobPostingViewSet, LeaveTypeViewSet, LeaveViewSet, MyLeavesView,
     PayrollViewSet, PerformanceWeightViewSet, PublicJobView, TargetMultiplierViewSet,
+    TrainingModuleViewSet, TrainingAssignmentViewSet, AssessmentViewSet,
 )
 
 router = DefaultRouter()
@@ -30,6 +31,9 @@ router.register("activity-incentives", ActivityIncentiveViewSet)
 router.register("formula-rules", FormulaRuleViewSet)
 router.register("job-postings", JobPostingViewSet)
 router.register("candidates", CandidateViewSet)
+router.register("training-modules", TrainingModuleViewSet)
+router.register("training-assignments", TrainingAssignmentViewSet)
+router.register("assessments", AssessmentViewSet)
 
 # Explicit self-service paths MUST come before router (so "check-in" isn't
 # parsed as an attendance pk by the detail route).
