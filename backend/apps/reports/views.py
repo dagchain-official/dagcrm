@@ -296,14 +296,40 @@ def team_dashboard(request):
     team_ids = list(team.values_list("id", flat=True)) + [leader.id]
     leads = Lead.objects.pipeline().filter(assigned_to_id__in=team_ids)
     opps = Opportunity.objects.filter(assigned_to_id__in=team_ids)
-    members = [
-        {
+
+    # per-agent scorecard (this month): KPI (attainment), revenue, calls,
+    # meetings and a health band — computed once, not per member
+    from collections import defaultdict
+
+    from .incentives import compute_incentives
+    from .pnl import _revenue_by_user
+    today = timezone.localdate()
+    m, y = today.month, today.year
+    by_user, _ = _revenue_by_user(m, y)
+    attain = {r["user_id"]: (r["revenue"] / r["target"]) if r["target"] else 0.0
+              for r in compute_incentives(m, y)["rows"]}
+    calls_map, meet_map = defaultdict(int), defaultdict(int)
+    for a in (LeadActivity.objects.filter(created_at__year=y, created_at__month=m)
+              .values("lead__assigned_to", "activity_type").annotate(c=Count("id"))):
+        if a["activity_type"] == "call":
+            calls_map[a["lead__assigned_to"]] += a["c"]
+        elif a["activity_type"] == "meeting":
+            meet_map[a["lead__assigned_to"]] += a["c"]
+
+    members = []
+    for u in team:
+        kpi = round(min(1.0, attain.get(u.id, 0.0)), 4)
+        members.append({
             "id": u.id, "name": u.name, "role": getattr(u.role, "name", ""),
+            "employee_id": u.employee_id,
             "leads": Lead.objects.pipeline().filter(assigned_to=u).count(),
             "won": Opportunity.objects.filter(assigned_to=u, stage="won").count(),
-        }
-        for u in team
-    ]
+            "kpi": kpi,
+            "revenue": round(float(by_user.get(u.id, 0.0)), 2),
+            "calls": calls_map.get(u.id, 0),
+            "meetings": meet_map.get(u.id, 0),
+            "band": _health_status(kpi),
+        })
     return Response({
         "team_size": team.count(),
         "team_leads": leads.count(),

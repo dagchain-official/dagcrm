@@ -5,12 +5,12 @@ import {
 } from "lucide-react";
 import api from "../../api/client";
 import usePolling from "../../hooks/usePolling";
-import { Spinner, Badge } from "../../components/ui";
-import { STATUS_COLORS } from "../../config/resources";
+import { Spinner } from "../../components/ui";
 import KpiScorecard from "../../components/KpiScorecard";
 
 const DONUT = ["#6366f1", "#22c55e", "#f59e0b", "#fb7185", "#8b5cf6"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
+const BAND = { Healthy: "bg-emerald-50 text-emerald-700", Watch: "bg-amber-50 text-amber-700", Critical: "bg-rose-50 text-rose-600" };
 
 function Kpi({ icon: Icon, label, value, trend, color }) {
   return (
@@ -98,30 +98,34 @@ export default function TeamLeaderDashboard({ userId }) {
         {/* team performance table */}
         <div className="card p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-ink-900">Team Performance</h3>
+            <h3 className="font-bold text-ink-900">Agent Scorecard</h3>
             <MoreHorizontal size={18} className="text-ink-300" />
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
-                  <th className="pb-3 pr-4 font-semibold">Name</th>
-                  <th className="pb-3 px-4 font-semibold">Role</th>
-                  <th className="pb-3 px-4 font-semibold">Leads</th>
-                  <th className="pb-3 px-4 font-semibold">Won</th>
+                  <th className="pb-3 pr-4 font-semibold">Agent</th>
+                  <th className="pb-3 px-4 font-semibold text-right">KPI</th>
+                  <th className="pb-3 px-4 font-semibold text-right">Revenue</th>
+                  <th className="pb-3 px-4 font-semibold text-right">Calls</th>
+                  <th className="pb-3 px-4 font-semibold text-right">Meetings</th>
+                  <th className="pb-3 pl-4 font-semibold text-right">Band</th>
                 </tr>
               </thead>
               <tbody>
                 {(d.members || []).map((m) => (
                   <tr key={m.id} className="border-t border-ink-100 hover:bg-ink-50/70">
-                    <td className="py-3.5 pr-4 font-medium text-ink-800">{m.name}</td>
-                    <td className="py-3.5 px-4"><Badge value={m.role} map={STATUS_COLORS} /></td>
-                    <td className="py-3.5 px-4 text-ink-700 tabular-nums">{m.leads}</td>
-                    <td className="py-3.5 px-4 text-ink-700 tabular-nums">{m.won}</td>
+                    <td className="py-3 pr-4 font-medium text-ink-800">{m.name}<span className="block text-[11px] text-ink-400">{m.employee_id || m.role}</span></td>
+                    <td className="py-3 px-4 text-right tabular-nums font-semibold text-ink-900">{(Number(m.kpi || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-3 px-4 text-right tabular-nums text-ink-700">{money(m.revenue)}</td>
+                    <td className="py-3 px-4 text-right tabular-nums text-ink-600">{m.calls}</td>
+                    <td className="py-3 px-4 text-right tabular-nums text-ink-600">{m.meetings}</td>
+                    <td className="py-3 pl-4 text-right"><span className={`badge ${BAND[m.band] || "bg-ink-100 text-ink-500"}`}>{m.band}</span></td>
                   </tr>
                 ))}
                 {(!d.members || d.members.length === 0) && (
-                  <tr><td colSpan={4} className="py-8 text-center text-ink-400">No team members assigned</td></tr>
+                  <tr><td colSpan={6} className="py-8 text-center text-ink-400">No team members assigned</td></tr>
                 )}
               </tbody>
             </table>
