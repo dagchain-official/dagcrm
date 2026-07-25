@@ -4,6 +4,7 @@ import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Spinner, EmptyState } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const now = new Date();
@@ -11,6 +12,7 @@ const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFract
 
 export default function IncentiveBoard() {
   const { user } = useAuth();
+  const toast = useToast();
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
@@ -30,9 +32,12 @@ export default function IncentiveBoard() {
     setRunning(true); setMsg("");
     try {
       const { data } = await api.post("/reports/incentive-run/", { month, year });
-      setMsg(`Paid out ${money(data.grand_total)} · ${data.employees_credited} credited · ${data.payrolls_updated} payrolls updated.`);
+      const text = `Paid out ${money(data.grand_total)} · ${data.employees_credited} credited · ${data.payrolls_updated} payrolls updated.`;
+      setMsg(text);
+      toast.success(text);
     } catch {
       setMsg("Run failed.");
+      toast.error("Incentive run failed");
     } finally { setRunning(false); }
   };
 

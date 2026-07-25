@@ -4,10 +4,12 @@ import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
+import { useToast } from "../context/ToastContext";
 
 const date = (v) => (v ? new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 export default function MyLeaves() {
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ leave_type: "", start_date: "", end_date: "", reason: "" });
@@ -28,9 +30,12 @@ export default function MyLeaves() {
       await api.post("/my-leaves/", payload);
       setOpen(false);
       setForm({ leave_type: "", start_date: "", end_date: "", reason: "" });
+      toast.success("Leave request submitted");
       load();
     } catch (e2) {
-      setErr(e2.response?.data?.detail || "Failed to apply.");
+      const msg = e2.response?.data?.detail || "Failed to apply.";
+      setErr(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

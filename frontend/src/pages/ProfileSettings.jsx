@@ -229,8 +229,13 @@ function EmailAccountsCard() {
 
   const remove = async (a) => {
     if (!window.confirm(`Delete "${a.label}"?`)) return;
-    await api.delete(`/email-accounts/${a.id}/`);
-    await load();
+    try {
+      await api.delete(`/email-accounts/${a.id}/`);
+      await load();
+      setMsg({ type: "ok", text: `Deleted "${a.label}"` });
+    } catch (err) {
+      setMsg({ type: "err", text: err.response?.data?.detail || "Could not delete account" });
+    }
   };
 
   const test = async (a) => {

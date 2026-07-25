@@ -26,6 +26,14 @@ def load_rules(platform):
     return universal, overrides
 
 
+def load_basis(platform):
+    """{product_key: 'percent'|'amount'} from the universal rules — how each
+    product's rate is applied (percent of a base, or a flat $ amount)."""
+    from apps.integrations.models import CommissionRule
+    return {r.product_key: r.basis for r in
+            CommissionRule.objects.filter(platform=platform, employee__isnull=True)}
+
+
 def rate_for(universal, overrides, product_key, employee_id, fallback=0.0):
     """The RM's override if they have one, else the universal rate, else fallback."""
     emp_over = overrides.get(employee_id)
@@ -55,14 +63,20 @@ FXARTHA_BASES = [
 _FX_BUILTIN = {b["key"] for b in FXARTHA_BASES}
 
 
+def _custom_unit(basis):
+    return "$ (flat)" if basis == "amount" else "% of base"
+
+
 def fxartha_products():
     universal, _ = load_rules("fxartha")
+    basis = load_basis("fxartha")
     out = [{**b, "rate": universal.get(b["key"], 0.0)} for b in FXARTHA_BASES]
     # anything the admin added by hand (a custom base) — kept so its rate persists
     for k, v in sorted(universal.items()):
         if k not in _FX_BUILTIN:
-            out.append({"key": k, "label": k, "unit": "$ / lot", "basis": "amount",
-                        "rate": v, "custom": True})
+            b = basis.get(k, "amount")
+            out.append({"key": k, "label": k, "unit": _custom_unit(b),
+                        "basis": b, "rate": v, "custom": True})
     return out
 
 
@@ -70,24 +84,33 @@ def dagchain_products():
     """DAGChain products that can carry a rate: every DISTINCT node package
     actually present (matched on the node, not the catalogue), grouped by kind,
     plus staking, plus any package an admin added by hand (e.g. a tier not yet
-    sold). Each carries its current universal rate."""
+    sold). Each carries its current universal rate and how it's applied."""
     from apps.integrations.models import DagChainNode
     universal, _ = load_rules("dagchain")
+    basis = load_basis("dagchain")
     out, seen = [], set()
+
+    def unit_for(key, default_pct):
+        return "$ / node" if basis.get(key) == "amount" else default_pct
+
     for kind in ("validator", "storage"):
         pkgs = (DagChainNode.objects.filter(kind=kind).exclude(package="")
                 .values_list("package", flat=True).distinct().order_by("package"))
         for pkg in pkgs:
             seen.add(pkg)
-            out.append({"key": pkg, "label": pkg, "kind": kind, "unit": "% of price",
+            out.append({"key": pkg, "label": pkg, "kind": kind,
+                        "unit": unit_for(pkg, "% of price"),
+                        "basis": basis.get(pkg, "percent"),
                         "rate": universal.get(pkg, 0.0)})
     out.append({"key": "staking", "label": "Staking", "kind": "staking",
-                "unit": "% of DGC", "rate": universal.get("staking", 0.0)})
+                "unit": "% of DGC", "basis": "percent",
+                "rate": universal.get("staking", 0.0)})
     seen.add("staking")
     for k, v in sorted(universal.items()):
         if k not in seen:
-            out.append({"key": k, "label": k, "kind": "custom", "unit": "% of price",
-                        "rate": v, "custom": True})
+            b = basis.get(k, "percent")
+            out.append({"key": k, "label": k, "kind": "custom",
+                        "unit": _custom_unit(b), "basis": b, "rate": v, "custom": True})
     return out
 
 

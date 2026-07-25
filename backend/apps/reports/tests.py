@@ -67,6 +67,15 @@ class DagChainCommissionTests(TestCase):
         self.assertEqual(row["comm_storage"], 0)
         self.assertEqual(row["comm_validator"], 450.0)      # the others still pay
 
+    def test_a_flat_amount_basis_pays_per_node_not_per_percent(self):
+        # $50 flat per Pioneer Tier node (3 nodes) instead of a percent of price
+        r = CommissionRule.objects.get(product_key="Pioneer Tier", employee__isnull=True)
+        r.rate, r.basis = 50, "amount"
+        r.save()
+        _, row = self._row()
+        self.assertEqual(row["comm_validator"], 150.0)      # 3 nodes × $50
+        self.assertEqual(row["comm_storage"], 20.38)        # storage still percent
+
     def test_totals_roll_up_to_the_employee_and_the_grand_row(self):
         data, row = self._row()
         emp = data["employees"][0]

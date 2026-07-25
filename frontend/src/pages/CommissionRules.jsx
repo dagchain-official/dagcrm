@@ -16,6 +16,7 @@ export default function CommissionRules() {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newRate, setNewRate] = useState("");
+  const [newBasis, setNewBasis] = useState("percent");   // "percent" | "amount"
 
   const load = () => api.get("/reports/commission-rules/")
     .then((r) => { setD(r.data); setErr(""); })
@@ -59,13 +60,13 @@ export default function CommissionRules() {
 
   const addProduct = () => {
     const name = newName.trim();
-    if (!name) return;
-    api.put("/reports/commission-rules/", { platform, product_key: name, rate: newRate || 0 })
+    if (!name) { toast.error("Enter a product name"); return; }
+    api.put("/reports/commission-rules/", { platform, product_key: name, rate: newRate || 0, basis: newBasis })
       .then(() => {
-        toast.success("Product added");
-        setAdding(false); setNewName(""); setNewRate(""); load();
+        toast.success(`Product “${name}” added`);
+        setAdding(false); setNewName(""); setNewRate(""); setNewBasis("percent"); load();
       })
-      .catch(() => toast.error("Could not add"));
+      .catch(() => toast.error("Could not add product"));
   };
 
   return (
@@ -102,17 +103,30 @@ export default function CommissionRules() {
             <input className="input" value={newName} autoFocus placeholder={platform === "dagchain" ? "e.g. Standard Tier" : "e.g. Insurance"}
               onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProduct()} />
           </div>
+          {/* $ or % — how the rate is applied */}
           <div>
-            <label className="label">Rate {platform === "fxartha" ? "($)" : "(%)"}</label>
+            <label className="label">Rate type</label>
+            <div className="flex items-center rounded-lg bg-ink-100 p-0.5 text-sm">
+              {[["percent", "%"], ["amount", "$"]].map(([v, l]) => (
+                <button key={v} onClick={() => setNewBasis(v)}
+                  className={`px-3.5 py-1.5 rounded-md font-semibold ${newBasis === v ? "bg-white text-brand-700 shadow-sm" : "text-ink-500"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="label">Rate ({newBasis === "amount" ? "$" : "%"})</label>
             <input className="input !w-28" type="number" step="0.01" min="0" value={newRate}
               onChange={(e) => setNewRate(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProduct()} />
           </div>
           <button onClick={addProduct} className="btn-primary !py-2.5 !px-4 text-sm">Add</button>
-          <button onClick={() => { setAdding(false); setNewName(""); setNewRate(""); }} className="chip !py-2.5 text-sm inline-flex items-center gap-1"><X size={14} /> Cancel</button>
+          <button onClick={() => { setAdding(false); setNewName(""); setNewRate(""); setNewBasis("percent"); }} className="chip !py-2.5 text-sm inline-flex items-center gap-1"><X size={14} /> Cancel</button>
           <p className="text-xs text-ink-400 basis-full">
+            <b>%</b> = a percent of the base; <b>$</b> = a flat amount {platform === "dagchain" ? "per node." : "per lot."}
             {platform === "dagchain"
-              ? "Matches nodes by this exact package name — use it to pre-set a rate for a tier that isn't sold yet."
-              : "A custom base only pays once its data is wired; the built-in Lots, Brokerage and Deposit already compute."}
+              ? " Matches nodes by this exact package name — set a rate for a tier before it's sold."
+              : " A custom base only pays once its data is wired; built-in Lots, Brokerage and Deposit already compute."}
           </p>
         </div>
       )}

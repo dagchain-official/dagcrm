@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, Save, X, Wand2 } from "lucide-react";
 import api from "../api/client";
 import { Spinner, EmptyState } from "../components/ui";
+import { useToast } from "../context/ToastContext";
 
 const OPS = [
   { value: "gt", label: ">" }, { value: "gte", label: "≥" }, { value: "lt", label: "<" },
@@ -15,6 +16,7 @@ const newCond = () => ({ left: "revenue", operator: "gt", right_type: "constant"
 const newRule = () => ({ name: "", match: "all", payout_type: "percent", payout_on: "revenue", payout_value: 0, status: "active", conditions: [newCond()] });
 
 export default function FormulaBuilder() {
+  const toast = useToast();
   const [vars, setVars] = useState([]);
   const [rules, setRules] = useState(null);
   const [form, setForm] = useState(null);          // null = not editing
@@ -54,10 +56,18 @@ export default function FormulaBuilder() {
       if (form.id) await api.put(`/formula-rules/${form.id}/`, payload);
       else await api.post("/formula-rules/", payload);
       setForm(null); load();
-    } catch (e) { alert("Save failed: " + JSON.stringify(e.response?.data || e.message)); }
+      toast.success(`Rule ${form.id ? "updated" : "created"}`);
+    } catch (e) {
+      const d = e.response?.data;
+      toast.error("Save failed: " + (typeof d === "object" ? Object.values(d).flat()[0] : d || e.message));
+    }
     finally { setSaving(false); }
   };
-  const remove = async (id) => { if (confirm("Delete this rule?")) { await api.delete(`/formula-rules/${id}/`); load(); } };
+  const remove = async (id) => {
+    if (!confirm("Delete this rule?")) return;
+    try { await api.delete(`/formula-rules/${id}/`); load(); toast.success("Rule deleted"); }
+    catch { toast.error("Could not delete rule"); }
+  };
 
   if (!rules) return <Spinner label="Loading rules…" />;
 

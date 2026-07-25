@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import api from "../api/client";
 import { Spinner } from "../components/ui";
+import { useToast } from "../context/ToastContext";
 
 const fmtTime = (d) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const fmtDate = (d) => d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -27,6 +28,7 @@ function Stat({ icon: Icon, label, value, tint }) {
 }
 
 export default function MyAttendance() {
+  const toast = useToast();
   const [now, setNow] = useState(new Date());
   const [att, setAtt] = useState(null);
   const [act, setAct] = useState(null);
@@ -52,6 +54,9 @@ export default function MyAttendance() {
     try {
       const { data } = await api.post(`/attendance/${path}/`);
       setAtt(data);
+      toast.success(path === "checkin" ? "Checked in" : path === "checkout" ? "Checked out" : "Done");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Could not update attendance");
     } finally {
       setBusy(false);
     }

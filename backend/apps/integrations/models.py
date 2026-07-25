@@ -170,11 +170,16 @@ class CommissionRule(models.Model):
     name) so a rate always matches the nodes people actually bought.
     """
     PLATFORMS = [("fxartha", "FX Artha"), ("dagchain", "DAGChain")]
+    BASIS = [("percent", "Percent"), ("amount", "Flat amount")]
     platform = models.CharField(max_length=20, choices=PLATFORMS)
     product_key = models.CharField(max_length=120)
     employee = models.ForeignKey("hr.Employee", on_delete=models.CASCADE, null=True, blank=True,
                                  related_name="commission_rules")
     rate = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    # how the rate is applied: "percent" of the money base, or a flat "amount"
+    # ($ per lot / per node). Built-in bases have a fixed basis; a custom base
+    # carries whatever the admin picked when adding it.
+    basis = models.CharField(max_length=10, choices=BASIS, default="percent")
 
     class Meta:
         unique_together = ("platform", "product_key", "employee")

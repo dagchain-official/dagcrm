@@ -588,9 +588,13 @@ def commission_rules(request):
                 rate = round(float(raw), 4)
             except (TypeError, ValueError):
                 return Response({"rate": "Must be a number."}, status=400)
+            defaults = {"rate": rate}
+            basis = request.data.get("basis")
+            if basis in ("percent", "amount"):
+                defaults["basis"] = basis
             CommissionRule.objects.update_or_create(
                 platform=platform, product_key=key, employee_id=emp_id,
-                defaults={"rate": rate})
+                defaults=defaults)
 
     products = commission_products()
     # the RMs an override can target — sales roles who own a book, never the admin

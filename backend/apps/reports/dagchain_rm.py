@@ -24,21 +24,24 @@ def compute_dagchain_by_rm(employee_id=None, rate_override=None):
     from apps.hr.models import Employee
     from apps.integrations.models import DagChainNode
 
-    from .commission import load_rules, rate_for
+    from .commission import load_basis, load_rules, rate_for
 
     universal, overrides = load_rules("dagchain")
+    basis = load_basis("dagchain")   # product_key -> "percent" | "amount"
 
-    # per-customer node roll-up, plus per-(customer, kind, package) spend so each
-    # package can be paid at its own rate
+    # per-customer node roll-up, plus per-(customer, kind, package) spend AND count
+    # so each package can be paid a percent of price OR a flat $ per node
     node_agg = {n["customer_id"]: n for n in DagChainNode.objects.values("customer_id").annotate(
         val=Count("id", filter=Q(kind="validator")),
         sto=Count("id", filter=Q(kind="storage")),
         spend=Sum("purchase_price"), rewards=Sum("rewards_earned"),
         staked=Sum("staked_amount"))}
-    pkg_spend = defaultdict(lambda: defaultdict(float))   # customer_id -> {(kind,pkg): spend}
+    pkg_agg = defaultdict(lambda: defaultdict(lambda: [0.0, 0]))  # cust -> {(kind,pkg): [spend,count]}
     for r in (DagChainNode.objects.exclude(package="")
-              .values("customer_id", "kind", "package").annotate(s=Sum("purchase_price"))):
-        pkg_spend[r["customer_id"]][(r["kind"], r["package"])] += float(r["s"] or 0)
+              .values("customer_id", "kind", "package").annotate(s=Sum("purchase_price"), c=Count("id"))):
+        cell = pkg_agg[r["customer_id"]][(r["kind"], r["package"])]
+        cell[0] += float(r["s"] or 0)
+        cell[1] += int(r["c"] or 0)
 
     # the super admin is never surfaced as an owner anywhere
     emp_by_user = {e.user_id: e for e in
@@ -55,16 +58,18 @@ def compute_dagchain_by_rm(employee_id=None, rate_override=None):
         emp_meta[key] = (getattr(owner, "id", None), getattr(owner, "name", None) or "Unassigned")
         prof, na = c.dagchain, node_agg.get(c.id, {})
         emp_id = emp.id if emp else None
-        # each package paid at its own rate; unassigned (key 0) earns nothing
+        # each package paid at its own rate; unassigned (key 0) earns nothing.
+        # basis "amount" = flat $ per node (count × rate); else percent of price.
         val_spend = sto_spend = comm_validator = comm_storage = 0.0
-        for (kind, pkg), spend in pkg_spend.get(c.id, {}).items():
-            pct = rate_for(universal, overrides, pkg, emp_id) / 100 if emp_id else 0.0
+        for (kind, pkg), (spend, count) in pkg_agg.get(c.id, {}).items():
+            rate = rate_for(universal, overrides, pkg, emp_id) if emp_id else 0.0
+            comm = count * rate if basis.get(pkg) == "amount" else spend * rate / 100
             if kind == "validator":
                 val_spend += spend
-                comm_validator += spend * pct
+                comm_validator += comm
             else:
                 sto_spend += spend
-                comm_storage += spend * pct
+                comm_storage += comm
         # real contract staking from the profile (per-node stakedAmount is 0);
         # fall back to the node figure only if the profile has none
         staked = float(prof.staked_amount or 0) or float(na.get("staked") or 0)
