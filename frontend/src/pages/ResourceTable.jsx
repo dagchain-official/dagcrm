@@ -352,7 +352,7 @@ export default function ResourceTable({ resource: propResource }) {
               <select key={f.key} className="input !py-2 w-auto" value={filters[f.key] ?? ""}
                 onChange={(e) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: e.target.value })); }}>
                 <option value="">All {f.label}</option>
-                {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {(f.options || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             )
           ))}

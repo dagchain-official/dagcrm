@@ -405,7 +405,6 @@ export const RESOURCES = {
   "training-modules": {
     title: "Training Modules", endpoint: "training-modules", search: true,
     filters: [
-      { key: "category", label: "Category" },
       { key: "active", label: "Active", options: sel("true", "false") },
     ],
     columns: [
