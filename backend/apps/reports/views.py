@@ -29,6 +29,10 @@ from apps.support.models import Ticket
 User = get_user_model()
 
 
+# every call-like activity type counts toward a "Calls" figure
+CALL_TYPES = ["call", "outbound_call", "inbound_call", "callback"]
+
+
 def _money(qs, field):
     return qs.aggregate(t=Sum(field))["t"] or 0
 
@@ -83,7 +87,7 @@ def kpi_scorecard(user_ids):
 
     return {
         "leads": leads.count(),
-        "calls": acts.filter(activity_type="call").count(),
+        "calls": acts.filter(activity_type__in=CALL_TYPES).count(),
         "talk_time": metric_sum("Talk Time"),
         "meetings": acts.filter(activity_type="meeting").count(),
         "sales": leads.filter(status="converted").count(),
@@ -311,7 +315,7 @@ def team_dashboard(request):
     calls_map, meet_map = defaultdict(int), defaultdict(int)
     for a in (LeadActivity.objects.filter(created_at__year=y, created_at__month=m)
               .values("lead__assigned_to", "activity_type").annotate(c=Count("id"))):
-        if a["activity_type"] == "call":
+        if a["activity_type"] in CALL_TYPES:
             calls_map[a["lead__assigned_to"]] += a["c"]
         elif a["activity_type"] == "meeting":
             meet_map[a["lead__assigned_to"]] += a["c"]

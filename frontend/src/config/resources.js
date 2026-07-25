@@ -8,10 +8,14 @@ export const STATUS_COLORS = {
   active: "bg-emerald-50 text-emerald-700",
   inactive: "bg-ink-100 text-ink-600",
   new: "bg-blue-50 text-blue-700",
+  attempted: "bg-orange-50 text-orange-700",
   contacted: "bg-amber-50 text-amber-700",
   qualified: "bg-violet-50 text-violet-700",
+  meeting_booked: "bg-cyan-50 text-cyan-700",
+  meeting_done: "bg-teal-50 text-teal-700",
   converted: "bg-emerald-50 text-emerald-700",
   lost: "bg-rose-50 text-rose-700",
+  nurture: "bg-ink-100 text-ink-600",
   won: "bg-emerald-50 text-emerald-700",
   open: "bg-blue-50 text-blue-700",
   closed: "bg-ink-100 text-ink-600",
@@ -201,7 +205,7 @@ export const RESOURCES = {
     title: "Leads", endpoint: "leads", search: true, importable: true, detailPath: "/leads",
     distribute: { path: "leads/distribute" },
     filters: [
-      { key: "status", label: "Status", options: sel("new", "contacted", "qualified", "converted", "lost") },
+      { key: "status", label: "Status", options: sel("new", "assigned", "attempted", "contacted", "qualified", "meeting_booked", "meeting_done", "negotiation", "converted", "lost", "nurture") },
       { key: "source", label: "Source", ref: "lead-sources/social", labelKey: "name" },
     ],
     columns: [
@@ -224,14 +228,14 @@ export const RESOURCES = {
       // hidden from a Sales Executive — they work their own leads and the API
       // stamps a new lead onto whoever created it
       { key: "assigned_to", label: "Assign to", type: "ref", ref: "users/assignable", labelKey: "name", assignerOnly: true },
-      { key: "status", label: "Status", type: "select", options: sel("new", "contacted", "qualified", "converted", "lost") },
+      { key: "status", label: "Status", type: "select", options: sel("new", "assigned", "attempted", "contacted", "qualified", "meeting_booked", "meeting_done", "negotiation", "converted", "lost", "nurture") },
     ],
   },
   "lead-activities": {
     title: "Lead Activities", endpoint: "lead-activities", search: false,
     filters: [
       { key: "lead", label: "Lead", ref: "leads", labelKey: "name" },
-      { key: "activity_type", label: "Type", options: sel("call", "whatsapp", "email", "meeting", "note") },
+      { key: "activity_type", label: "Type", options: sel("call", "outbound_call", "inbound_call", "whatsapp", "email", "callback", "followup", "meeting", "document_collection", "service_call", "note") },
     ],
     columns: [
       { key: "lead_name", label: "Lead" },
@@ -242,7 +246,7 @@ export const RESOURCES = {
     ],
     fields: [
       { key: "lead", label: "Lead", type: "ref", ref: "leads", labelKey: "name", required: true },
-      { key: "activity_type", label: "Type", type: "select", options: sel("call", "whatsapp", "email", "meeting", "note") },
+      { key: "activity_type", label: "Type", type: "select", options: sel("call", "outbound_call", "inbound_call", "whatsapp", "email", "callback", "followup", "meeting", "document_collection", "service_call", "note") },
       { key: "remarks", label: "Remarks", type: "textarea" },
       { key: "followup_date", label: "Follow-up date", type: "date" },
       { key: "next_action", label: "Next action" },

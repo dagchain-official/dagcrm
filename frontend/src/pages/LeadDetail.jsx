@@ -22,7 +22,8 @@ const ACT_ICON = {
 };
 
 // funnel order for the progress strip
-const FUNNEL = ["new", "contacted", "qualified", "converted"];
+const FUNNEL = ["new", "assigned", "attempted", "contacted", "qualified",
+  "meeting_booked", "meeting_done", "negotiation", "converted"];
 
 export default function LeadDetail() {
   const { id } = useParams();

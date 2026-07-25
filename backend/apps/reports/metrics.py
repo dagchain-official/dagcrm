@@ -90,11 +90,18 @@ def _leaf_stats(mdefs, month, year, date_from=None, date_to=None):
     #      lead owner (lead.assigned_to -> their Employee) — same path as P&L.
     if derived:
         u2e = dict(Employee.objects.values_list("user_id", "id"))
+        # a "call" KPI counts every call-like activity type; a "meeting" KPI
+        # every meeting-like one
+        ATYPE_GROUP = {
+            "call": ["call", "outbound_call", "inbound_call", "callback"],
+            "meeting": ["meeting"],
+        }
         for m in derived:
             if m.derived_key in ("lead_activity:meeting", "lead_activity:call"):
                 atype = m.derived_key.split(":")[1]
                 rows = (LeadActivity.objects
-                        .filter(activity_type=atype, **_flt("created_at", True))
+                        .filter(activity_type__in=ATYPE_GROUP.get(atype, [atype]),
+                                **_flt("created_at", True))
                         .values("lead__assigned_to").annotate(c=Count("id")))
                 for r in rows:
                     eid = u2e.get(r["lead__assigned_to"])

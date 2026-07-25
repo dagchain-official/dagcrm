@@ -6,7 +6,11 @@ stage. Applied automatically on create/update and whenever an activity is logged
 HOT_SOURCES = {"referral", "website", "whatsapp"}
 WARM_SOURCES = {"meta ads", "google ads", "telegram", "facebook", "instagram", "linkedin", "tiktok"}
 
-STATUS_BOOST = {"qualified": 15, "contacted": 8, "converted": 25, "lost": -25}
+STATUS_BOOST = {
+    "assigned": 4, "attempted": 6, "contacted": 8, "qualified": 15,
+    "meeting_booked": 18, "meeting_done": 20, "negotiation": 22,
+    "converted": 25, "lost": -25, "nurture": 2,
+}
 
 
 def compute_score(lead) -> int:

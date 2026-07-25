@@ -469,7 +469,7 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
         # Auto activity tracking: real call/note actions bump the counters.
         if user:
             from apps.hr.services import bump_activity
-            if obj.activity_type == "call":
+            if obj.activity_type in ("call", "outbound_call", "inbound_call", "callback"):
                 bump_activity(user, "calls_completed")
             elif obj.activity_type == "note":
                 bump_activity(user, "notes_added")

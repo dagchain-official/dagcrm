@@ -63,8 +63,11 @@ class LeadQuerySet(models.QuerySet):
 
 class Lead(models.Model):
     STATUS = [
-        ("new", "New"), ("contacted", "Contacted"), ("qualified", "Qualified"),
-        ("converted", "Converted"), ("lost", "Lost"),
+        ("new", "New"), ("assigned", "Assigned"), ("attempted", "Attempted"),
+        ("contacted", "Contacted"), ("qualified", "Qualified"),
+        ("meeting_booked", "Meeting Booked"), ("meeting_done", "Meeting Done"),
+        ("negotiation", "Negotiation"), ("converted", "Closed Won"),
+        ("lost", "Closed Lost"), ("nurture", "Nurture"),
     ]
     lead_code = models.CharField(max_length=40, unique=True)
     external_id = models.CharField(max_length=64, blank=True, db_index=True)  # id in an external system (e.g. FXArtha)
@@ -109,8 +112,11 @@ class LeadInterest(models.Model):
 
 
 class LeadActivity(models.Model):
-    TYPES = [("call", "Call"), ("whatsapp", "WhatsApp"), ("email", "Email"),
-             ("meeting", "Meeting"), ("note", "Note"), ("proposal", "Proposal")]
+    TYPES = [("call", "Call"), ("outbound_call", "Outbound Call"),
+             ("inbound_call", "Inbound Call"), ("whatsapp", "WhatsApp"),
+             ("email", "Email"), ("callback", "Callback"), ("followup", "Follow-up"),
+             ("meeting", "Meeting"), ("document_collection", "Document Collection"),
+             ("service_call", "Service Call"), ("note", "Note")]
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="activities")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     activity_type = models.CharField(max_length=20, choices=TYPES, default="call")
