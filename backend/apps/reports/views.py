@@ -107,8 +107,18 @@ def _fxartha_dashboard():
 
 @api_view(["GET"])
 def my_dashboard(request):
-    """Personal KPIs scoped to the logged-in user."""
+    """Personal KPIs scoped to the logged-in user. An admin/manager may pass
+    ?user=<id> to view another employee's dashboard (only within their reach)."""
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
     user = request.user
+    target = request.query_params.get("user")
+    if target and str(target) != str(user.id):
+        try:
+            tid = int(target)
+        except (TypeError, ValueError):
+            tid = None
+        if tid and (is_admin_view(user) or tid in subordinate_user_ids(user, include_self=True)):
+            user = User.objects.filter(id=tid, is_superuser=False).first() or user
     today = timezone.localdate()
     my_leads = Lead.objects.pipeline().filter(assigned_to=user)
     my_opps = Opportunity.objects.filter(assigned_to=user)
@@ -144,6 +154,7 @@ def my_dashboard(request):
         "recent_leads": recent,
         "upcoming_followups": followups,
         "kpis": kpi_scorecard([user.id]),
+        "user_name": user.name,
     })
 
 
@@ -184,6 +195,86 @@ def dashboard_summary(request):
         "open_tickets": Ticket.objects.exclude(status__in=["resolved", "closed"]).count(),
         "total_expenses": _money(Expense.objects.all(), "amount"),
         "total_commissions": _money(Commission.objects.all(), "amount"),
+    })
+
+
+def _health_status(score):
+    """The Excel's bands: >=85% Healthy, >=60% Watch, else Critical."""
+    if score >= 0.85:
+        return "Healthy"
+    if score >= 0.6:
+        return "Watch"
+    return "Critical"
+
+
+@api_view(["GET"])
+def company_health(request):
+    """CEO Command Center — the company-health view: headline numbers plus a
+    five-dimension health index (Sales / Execution / Learning / Customer /
+    Finance -> Overall), mirroring the Excel monitor.
+
+    Real where the data exists. Learning depends on a Training/Assessment module
+    the CRM doesn't have yet, so Training Compliance / Assessment Pass Rate and
+    the Learning dimension read 0 until that module is built.
+    """
+    today = timezone.localdate()
+    m, y = today.month, today.year
+    leads = Lead.objects.pipeline()
+    total_leads = leads.count()
+    won = leads.filter(status="converted").count()
+    lost = leads.filter(status="lost").count()
+    closed_won = Opportunity.objects.filter(stage="won").count() or won
+
+    fx_revenue = float(_fxartha_dashboard().get("total_revenue") or 0)
+    other = Revenue.objects.exclude(external_id__startswith="fxa")
+    revenue = float(_money(other, "net_revenue")) + fx_revenue
+    gross_profit = round(revenue, 2)                       # net = after commission
+    expenses = float(_money(Expense.objects.all(), "amount"))
+    weighted_pipeline = float(_money(Opportunity.objects.filter(status="open"), "expected_revenue"))
+    overdue_actions = LeadActivity.objects.filter(followup_date__lt=today).count()
+
+    # ---- five health dimensions (0..1) ----
+    tgt = compute_targets(m, y).get("company", {})
+    if tgt.get("target"):
+        sales = min(1.0, tgt.get("achieved", 0) / tgt["target"])
+    else:
+        sales = (won / total_leads) if total_leads else 0.0
+
+    total_fu = LeadActivity.objects.filter(followup_date__isnull=False).count()
+    execution = (1 - overdue_actions / total_fu) if total_fu else 1.0
+
+    # Learning needs the Training module (not built) -> 0 for now
+    training_compliance = 0.0
+    assessment_pass_rate = 0.0
+    learning = training_compliance
+
+    # Customer health proxy: share of customers that actually generate revenue
+    total_custs = Customer.objects.exclude(external_id="").count() or Customer.objects.count()
+    active_custs = (Customer.objects.filter(revenues__isnull=False).distinct().count())
+    customer = (active_custs / total_custs) if total_custs else 0.0
+
+    finance = max(0.0, min(1.0, (revenue - expenses) / revenue)) if revenue else 0.0
+
+    dims = [
+        ("Sales", sales), ("Execution", execution), ("Learning", learning),
+        ("Customer", customer), ("Finance", finance),
+    ]
+    overall = sum(s for _, s in dims) / len(dims)
+    health = [{"dimension": d, "score": round(s, 4), "status": _health_status(s)}
+              for d, s in dims]
+    health.append({"dimension": "Overall", "score": round(overall, 4),
+                   "status": _health_status(overall)})
+
+    return Response({
+        "total_leads": total_leads,
+        "closed_won": closed_won,
+        "revenue": round(revenue, 2),
+        "gross_profit": gross_profit,
+        "weighted_pipeline": round(weighted_pipeline, 2),
+        "overdue_actions": overdue_actions,
+        "training_compliance": training_compliance,
+        "assessment_pass_rate": assessment_pass_rate,
+        "health": health,
     })
 
 

@@ -46,23 +46,31 @@ function CardHead({ title, to }) {
   );
 }
 
-export default function UserDashboard() {
+export default function UserDashboard({ userId }) {
   const [d, setD] = useState(null);
 
   useEffect(() => {
-    const fetchData = () => api.get("/reports/my-dashboard/").then((r) => setD(r.data)).catch(() => {});
+    setD(null);
+    const url = userId ? `/reports/my-dashboard/?user=${userId}` : "/reports/my-dashboard/";
+    const fetchData = () => api.get(url).then((r) => setD(r.data)).catch(() => {});
     fetchData();
     // live auto-refresh — new assigned leads appear without manual reload
     const id = setInterval(() => { if (!document.hidden) fetchData(); }, 15000);
     return () => clearInterval(id);
-  }, []);
+  }, [userId]);
 
-  if (!d) return <Spinner label="Loading your workspace…" />;
+  if (!d) return <Spinner label="Loading workspace…" />;
 
   const statusData = (d.leads_by_status || []).map((s) => ({ name: s.status, count: s.count }));
 
   return (
     <div className="space-y-5">
+      {userId && d.user_name && (
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink-900">{d.user_name}</h1>
+          <p className="text-sm text-ink-400 mt-0.5">Employee dashboard — personal performance</p>
+        </div>
+      )}
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Kpi icon={UserPlus} label="My Leads" value={d.my_leads} trend={`${d.my_new_leads} new`} color="bg-orange-100 text-orange-600" />
