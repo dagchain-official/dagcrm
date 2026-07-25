@@ -53,7 +53,17 @@ export default function SalesManagerDashboard() {
   const leadsBySource = d.leads_by_source || [];
   const topReps = d.top_reps || [];
   const targets = d.targets || [];
+  const k = d.team_kpis || {};
   const barColor = (p) => (p >= 100 ? "bg-emerald-500" : p >= 50 ? "bg-brand-500" : "bg-amber-500");
+  const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  // the sales-department scorecard (this month)
+  const KPIS = [
+    ["Leads", num(k.leads)], ["Calls", num(k.calls)], ["Talk Time", num(k.talk_time)],
+    ["Meetings", num(k.meetings)], ["Sales", num(k.sales)],
+    ["Revenue", money(k.revenue)], ["Overall KPI", num(k.overall_kpi)],
+    ["Incentive Earned", money(k.incentive_earned)], ["Incentive Paid", money(k.incentive_paid)],
+    ["Training", num(k.training)],
+  ];
 
   return (
     <div className="space-y-5">
@@ -69,6 +79,19 @@ export default function SalesManagerDashboard() {
         <Kpi icon={Target} label="Open Deals" value={d.open_opportunities} trend={money(d.pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
         <Kpi icon={Trophy} label="Deals Won" value={d.won_deals} trend={`${d.converted_leads} converted`} color="bg-emerald-100 text-emerald-600" />
         <Kpi icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} trend={money(d.pipeline_value) + " pipeline"} color="bg-brand-100 text-brand-600" />
+      </div>
+
+      {/* team KPIs — the sales-department scorecard (this month) */}
+      <div className="card p-5">
+        <CardHead title="Team KPIs · This Month" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {KPIS.map(([label, value]) => (
+            <div key={label} className="rounded-xl bg-ink-50 border border-ink-100 px-4 py-3 text-center">
+              <p className="text-xs font-semibold text-ink-500">{label}</p>
+              <p className="text-xl font-extrabold text-ink-900 tabular-nums mt-1">{value}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* charts row */}

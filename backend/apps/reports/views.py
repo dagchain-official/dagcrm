@@ -221,13 +221,55 @@ def support_dashboard(request):
 @api_view(["GET"])
 def sales_dashboard(request):
     """Sales Manager — company-wide sales (no HR/finance)."""
-    from apps.crm.models import Target
+    from apps.crm.models import LeadActivity, MetricDefinition, MetricEntry, Target
     from apps.crm.serializers import TargetSerializer
 
     rev = _scoped_revenue(request.user)
     targets = TargetSerializer(Target.objects.all().order_by("end_date")[:6], many=True).data
+
+    # ---- Team KPIs (this month) — the sales-department scorecard row -----------
+    today = timezone.localdate()
+    m, y = today.month, today.year
+    month_leads = Lead.objects.pipeline().filter(created_at__year=y, created_at__month=m)
+    acts = LeadActivity.objects.filter(created_at__year=y, created_at__month=m)
+
+    def _metric_sum(name):
+        """Team total for a manual metric this month — 0 if that metric doesn't
+        exist yet (e.g. Talk Time / Training can be added later and light up)."""
+        mid = (MetricDefinition.objects.filter(name__iexact=name, status="active")
+               .values_list("id", flat=True).first())
+        if not mid:
+            return 0.0
+        return float(MetricEntry.objects.filter(metric_id=mid, date__year=y, date__month=m)
+                     .aggregate(s=Sum("value"))["s"] or 0)
+
+    month_rev = _money(rev.filter(created_at__year=y, created_at__month=m), "net_revenue")
+    # Overall KPI = the month's target attainment (achieved / target), 0..1
+    from .targets import compute_targets
+    tgt = compute_targets(m, y).get("company", {})
+    overall = round((tgt.get("achieved", 0) / tgt["target"]), 4) if tgt.get("target") else 0.0
+    # incentives: earned = computed this month; paid = persisted on payroll
+    from apps.hr.models import Payroll
+    earned = compute_incentives(m, y).get("grand_total", 0)
+    paid = float(Payroll.objects.filter(month=m, year=y)
+                 .aggregate(s=Sum("incentive"))["s"] or 0)
+
+    team_kpis = {
+        "leads": month_leads.count(),
+        "calls": acts.filter(activity_type="call").count(),
+        "talk_time": _metric_sum("Talk Time"),
+        "meetings": acts.filter(activity_type="meeting").count(),
+        "sales": month_leads.filter(status="converted").count(),
+        "revenue": month_rev,
+        "overall_kpi": overall,
+        "incentive_earned": round(float(earned), 2),
+        "incentive_paid": round(paid, 2),
+        "training": _metric_sum("Training"),
+    }
+
     return Response({
         "targets": targets,
+        "team_kpis": team_kpis,
         "total_leads": Lead.objects.pipeline().count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),
