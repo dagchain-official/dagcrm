@@ -58,7 +58,7 @@ export const STATUS_COLORS = {
   withdrawal: "bg-rose-50 text-rose-700",
 };
 
-const sel = (...opts) => opts.map((o) => ({ value: o, label: o[0].toUpperCase() + o.slice(1).replace("_", " ") }));
+const sel = (...opts) => opts.map((o) => ({ value: o, label: o ? o[0].toUpperCase() + o.slice(1).replace("_", " ") : "—" }));
 
 // A user and an employee are the same person, so Administration → Users and
 // HR → People share ONE form. Both endpoints accept every field below: the login
