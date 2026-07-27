@@ -133,30 +133,35 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
     # these — and lots — are keyed by user_id with the rolled-up per-user figure;
     # re-running per account-row just rewrites the same row (no double-counting).
     # Fall back to the per-account customer field only if the tx feed was absent.
-    _txu = (tx_map or {}).get(uid)
-    if _txu is not None:
-        dep = float(_txu.get("deposit") or 0)
-        wd = float(_txu.get("withdrawal") or 0)
-    else:
-        dep = float(item.get("total_deposit") or 0)
-        # A SETTLED withdrawal always posts to the ledger (so it's already in the
-        # tx_map branch above). The per-customer total_withdrawal can also include
-        # pending/rejected requests the platform doesn't count as money out, which
-        # over-reported withdrawals — so never fall back to it.
-        wd = 0.0
+    _txu = (tx_map or {}).get(uid) or {}
+    # Deposit: the per-trader total_deposit is the platform's authoritative figure
+    # (it folds in admin fund-additions credited straight to the ledger) and
+    # reconciles with the dashboard. For a user who appears only in the ledger/
+    # trades feed — not in /customers — fall back to the ledger deposit roll-up.
+    dep = float(item.get("total_deposit") or _txu.get("deposit") or 0)
+    # Withdrawal: only SETTLED, real money-out counts — that's the ledger roll-up
+    # (which already drops internal transfers). The per-customer total_withdrawal
+    # can include pending/rejected requests, so never use it.
+    wd = float(_txu.get("withdrawal") or 0)
     dep_acct = float(item.get("total_deposit") or 0)  # per-account (for contribution)
 
-    # AUM (PART 11) — deposits / withdrawals -> Net New AUM (per trader)
+    # AUM (PART 11) — deposits / withdrawals -> Net New AUM (per trader). Delete a
+    # stale row when a figure drops to 0 (e.g. a withdrawal that turned out to be
+    # an internal transfer), so corrections don't leave orphaned AUM behind.
     if emp and dep:
         AumEntry.objects.update_or_create(
             external_id=f"fxa-dep:{uid}",
             defaults={"employee": emp, "customer": cust, "business": business,
                       "entry_type": "deposit", "amount": dep, "date": when, "note": "FXArtha sync"})
+    else:
+        AumEntry.objects.filter(external_id=f"fxa-dep:{uid}").delete()
     if emp and wd:
         AumEntry.objects.update_or_create(
             external_id=f"fxa-wd:{uid}",
             defaults={"employee": emp, "customer": cust, "business": business,
                       "entry_type": "withdrawal", "amount": wd, "date": when, "note": "FXArtha sync"})
+    else:
+        AumEntry.objects.filter(external_id=f"fxa-wd:{uid}").delete()
 
     # Contribution (PART 12) — per-account components (brokerage/loss are per account)
     brokerage = float(item.get("brokerage") or item.get("gross_brokerage") or 0)
@@ -230,6 +235,14 @@ def _aggregate_transactions(client):
                 continue
             ty = (l.get("type") or "").lower()
             if ty not in ("deposit", "withdrawal"):
+                continue
+            # Some ledger rows are internal account-to-account movements (e.g.
+            # "Copy trading investment → account …") tagged as a withdrawal. That
+            # money hasn't left the trader — it moved to another of their accounts —
+            # so the platform dashboard excludes it, and so do we. Real withdrawals
+            # read "Withdrawal approved (main wallet)" and carry no "→".
+            raw_desc = l.get("description") or ""
+            if ty == "withdrawal" and ("→" in raw_desc or "copy trading" in raw_desc.lower()):
                 continue
             row = out.setdefault(uid, {"deposit": 0.0, "withdrawal": 0.0})
             row[ty] += abs(float(l.get("amount") or 0))
