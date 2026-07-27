@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import (
     Attachment, AumEntry, Business, Communication, ContributionEntry, ContributionWeight,
     Customer, CustomerProduct, Lead, LeadActivity, LeadInterest, LeadSource, MetricDefinition,
-    MetricEntry, Opportunity, Product, Proposal, ProposalItem, Target, TargetAssignment,
+    MetricEntry, Opportunity, PostSale, Product, Proposal, ProposalItem, Target, TargetAssignment,
 )
 
 
@@ -164,12 +164,15 @@ class LeadSerializer(serializers.ModelSerializer):
 
     interests = LeadInterestSerializer(many=True, read_only=True)
     activity_count = serializers.IntegerField(source="activities.count", read_only=True)
+    weighted_pipeline = serializers.ReadOnlyField()
 
     class Meta:
         model = Lead
         fields = ["id", "lead_code", "name", "email", "phone", "country", "source",
                   "source_name", "business", "business_name", "assigned_to", "assigned_name",
-                  "created_by", "status", "score", "interests", "activity_count", "created_at"]
+                  "created_by", "status", "priority", "campaign", "expected_value",
+                  "probability", "weighted_pipeline", "lost_reason",
+                  "score", "interests", "activity_count", "created_at"]
         read_only_fields = ["created_at", "score"]
 
     def to_representation(self, instance):
@@ -218,6 +221,33 @@ class CustomerProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerProduct
         fields = ["id", "customer", "business", "business_name", "product", "product_name", "status"]
+
+
+class PostSaleSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    business_name = serializers.CharField(source="business.name", read_only=True)
+    agent_name = serializers.SerializerMethodField()
+    onboarding_owner_name = serializers.SerializerMethodField()
+    gross_profit = serializers.ReadOnlyField()
+
+    def _name(self, u):
+        return None if (not u or u.is_superuser) else u.name
+
+    def get_agent_name(self, obj):
+        return self._name(obj.agent)
+
+    def get_onboarding_owner_name(self, obj):
+        return self._name(obj.onboarding_owner)
+
+    class Meta:
+        model = PostSale
+        fields = ["id", "customer", "lead", "agent", "agent_name", "business", "business_name",
+                  "product", "product_name", "close_date", "sale_type", "sale_status",
+                  "gross_value", "collected_value", "commission", "direct_cost", "gross_profit",
+                  "onboarding_owner", "onboarding_owner_name", "welcome_call", "documents_complete",
+                  "delivery_date", "service_status", "next_renewal_date", "topup_opportunity",
+                  "topup_value", "referral_received", "post_sales_health", "created_at"]
+        read_only_fields = ["created_at", "gross_profit"]
 
 
 class CustomerSerializer(serializers.ModelSerializer):

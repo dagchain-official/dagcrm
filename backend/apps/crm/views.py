@@ -9,14 +9,15 @@ from apps.accounts.utils import is_admin_view
 from .models import (
     Attachment, AumEntry, Business, Communication, ContributionEntry, ContributionWeight,
     Customer, CustomerProduct, Lead, LeadActivity, LeadInterest, LeadSource, MetricDefinition,
-    MetricEntry, Opportunity, Product, Proposal, ProposalItem, Target, TargetAssignment,
+    MetricEntry, Opportunity, PostSale, Product, Proposal, ProposalItem, Target, TargetAssignment,
 )
 from .serializers import (
     AttachmentSerializer, AumEntrySerializer, BusinessSerializer, CommunicationSerializer,
     ContributionEntrySerializer, ContributionWeightSerializer, CustomerProductSerializer,
     CustomerSerializer, LeadActivitySerializer, LeadInterestSerializer, LeadSerializer,
     LeadSourceSerializer, MetricDefinitionSerializer, MetricEntrySerializer, OpportunitySerializer,
-    ProductSerializer, ProposalSerializer, TargetAssignmentSerializer, TargetSerializer,
+    PostSaleSerializer, ProductSerializer, ProposalSerializer, TargetAssignmentSerializer,
+    TargetSerializer,
 )
 
 
@@ -612,6 +613,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
             },
             "platform": platform,
             "purchases": purchases,
+            "sales": PostSaleSerializer(customer.sales.select_related(
+                "product", "business", "agent", "onboarding_owner"), many=True).data,
             "products": CustomerProductSerializer(products, many=True).data,
             "revenues": RevenueSerializer(revenues, many=True).data,
             "tickets": TicketSerializer(tickets, many=True).data,
@@ -661,6 +664,14 @@ class CustomerProductViewSet(viewsets.ModelViewSet):
     queryset = CustomerProduct.objects.select_related("business", "product").all()
     serializer_class = CustomerProductSerializer
     filterset_fields = ["customer", "business", "product", "status"]
+
+
+class PostSaleViewSet(viewsets.ModelViewSet):
+    queryset = (PostSale.objects.select_related("customer", "lead", "agent", "business",
+                                                "product", "onboarding_owner").all())
+    serializer_class = PostSaleSerializer
+    filterset_fields = ["customer", "agent", "sale_type", "sale_status",
+                        "service_status", "post_sales_health"]
 
 
 class CommunicationViewSet(viewsets.ModelViewSet):

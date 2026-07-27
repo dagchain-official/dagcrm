@@ -83,3 +83,25 @@ def ensure_customer_for_lead(lead):
         name=lead.name, email=lead.email, phone=lead.phone,
         country=lead.country, lead=lead, assigned_to=lead.assigned_to,
     )
+
+
+def ensure_postsale_for_lead(lead, customer):
+    """Seed a PostSale for a Closed-Won lead so its onboarding/service lifecycle can
+    be tracked from the customer's record. The agent completes the rest. Idempotent
+    — one seeded sale per lead."""
+    from django.utils import timezone
+    from .models import PostSale
+
+    if not customer or PostSale.objects.filter(lead=lead).exists():
+        return None
+    biz = lead.business
+    prod = None
+    interest = lead.interests.first()
+    if interest:
+        biz = biz or interest.business
+        prod = interest.product
+    return PostSale.objects.create(
+        customer=customer, lead=lead, agent=lead.assigned_to, business=biz, product=prod,
+        close_date=timezone.now().date(), sale_type="new", sale_status="closed_won",
+        gross_value=lead.expected_value or 0,
+    )

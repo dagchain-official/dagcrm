@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AttachmentViewSet, AumEntryViewSet, BusinessViewSet, CommunicationViewSet,
-    ContributionEntryViewSet, ContributionWeightViewSet, CustomerProductViewSet,
+    ContributionEntryViewSet, ContributionWeightViewSet, CustomerProductViewSet, PostSaleViewSet,
     CustomerViewSet, LeadActivityViewSet, LeadInterestViewSet, LeadSourceViewSet,
     LeadViewSet, MetricDefinitionViewSet, MetricEntryViewSet, OpportunityViewSet,
     ProductViewSet, ProposalViewSet, TargetAssignmentViewSet, TargetViewSet,
@@ -18,6 +18,7 @@ router.register("lead-activities", LeadActivityViewSet)
 router.register("opportunities", OpportunityViewSet)
 router.register("customers", CustomerViewSet)
 router.register("customer-products", CustomerProductViewSet)
+router.register("post-sales", PostSaleViewSet)
 router.register("communications", CommunicationViewSet)
 router.register("targets", TargetViewSet)
 router.register("target-assignments", TargetAssignmentViewSet)

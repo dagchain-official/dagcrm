@@ -69,6 +69,7 @@ class Lead(models.Model):
         ("negotiation", "Negotiation"), ("converted", "Closed Won"),
         ("lost", "Closed Lost"), ("nurture", "Nurture"),
     ]
+    PRIORITY = [("low", "Low"), ("medium", "Medium"), ("high", "High"), ("critical", "Critical")]
     lead_code = models.CharField(max_length=40, unique=True)
     external_id = models.CharField(max_length=64, blank=True, db_index=True)  # id in an external system (e.g. FXArtha)
     name = models.CharField(max_length=150)
@@ -80,9 +81,20 @@ class Lead(models.Model):
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_leads")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_leads")
     status = models.CharField(max_length=20, choices=STATUS, default="new")
+    # Lead Register qualifiers (per the Business Life Monitor)
+    priority = models.CharField(max_length=10, choices=PRIORITY, default="medium")
+    campaign = models.CharField(max_length=120, blank=True)     # campaign / reference
+    expected_value = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    probability = models.PositiveIntegerField(default=0)         # closing probability, 0–100 %
+    lost_reason = models.CharField(max_length=255, blank=True)   # set when Closed Lost
     score = models.PositiveIntegerField(default=0)  # AI lead score (0-100)
     converted_at = models.DateTimeField(null=True, blank=True)  # set when status -> converted
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def weighted_pipeline(self):
+        """Expected value scaled by the closing probability — the pipeline figure."""
+        return float(self.expected_value or 0) * (self.probability or 0) / 100.0
 
     objects = LeadQuerySet.as_manager()
 
@@ -200,6 +212,54 @@ class CustomerProduct(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="active")
+
+
+class PostSale(models.Model):
+    """A closed deal and its post-sales lifecycle (the "Sales & Post Sales" sheet
+    of the Business Life Monitor): the money, plus onboarding, service, renewal,
+    top-up and health. Auto-seeded when a lead is Closed Won; the agent completes
+    the onboarding fields from the customer's record."""
+    SALE_TYPE = [("new", "New"), ("renewal", "Renewal"), ("topup", "Top-up")]
+    SALE_STATUS = [("closed_won", "Closed Won"), ("pending", "Pending"), ("cancelled", "Cancelled")]
+    WELCOME = [("pending", "Pending"), ("done", "Done")]
+    SERVICE = [("active", "Active"), ("paused", "Paused"), ("churned", "Churned")]
+    HEALTH = [("healthy", "Healthy"), ("at_risk", "At Risk"), ("churned", "Churned")]
+
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="sales")
+    lead = models.ForeignKey(Lead, on_delete=models.SET_NULL, null=True, blank=True, related_name="sales")
+    agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="sales")
+    business = models.ForeignKey(Business, on_delete=models.SET_NULL, null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
+    close_date = models.DateField(null=True, blank=True)
+    sale_type = models.CharField(max_length=10, choices=SALE_TYPE, default="new")
+    sale_status = models.CharField(max_length=15, choices=SALE_STATUS, default="closed_won")
+    # money — gross_profit is computed (commission − direct cost), per the sheet
+    gross_value = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    collected_value = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    commission = models.DecimalField(max_digits=14, decimal_places=2, default=0)   # revenue / commission
+    direct_cost = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    # onboarding
+    onboarding_owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                         null=True, blank=True, related_name="onboarding_sales")
+    welcome_call = models.CharField(max_length=10, choices=WELCOME, default="pending")
+    documents_complete = models.BooleanField(default=False)
+    delivery_date = models.DateField(null=True, blank=True)
+    # service / renewal
+    service_status = models.CharField(max_length=10, choices=SERVICE, default="active")
+    next_renewal_date = models.DateField(null=True, blank=True)
+    # top-up / referral
+    topup_opportunity = models.BooleanField(default=False)
+    topup_value = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    referral_received = models.BooleanField(default=False)
+    post_sales_health = models.CharField(max_length=10, choices=HEALTH, default="healthy")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-close_date", "-id"]
+
+    @property
+    def gross_profit(self):
+        return float(self.commission or 0) - float(self.direct_cost or 0)
 
 
 # ------------------------------------------------------------------ Communications

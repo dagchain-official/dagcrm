@@ -166,6 +166,7 @@ VIEWSET_MODULE = {
     "ProposalViewSet": "proposals",
     "CustomerViewSet": "customers",
     "CustomerProductViewSet": "customers",
+    "PostSaleViewSet": "customers",
     "CommunicationViewSet": "communications",
     "TargetViewSet": "targets",
     "TargetAssignmentViewSet": "targets",

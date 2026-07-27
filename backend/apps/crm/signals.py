@@ -66,5 +66,6 @@ def on_lead_converted(sender, instance, **kwargs):
     to the person's live FX Artha / DAGChain account if one exists, so their real
     purchases and revenue surface on the customer and keep updating via sync."""
     if instance.status == "converted":
-        from .linking import ensure_customer_for_lead
-        ensure_customer_for_lead(instance)
+        from .linking import ensure_customer_for_lead, ensure_postsale_for_lead
+        customer = ensure_customer_for_lead(instance)
+        ensure_postsale_for_lead(instance, customer)

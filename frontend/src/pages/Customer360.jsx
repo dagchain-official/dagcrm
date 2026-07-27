@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Package, LifeBuoy,
@@ -95,6 +95,7 @@ export default function Customer360() {
   const [reassign, setReassign] = useState(false);   // reassign modal open
   const [assignables, setAssignables] = useState([]);
   const [newOwner, setNewOwner] = useState("");
+  const [editSale, setEditSale] = useState(null);   // null=closed, {}=new, {...}=edit
 
   const load = () => api.get(`/customers/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
   usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
@@ -135,6 +136,21 @@ export default function Customer360() {
     }
   };
 
+  const saveSale = async (form) => {
+    setSaving(true);
+    try {
+      if (form.id) await api.patch(`/post-sales/${form.id}/`, form);
+      else await api.post("/post-sales/", { ...form, customer: Number(id) });
+      setEditSale(null);
+      load();
+      toast.success("Sale saved");
+    } catch (e) {
+      toast.error("Save failed: " + (e.response?.data?.detail || e.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const upload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -155,9 +171,14 @@ export default function Customer360() {
   const tr = d.trading || {};
   const num = (v) => Number(v || 0).toLocaleString();
   const purchases = d.purchases || [];
-  const visibleTabs = purchases.length
-    ? ["Overview", "Purchases", ...TABS.slice(1)]
-    : TABS;
+  const sales = d.sales || [];
+  const visibleTabs = (() => {
+    const t = [...TABS];                       // Overview, Products, Revenue, …
+    let at = 1;
+    if (purchases.length) t.splice(at++, 0, "Purchases");
+    t.splice(at, 0, "Sales");                   // always available (can add manually)
+    return t;
+  })();
 
   const Timeline = ({ items }) => (
     <div className="space-y-1">
@@ -383,6 +404,55 @@ export default function Customer360() {
         </Section>
       )}
 
+      {/* SALES & POST-SALES — onboarding, service, renewal, top-up, health */}
+      {tab === "Sales" && (
+        <Section>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-ink-900 flex items-center gap-2"><ShoppingBag size={18} className="text-brand-600" /> Sales &amp; Onboarding <span className="text-sm font-normal text-ink-400">({sales.length})</span></h3>
+            <button onClick={() => setEditSale({})} className="btn-primary !py-2 !px-4 text-sm inline-flex items-center gap-1.5"><Plus size={15} /> Add sale</button>
+          </div>
+          {sales.length === 0 && <EmptyState title="No sales yet" hint="A sale is created automatically when a lead converts, or add one here." />}
+          <div className="space-y-3">
+            {sales.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-ink-100 p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="font-bold text-ink-900">{s.product_name || "Sale"}</span>
+                  <Badge value={s.sale_type} map={STATUS_COLORS} />
+                  <Badge value={s.sale_status} map={STATUS_COLORS} />
+                  <span className="ml-auto flex items-center gap-2">
+                    <span className="text-xs text-ink-400">Health</span>
+                    <Badge value={s.post_sales_health} map={STATUS_COLORS} />
+                    <button onClick={() => setEditSale(s)} className="chip !py-1.5 text-xs">Edit</button>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-2 gap-x-4 text-sm">
+                  {[
+                    ["Close date", date(s.close_date)],
+                    ["Gross value", money(s.gross_value)],
+                    ["Collected", money(s.collected_value)],
+                    ["Commission", money(s.commission)],
+                    ["Gross profit", money(s.gross_profit)],
+                    ["Agent", s.agent_name || "—"],
+                    ["Onboarding owner", s.onboarding_owner_name || "—"],
+                    ["Delivery", date(s.delivery_date)],
+                    ["Next renewal", date(s.next_renewal_date)],
+                  ].map(([k, v]) => (
+                    <div key={k}><p className="text-[11px] text-ink-400 uppercase tracking-wide">{k}</p><p className="font-semibold text-ink-800">{v}</p></div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Chip on={s.welcome_call === "done"} label={`Welcome call: ${s.welcome_call}`} />
+                  <Chip on={s.documents_complete} label={`Documents: ${s.documents_complete ? "complete" : "pending"}`} />
+                  <Chip on={s.service_status === "active"} label={`Service: ${s.service_status}`} />
+                  {s.topup_opportunity && <Chip on label={`Top-up: ${money(s.topup_value)}`} />}
+                  {s.referral_received && <Chip on label="Referral received" />}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* PRODUCTS */}
       {tab === "Products" && (
         <Section>
@@ -537,6 +607,116 @@ export default function Customer360() {
           </p>
         </div>
       </Modal>
+
+      {/* SALE / ONBOARDING editor */}
+      <Modal open={!!editSale} onClose={() => setEditSale(null)}
+        title={editSale?.id ? "Edit sale & onboarding" : "Add sale"}>
+        {editSale && <PostSaleEditor sale={editSale} saving={saving}
+          onSave={saveSale} onCancel={() => setEditSale(null)} />}
+      </Modal>
+    </div>
+  );
+}
+
+// a small status pill for the onboarding checklist
+function Chip({ on, label }) {
+  return (
+    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${on ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-500"}`}>
+      {label}
+    </span>
+  );
+}
+
+const SALE_SELECTS = {
+  sale_type: ["new", "renewal", "topup"],
+  sale_status: ["closed_won", "pending", "cancelled"],
+  welcome_call: ["pending", "done"],
+  service_status: ["active", "paused", "churned"],
+  post_sales_health: ["healthy", "at_risk", "churned"],
+};
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "");
+
+// field helpers are module-level so they don't remount (and lose focus) on keystroke
+const FNum = ({ f, set, k, label }) => (
+  <div><label className="label">{label}</label>
+    <input className="input" type="number" step="0.01" value={f[k] ?? ""} onChange={(e) => set(k, e.target.value)} /></div>
+);
+const FSel = ({ f, set, k, label }) => (
+  <div><label className="label">{label}</label>
+    <select className="input" value={f[k] || ""} onChange={(e) => set(k, e.target.value)}>
+      {SALE_SELECTS[k].map((o) => <option key={o} value={o}>{cap(o)}</option>)}
+    </select></div>
+);
+const FDt = ({ f, set, k, label }) => (
+  <div><label className="label">{label}</label>
+    <input className="input" type="date" value={(f[k] || "").slice(0, 10)} onChange={(e) => set(k, e.target.value || null)} /></div>
+);
+const FBool = ({ f, set, k, label }) => (
+  <label className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer py-1">
+    <input type="checkbox" checked={!!f[k]} onChange={(e) => set(k, e.target.checked)} /> {label}
+  </label>
+);
+
+function PostSaleEditor({ sale, onSave, onCancel, saving }) {
+  const [f, setF] = useState({
+    sale_type: "new", sale_status: "closed_won", welcome_call: "pending",
+    service_status: "active", post_sales_health: "healthy",
+    gross_value: 0, collected_value: 0, commission: 0, direct_cost: 0, topup_value: 0,
+    documents_complete: false, topup_opportunity: false, referral_received: false,
+    ...sale,
+  });
+  const [people, setPeople] = useState([]);
+  const [products, setProducts] = useState([]);
+  useEffect(() => {
+    api.get("/users/assignable/").then((r) => setPeople(r.data)).catch(() => setPeople([]));
+    api.get("/products/").then((r) => setProducts(r.data.results || r.data || [])).catch(() => setProducts([]));
+  }, []);
+  const set = (k, v) => setF((o) => ({ ...o, [k]: v }));
+  const p = { f, set };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <FSel {...p} k="sale_type" label="Sale type" />
+        <FSel {...p} k="sale_status" label="Sale status" />
+        <div className="col-span-2"><label className="label">Product</label>
+          <select className="input" value={f.product || ""} onChange={(e) => set("product", e.target.value || null)}>
+            <option value="">—</option>
+            {products.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+          </select></div>
+        <FNum {...p} k="gross_value" label="Gross value ($)" />
+        <FNum {...p} k="collected_value" label="Collected ($)" />
+        <FNum {...p} k="commission" label="Revenue / commission ($)" />
+        <FNum {...p} k="direct_cost" label="Direct cost ($)" />
+        <FDt {...p} k="close_date" label="Close date" />
+        <FDt {...p} k="delivery_date" label="Delivery date" />
+      </div>
+
+      <div className="border-t border-ink-100 pt-3">
+        <p className="text-xs font-bold text-ink-500 uppercase tracking-wide mb-2">Onboarding &amp; service</p>
+        <div className="grid grid-cols-2 gap-3">
+          <FSel {...p} k="welcome_call" label="Welcome call" />
+          <FSel {...p} k="service_status" label="Service status" />
+          <FDt {...p} k="next_renewal_date" label="Next renewal" />
+          <div><label className="label">Onboarding owner</label>
+            <select className="input" value={f.onboarding_owner || ""} onChange={(e) => set("onboarding_owner", e.target.value || null)}>
+              <option value="">—</option>
+              {people.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select></div>
+          <FSel {...p} k="post_sales_health" label="Post-sales health" />
+        </div>
+        <div className="flex flex-wrap gap-x-5 mt-2">
+          <FBool {...p} k="documents_complete" label="Documents complete" />
+          <FBool {...p} k="topup_opportunity" label="Top-up opportunity" />
+          <FBool {...p} k="referral_received" label="Referral received" />
+        </div>
+        {f.topup_opportunity && <div className="mt-1 w-40"><FNum {...p} k="topup_value" label="Top-up value ($)" /></div>}
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button className="btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn-primary" disabled={saving} onClick={() => onSave(f)}>Save</button>
+      </div>
     </div>
   );
 }
