@@ -1,4 +1,5 @@
-import { Phone, Clock, Users, CheckCircle2, Gauge, Coins, Wallet, GraduationCap } from "lucide-react";
+import { Phone, Clock, Users, CheckCircle2, Gauge, Coins, Wallet, GraduationCap,
+  ShieldCheck, CalendarCheck, UserCheck } from "lucide-react";
 
 // The sales scorecard, styled like the dashboard's top KPI cards. Leads and
 // Revenue are intentionally NOT here — they already appear in the cards above,
@@ -6,16 +7,20 @@ import { Phone, Clock, Users, CheckCircle2, Gauge, Coins, Wallet, GraduationCap 
 // (already scoped by role: a Sales Executive sees only their own numbers).
 const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const pct = (v) => `${(Number(v || 0) * 100).toFixed(0)}%`;
 
 const CARDS = [
   { key: "calls", label: "Calls", icon: Phone, color: "bg-sky-100 text-sky-600", fmt: num },
   { key: "talk_time", label: "Talk Time", icon: Clock, color: "bg-indigo-100 text-indigo-600", fmt: num },
   { key: "meetings", label: "Meetings", icon: Users, color: "bg-violet-100 text-violet-600", fmt: num },
   { key: "sales", label: "Sales", icon: CheckCircle2, color: "bg-emerald-100 text-emerald-600", fmt: num },
+  { key: "quality_score", label: "Quality Score", icon: ShieldCheck, color: "bg-fuchsia-100 text-fuchsia-600", fmt: pct },
+  { key: "followup_compliance", label: "Follow-up Compliance", icon: CalendarCheck, color: "bg-cyan-100 text-cyan-600", fmt: pct },
+  { key: "attendance", label: "Attendance", icon: UserCheck, color: "bg-lime-100 text-lime-600", fmt: pct },
   { key: "overall_kpi", label: "Overall KPI", icon: Gauge, color: "bg-amber-100 text-amber-600", fmt: num },
   { key: "incentive_earned", label: "Incentive Earned", icon: Coins, color: "bg-teal-100 text-teal-600", fmt: money },
   { key: "incentive_paid", label: "Incentive Paid", icon: Wallet, color: "bg-rose-100 text-rose-500", fmt: money },
-  { key: "training", label: "Training", icon: GraduationCap, color: "bg-orange-100 text-orange-600", fmt: num },
+  { key: "training", label: "Training", icon: GraduationCap, color: "bg-orange-100 text-orange-600", fmt: pct },
 ];
 
 export default function KpiScorecard({ data, title = "KPIs · This Month" }) {

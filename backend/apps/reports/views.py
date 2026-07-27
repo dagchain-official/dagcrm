@@ -110,6 +110,41 @@ def kpi_scorecard(user_ids):
     paid = float(Payroll.objects.filter(month=m, year=y, employee_id__in=emp_ids)
                  .aggregate(s=Sum("incentive"))["s"] or 0)
 
+    # --- Quality Score: connect rate + meeting-completion rate, from real activity
+    calls_qs = acts.filter(activity_type__in=CALL_TYPES)
+    n_calls = calls_qs.count()
+    connected = calls_qs.exclude(outcome="").exclude(
+        outcome__in=["no_answer", "busy", "voicemail", "wrong_number"]).count()
+    n_booked = acts.exclude(meeting_status="").count()
+    n_done = acts.filter(meeting_status="completed").count()
+    parts = []
+    if n_calls:
+        parts.append(connected / n_calls)
+    if n_booked:
+        parts.append(n_done / n_booked)
+    quality = round(sum(parts) / len(parts), 4) if parts else 0.0
+
+    # --- Follow-up compliance: of the follow-ups that fell due, how many were
+    # honoured (the rep logged another activity on that lead by the due date).
+    from collections import defaultdict
+    due_fu = list(acts.exclude(followup_date=None).filter(followup_date__lt=today)
+                  .values_list("lead_id", "created_at", "followup_date"))
+    followup_compliance = 0.0
+    if due_fu:
+        lead_ids = {x[0] for x in due_fu}
+        by_lead = defaultdict(list)
+        for lid, ca in LeadActivity.objects.filter(lead_id__in=lead_ids).values_list("lead_id", "created_at"):
+            by_lead[lid].append(ca)
+        honored = sum(1 for lid, created, due in due_fu
+                      if any(ca > created and ca.date() <= due for ca in by_lead[lid]))
+        followup_compliance = round(honored / len(due_fu), 4)
+
+    # --- Attendance %: present-equivalent (half-day = 0.5) over days recorded
+    att = Attendance.objects.filter(employee_id__in=emp_ids, date__year=y, date__month=m)
+    att_total = att.count()
+    present_eq = att.filter(status="present").count() + 0.5 * att.filter(status="half_day").count()
+    attendance = round(present_eq / att_total, 4) if att_total else 0.0
+
     return {
         "leads": leads.count(),
         "calls": acts.filter(activity_type__in=CALL_TYPES).count(),
@@ -122,6 +157,9 @@ def kpi_scorecard(user_ids):
         "incentive_paid": round(paid, 2),
         # training compliance for these people (0..1) — the Training tile
         "training": _training_stats(emp_ids)["compliance"],
+        "quality_score": quality,               # connect + meeting-completion blend
+        "followup_compliance": followup_compliance,
+        "attendance": attendance,
     }
 
 
