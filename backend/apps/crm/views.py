@@ -513,12 +513,19 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # The Customers list is the CRM's OWN book only — the manual/social-media
-        # leads that converted (external_id == ""). FXArtha traders and DAGChain
-        # users are platform accounts, listed by their own modules, and are never
-        # counted as CRM customers here. Detail routes stay unscoped so Customer 360
-        # still opens for any synced account.
-        return qs.pipeline() if self.action == "list" else qs
+        # The Customers list is the CRM's own book:
+        #   • customers the CRM created (external_id == ""), and
+        #   • any platform account (FXArtha / DAGChain) that an RM converted from a
+        #     MANUAL / social-media lead — i.e. the linked lead is itself CRM-own
+        #     (lead.external_id == ""). Those count as customers even though they
+        #     also keep a trading row in the platform module.
+        # Purely-synced accounts — no lead, or a lead that came from the platform
+        # sync (lead.external_id != "") — are NOT customers here; they live only in
+        # their own module. Detail routes stay unscoped so Customer 360 always opens.
+        if self.action == "list":
+            from django.db.models import Q
+            qs = qs.filter(Q(external_id="") | Q(lead__external_id=""))
+        return qs
 
     @action(detail=True, methods=["get"])
     def overview(self, request, pk=None):
