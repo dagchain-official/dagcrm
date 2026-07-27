@@ -1,4 +1,5 @@
-import { Phone, Clock, Users, CheckCircle2, Gauge, Coins, Wallet, GraduationCap,
+import { Phone, PhoneCall, Clock, Timer, Target, Repeat, Users, CalendarClock,
+  CalendarCheck2, CheckCircle2, Gauge, Coins, Wallet, GraduationCap,
   ShieldCheck, CalendarCheck, UserCheck } from "lucide-react";
 
 // The sales scorecard, styled like the dashboard's top KPI cards. Leads and
@@ -11,8 +12,14 @@ const pct = (v) => `${(Number(v || 0) * 100).toFixed(0)}%`;
 
 const CARDS = [
   { key: "calls", label: "Calls", icon: Phone, color: "bg-sky-100 text-sky-600", fmt: num },
-  { key: "talk_time", label: "Talk Time", icon: Clock, color: "bg-indigo-100 text-indigo-600", fmt: num },
-  { key: "meetings", label: "Meetings", icon: Users, color: "bg-violet-100 text-violet-600", fmt: num },
+  { key: "contact_rate", label: "Contact Rate", icon: Target, color: "bg-blue-100 text-blue-600", fmt: pct },
+  { key: "connect_rate", label: "Connect Rate", icon: PhoneCall, color: "bg-sky-100 text-sky-600", fmt: pct },
+  { key: "talk_time", label: "Talk Time (min)", icon: Clock, color: "bg-indigo-100 text-indigo-600", fmt: num },
+  { key: "avg_talk_min", label: "Avg Talk (min)", icon: Timer, color: "bg-indigo-100 text-indigo-600", fmt: num },
+  { key: "callbacks_due", label: "Callbacks Due", icon: Repeat, color: "bg-amber-100 text-amber-600", fmt: num },
+  { key: "callbacks_completed", label: "Callbacks Done", icon: Repeat, color: "bg-emerald-100 text-emerald-600", fmt: num },
+  { key: "meetings_booked", label: "Meetings Booked", icon: CalendarClock, color: "bg-violet-100 text-violet-600", fmt: num },
+  { key: "meetings_done", label: "Meetings Done", icon: CalendarCheck2, color: "bg-violet-100 text-violet-600", fmt: num },
   { key: "sales", label: "Sales", icon: CheckCircle2, color: "bg-emerald-100 text-emerald-600", fmt: num },
   { key: "quality_score", label: "Quality Score", icon: ShieldCheck, color: "bg-fuchsia-100 text-fuchsia-600", fmt: pct },
   { key: "followup_compliance", label: "Follow-up Compliance", icon: CalendarCheck, color: "bg-cyan-100 text-cyan-600", fmt: pct },

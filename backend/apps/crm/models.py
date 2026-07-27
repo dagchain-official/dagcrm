@@ -141,9 +141,12 @@ class LeadActivity(models.Model):
         ("scheduled", "Scheduled"), ("confirmed", "Confirmed"), ("completed", "Completed"),
         ("cancelled", "Cancelled"), ("no_show", "No Show"), ("rescheduled", "Rescheduled"),
     ]
+    DIRECTION = [("outbound", "Outbound"), ("inbound", "Inbound")]
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="activities")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     activity_type = models.CharField(max_length=20, choices=TYPES, default="call")
+    direction = models.CharField(max_length=10, choices=DIRECTION, default="outbound")
+    completed = models.BooleanField(default=True)             # was the action carried out
     remarks = models.TextField(blank=True)                    # what was discussed
     duration_min = models.DecimalField(max_digits=7, decimal_places=2, default=0)   # call length
     outcome = models.CharField(max_length=20, choices=OUTCOME, blank=True)

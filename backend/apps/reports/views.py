@@ -145,10 +145,21 @@ def kpi_scorecard(user_ids):
     present_eq = att.filter(status="present").count() + 0.5 * att.filter(status="half_day").count()
     attendance = round(present_eq / att_total, 4) if att_total else 0.0
 
+    # --- Agent-KPI ratios & splits (from the same activity set)
+    n_leads = leads.count()
+    contacted = leads.exclude(status__in=["new", "assigned"]).count()   # got at least attempted
+    contact_rate = round(contacted / n_leads, 4) if n_leads else 0.0
+    connect_rate = round(connected / n_calls, 4) if n_calls else 0.0
+    total_talk = float(calls_qs.aggregate(s=Sum("duration_min"))["s"] or 0)
+    avg_talk = round(total_talk / n_calls, 2) if n_calls else 0.0
+    talk_time = total_talk or metric_sum("Talk Time")   # real call minutes, else a manual metric
+    callbacks_due = acts.filter(outcome="callback").count()       # a callback was requested
+    callbacks_completed = acts.filter(activity_type="callback").count()   # a callback was made
+
     return {
-        "leads": leads.count(),
-        "calls": acts.filter(activity_type__in=CALL_TYPES).count(),
-        "talk_time": metric_sum("Talk Time"),
+        "leads": n_leads,
+        "calls": n_calls,
+        "talk_time": round(talk_time, 2),
         "meetings": acts.filter(activity_type="meeting").count(),
         "sales": leads.filter(status="converted").count(),
         "revenue": revenue,
@@ -160,6 +171,15 @@ def kpi_scorecard(user_ids):
         "quality_score": quality,               # connect + meeting-completion blend
         "followup_compliance": followup_compliance,
         "attendance": attendance,
+        # Agent KPI ratios / splits (Business Life Monitor)
+        "contacted": contacted,
+        "contact_rate": contact_rate,
+        "connect_rate": connect_rate,
+        "avg_talk_min": avg_talk,
+        "callbacks_due": callbacks_due,
+        "callbacks_completed": callbacks_completed,
+        "meetings_booked": n_booked,
+        "meetings_done": n_done,
     }
 
 

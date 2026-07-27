@@ -146,7 +146,8 @@ class LeadActivitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LeadActivity
-        fields = ["id", "lead", "lead_name", "user", "user_name", "activity_type", "remarks",
+        fields = ["id", "lead", "lead_name", "user", "user_name", "activity_type",
+                  "direction", "completed", "remarks",
                   "duration_min", "outcome", "meeting_status", "meeting_at",
                   "followup_date", "next_action", "created_at"]
         read_only_fields = ["created_at"]

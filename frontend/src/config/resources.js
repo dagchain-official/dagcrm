@@ -49,6 +49,9 @@ export const STATUS_COLORS = {
   scheduled: "bg-blue-50 text-blue-700",
   overdue: "bg-rose-50 text-rose-700",
   none: "bg-ink-100 text-ink-500",
+  // activity direction
+  outbound: "bg-blue-50 text-blue-700",
+  inbound: "bg-emerald-50 text-emerald-700",
   paused: "bg-amber-50 text-amber-700",
   done: "bg-emerald-50 text-emerald-700",
   closed_won: "bg-emerald-50 text-emerald-700",
@@ -267,19 +270,23 @@ export const RESOURCES = {
     columns: [
       { key: "lead_name", label: "Lead" },
       { key: "activity_type", label: "Type", badge: true },
+      { key: "direction", label: "Direction", badge: true },
       { key: "remarks", label: "Remarks" },
       { key: "followup_date", label: "Follow-up" },
+      { key: "completed", label: "Done", bool: true },
       { key: "user_name", label: "By" },
     ],
     fields: [
       { key: "lead", label: "Lead", type: "ref", ref: "leads", labelKey: "name", required: true },
       { key: "activity_type", label: "Type", type: "select", options: sel("call", "outbound_call", "inbound_call", "whatsapp", "email", "callback", "followup", "meeting", "document_collection", "service_call", "note") },
+      { key: "direction", label: "Direction", type: "select", options: sel("outbound", "inbound") },
       { key: "outcome", label: "Call outcome (moves lead status)", type: "select", options: sel("", "connected", "interested", "callback", "meeting_booked", "no_answer", "busy", "voicemail", "wrong_number", "not_interested", "converted") },
       { key: "duration_min", label: "Duration (min)", type: "number" },
       { key: "meeting_status", label: "Meeting status", type: "select", options: sel("", "scheduled", "confirmed", "completed", "cancelled", "no_show", "rescheduled") },
       { key: "remarks", label: "Remarks / notes", type: "textarea" },
       { key: "followup_date", label: "Follow-up date", type: "date" },
       { key: "next_action", label: "Next action" },
+      { key: "completed", label: "Completed?", type: "select", options: [{ value: "true", label: "Yes" }, { value: "false", label: "No" }] },
     ],
   },
   opportunities: {
