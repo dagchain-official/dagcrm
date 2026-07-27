@@ -114,6 +114,30 @@ def dagchain_products():
     return out
 
 
+def fxartha_catalogue():
+    """FXArtha's live product catalogue — account types, instruments, staking
+    plans, insurance and VIP pricing, each with the platform's OWN reference
+    rates. Cached on the connection by the sync (`/products`). Shown alongside
+    Commission Rules so the admin has the real products and rates to hand when
+    setting RM commissions. Reference only — our RM payout still runs on the
+    lots / brokerage / deposit bases."""
+    from apps.integrations.models import IntegrationConnection
+    conn = IntegrationConnection.objects.filter(platform__icontains="fx").first()
+    cat = (conn.config or {}).get("products_catalogue") if conn else None
+    if not isinstance(cat, dict):
+        return {}
+    # keep only the sections the UI shows, and active account types first
+    types = cat.get("account_types") or []
+    types = sorted(types, key=lambda t: (not t.get("is_active"), t.get("is_demo", False)))
+    return {
+        "account_types": types,
+        "instruments": cat.get("instruments") or [],
+        "staking_plans": cat.get("staking_plans") or [],
+        "insurance": cat.get("insurance") or [],
+        "vip": cat.get("vip") or [],
+    }
+
+
 def commission_products():
     """All settable commission products, per platform, with their universal rate."""
     return {"fxartha": fxartha_products(), "dagchain": dagchain_products()}

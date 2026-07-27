@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Coins, ChevronDown, ChevronRight, Check, Info, Plus, X, Trash2 } from "lucide-react";
+import { Coins, ChevronDown, ChevronRight, Check, Info, Plus, X, Trash2, BookOpen } from "lucide-react";
 import api from "../api/client";
 import { Spinner, EmptyState } from "../components/ui";
 import { useToast } from "../context/ToastContext";
@@ -27,6 +27,7 @@ export default function CommissionRules() {
   if (!d) return <Spinner label="Loading commission rules…" />;
 
   const products = d.products[platform] || [];
+  const catalogue = platform === "fxartha" ? d.catalogue?.fxartha : null;
   const employees = d.employees || [];
   const overrides = d.overrides[platform] || {};      // {emp_id: {key: rate}}
   const canEdit = d.can_edit;
@@ -186,6 +187,80 @@ export default function CommissionRules() {
           );
         })}
       </div>
+
+      {catalogue && <FxCatalogue cat={catalogue} />}
+    </div>
+  );
+}
+
+// FX Artha's live product catalogue (from /products) — reference only, so the
+// admin sees the real account types + the platform's own rates when setting RM
+// commission. Our RM payout still computes on Lots / Brokerage / Deposit above.
+function FxCatalogue({ cat }) {
+  const [open, setOpen] = useState(false);
+  const types = cat.account_types || [];
+  const pct = (v) => (v == null ? "—" : `${(Number(v) * 100).toFixed(3).replace(/\.?0+$/, "")}%`);
+  const money = (v) => (v == null ? "—" : `$${Number(v).toLocaleString()}`);
+  const counts = [
+    ["Instruments", (cat.instruments || []).length],
+    ["Staking plans", (cat.staking_plans || []).length],
+    ["Insurance", (cat.insurance || []).length],
+    ["VIP tiers", (cat.vip || []).length],
+  ].filter(([, n]) => n);
+
+  if (!types.length && !counts.length) return null;
+  return (
+    <div className="card overflow-hidden">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2 p-4 text-left">
+        <BookOpen size={16} className="text-brand-600" />
+        <span className="font-bold text-ink-900">FX Artha product catalogue</span>
+        <span className="badge bg-ink-100 text-ink-500">reference</span>
+        <span className="ml-auto text-ink-400">{open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
+      </button>
+      {open && (
+        <div className="border-t border-ink-100 p-4 space-y-4">
+          <p className="text-xs text-ink-400 flex items-center gap-1.5">
+            <Info size={13} /> FX Artha's own account types &amp; rates, pulled live. Your RM commission is set on Lots / Brokerage / Deposit above — this is here as a reference.
+          </p>
+          {types.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead>
+                  <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
+                    <th className="py-2.5 px-3">Account type</th>
+                    <th className="py-2.5 px-3 text-right">Min deposit</th>
+                    <th className="py-2.5 px-3 text-right">Leverage</th>
+                    <th className="py-2.5 px-3 text-right">Commission</th>
+                    <th className="py-2.5 px-3 text-right">Spread markup</th>
+                    <th className="py-2.5 px-3">Flags</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {types.map((t, i) => (
+                    <tr key={i} className={`border-t border-ink-100 ${t.is_active ? "" : "opacity-50"}`}>
+                      <td className="py-2.5 px-3 font-semibold text-ink-800">{t.name}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{money(t.minimum_deposit)}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{t.leverage ? `1:${t.leverage}` : "—"}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{t.commission_pct != null ? pct(t.commission_pct) : (t.commission ? money(t.commission) : "—")}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{t.spread_markup ? pct(t.spread_markup) : "—"}</td>
+                      <td className="py-2.5 px-3 text-xs text-ink-500">
+                        {[t.swap_free && "swap-free", t.is_demo && "demo", !t.is_active && "inactive"].filter(Boolean).join(" · ") || "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {counts.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {counts.map(([label, n]) => (
+                <span key={label} className="chip !py-1.5 text-xs">{label}: <b className="ml-1 text-ink-800">{n}</b></span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

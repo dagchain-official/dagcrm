@@ -883,7 +883,7 @@ def commission_rules(request):
     from apps.hr.models import Employee
     from apps.integrations.models import CommissionRule
 
-    from .commission import commission_products, load_rules
+    from .commission import commission_products, fxartha_catalogue, load_rules
 
     can_edit = is_admin_view(request.user)
     if request.method == "PUT":
@@ -919,6 +919,7 @@ def commission_rules(request):
     _, dc_over = load_rules("dagchain")
     return Response({
         "products": products,
+        "catalogue": {"fxartha": fxartha_catalogue()},
         "employees": [{"id": e.id, "name": e.user.name} for e in emps],
         "overrides": {"fxartha": {str(k): v for k, v in fx_over.items()},
                       "dagchain": {str(k): v for k, v in dc_over.items()}},

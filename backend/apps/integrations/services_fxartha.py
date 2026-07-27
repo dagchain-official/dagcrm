@@ -139,7 +139,11 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
         wd = float(_txu.get("withdrawal") or 0)
     else:
         dep = float(item.get("total_deposit") or 0)
-        wd = float(item.get("total_withdrawal") or 0)
+        # A SETTLED withdrawal always posts to the ledger (so it's already in the
+        # tx_map branch above). The per-customer total_withdrawal can also include
+        # pending/rejected requests the platform doesn't count as money out, which
+        # over-reported withdrawals — so never fall back to it.
+        wd = 0.0
     dep_acct = float(item.get("total_deposit") or 0)  # per-account (for contribution)
 
     # AUM (PART 11) — deposits / withdrawals -> Net New AUM (per trader)
@@ -261,6 +265,13 @@ def sync_fxartha(conn):
 
     try:
         dashboard = client.get("/dashboard")
+        # Product catalogue (account types, instruments, staking, insurance, VIP)
+        # with FXArtha's own reference rates — cached for the Commission Rules UI.
+        # Optional: keep the last good copy if the endpoint is briefly unavailable.
+        try:
+            products_catalogue = client.get("/products")
+        except (RuntimeError, requests.RequestException):
+            products_catalogue = (conn.config or {}).get("products_catalogue")
         source, _ = LeadSource.objects.get_or_create(name="FXArtha")
         business, _ = Business.objects.get_or_create(name="FX Artha")
 
@@ -325,6 +336,7 @@ def sync_fxartha(conn):
 
     conn.status = "connected"
     conn.config = {**(conn.config or {}), "dashboard": dashboard,
+                   "products_catalogue": products_catalogue,
                    "last_sync": timezone.now().isoformat()}
     conn.total_leads = lead_created + lead_updated
     conn.last_lead_at = timezone.now()
