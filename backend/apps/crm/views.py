@@ -246,7 +246,10 @@ class LeadViewSet(viewsets.ModelViewSet):
                 message=logged,
             )
         if kind == "call" and request.data.get("place_call"):
-            telephony = make_call(lead.phone, getattr(user, "phone", "") or None)
+            # Bridge on the ACTING user's own phone (request.user), not `user` —
+            # which is blanked for the Super Admin and would drop the agent leg.
+            agent_phone = getattr(request.user, "phone", "") or None
+            telephony = make_call(lead.phone, agent_phone)
         elif kind == "whatsapp":
             telephony = send_whatsapp(lead.phone, message or f"Hi {lead.name}, following up.")
         elif kind == "email":

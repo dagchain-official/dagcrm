@@ -80,6 +80,7 @@ export default function LeadDetail() {
       const prev = d.lead.status;
       const { data } = await api.post(`/leads/${id}/engage/`, {
         type,
+        place_call: opts.place_call || false,
         message: opts.message || "",
         subject: opts.subject || "",
         email_account: opts.emailAccount || null,
@@ -91,8 +92,15 @@ export default function LeadDetail() {
       });
       await load();
       const t = data.telephony;
-      const liveNote = t?.note ? ` — ${t.note}` : t?.live ? " (live)" : "";
-      toast.success(`${type === "call" ? "Call placed" : type === "whatsapp" ? "WhatsApp sent" : type === "email" ? "Email sent" : "Logged"}${liveNote}`);
+      // Report what actually happened on the line, not just "logged".
+      if (opts.place_call) {
+        if (t?.live) toast.success("Calling now — your phone will ring, then it dials the lead");
+        else if (t?.error) toast.error(`Call failed: ${t.error}`);
+        else toast.info(t?.note || "Logged — live calling isn't set up");
+      } else {
+        const liveNote = t?.note ? ` — ${t.note}` : t?.live ? " (live)" : "";
+        toast.success(`${type === "call" ? "Logged" : type === "whatsapp" ? "WhatsApp sent" : type === "email" ? "Email sent" : "Logged"}${liveNote}`);
+      }
       if (data.lead.status !== prev) toast.info(`Status auto-advanced: ${prev} → ${data.lead.status}`);
       if (type === "whatsapp" || type === "email") {
         // keep the chat modal open so the conversation can continue — clear the
@@ -332,6 +340,12 @@ function CallModal({ lead, busy, onClose, onSubmit, onCall }) {
   return (
     <Modal open onClose={onClose} title={`Log call — ${lead.name}`}>
       <div className="space-y-3">
+        {/* the number, visible so an agent can dial it directly from their phone */}
+        <a href={lead.phone ? `tel:${lead.phone}` : undefined}
+          className={`flex items-center justify-between gap-2 rounded-xl px-4 py-3 ${lead.phone ? "bg-brand-50 text-brand-700" : "bg-ink-50 text-ink-400"}`}>
+          <span className="inline-flex items-center gap-2 text-sm font-semibold"><Phone size={15} /> {lead.phone || "No phone number on this lead"}</span>
+          {lead.phone && <span className="text-xs font-medium">Tap to dial</span>}
+        </a>
         <div>
           <label className="label">Outcome</label>
           <select className="input" value={outcome} onChange={(e) => setOutcome(e.target.value)}>

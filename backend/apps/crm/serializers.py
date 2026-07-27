@@ -222,25 +222,8 @@ class LeadSerializer(serializers.ModelSerializer):
                   "score", "interests", "activity_count", "created_at"]
         read_only_fields = ["created_at", "score"]
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        # ONLY the Super Admin (superuser) may see lead phone numbers. Everyone
-        # else — including Business Head and managers — has it hidden. They still
-        # call/WhatsApp via the system (number is used server-side only).
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if not (user and user.is_superuser):
-            data["phone"] = ""          # hidden from everyone except admin
-            data["phone_hidden"] = True
-        return data
-
-    def update(self, instance, validated_data):
-        # non-admins can't change/blank the number (their view sends it empty)
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if not (user and user.is_superuser):
-            validated_data.pop("phone", None)
-        return super().update(instance, validated_data)
+    # Lead phone numbers are visible to every user now (they need it to call /
+    # WhatsApp the lead directly), so no masking here.
 
 
 class OpportunitySerializer(serializers.ModelSerializer):
