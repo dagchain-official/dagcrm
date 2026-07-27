@@ -513,11 +513,16 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # The Customers list is the CRM's own book — platform accounts (FXArtha
-        # traders, DAGChain users) are listed by their own modules instead. Only
-        # the list is scoped: Customer 360 and RM reassignment are detail routes
-        # and must keep working for a synced trader.
-        return qs.pipeline() if self.action == "list" else qs
+        # The Customers list is the CRM's own book: customers the CRM created,
+        # PLUS any platform account (FXArtha / DAGChain) we actually converted from
+        # a lead — so a converted client always lands here, in one place, even
+        # though they also keep their trading row in the platform module. Untouched
+        # synced accounts (no lead) stay in their own modules. Detail routes are
+        # never scoped so Customer 360 works for every account.
+        if self.action == "list":
+            from django.db.models import Q
+            qs = qs.filter(Q(external_id="") | Q(lead__isnull=False))
+        return qs
 
     @action(detail=True, methods=["get"])
     def overview(self, request, pk=None):
