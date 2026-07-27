@@ -135,6 +135,11 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset().pipeline()
+        # A converted lead is now a Customer — it drops off the leads list so the
+        # pipeline shows only open work. Detail/convert/update still reach it (only
+        # the list is filtered), and its history stays on the Customer 360 record.
+        if self.action == "list":
+            qs = qs.exclude(status="converted")
         if not is_admin_view(self.request.user):
             # A manager (Sales Manager / Team Leader) sees their whole team's
             # leads, not just leads assigned to them personally.

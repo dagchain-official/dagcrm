@@ -216,7 +216,9 @@ export const RESOURCES = {
     title: "Leads", endpoint: "leads", search: true, importable: true, detailPath: "/leads",
     distribute: { path: "leads/distribute" },
     filters: [
-      { key: "status", label: "Status", options: sel("new", "assigned", "attempted", "contacted", "qualified", "meeting_booked", "meeting_done", "negotiation", "converted", "lost", "nurture") },
+      // "converted" is intentionally omitted — a converted lead becomes a Customer
+      // and leaves the leads list, so filtering by it would show nothing.
+      { key: "status", label: "Status", options: sel("new", "assigned", "attempted", "contacted", "qualified", "meeting_booked", "meeting_done", "negotiation", "lost", "nurture") },
       { key: "priority", label: "Priority", options: sel("low", "medium", "high", "critical") },
       { key: "source", label: "Source", ref: "lead-sources/social", labelKey: "name" },
     ],
