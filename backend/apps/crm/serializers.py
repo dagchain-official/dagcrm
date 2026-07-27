@@ -165,6 +165,51 @@ class LeadSerializer(serializers.ModelSerializer):
     interests = LeadInterestSerializer(many=True, read_only=True)
     activity_count = serializers.IntegerField(source="activities.count", read_only=True)
     weighted_pipeline = serializers.ReadOnlyField()
+    # Lead Register SLA analytics (computed live from the activity trail)
+    first_response_min = serializers.SerializerMethodField()
+    sla_status = serializers.SerializerMethodField()
+    days_open = serializers.SerializerMethodField()
+    follow_up_status = serializers.SerializerMethodField()
+
+    def _sla_min(self):
+        if not hasattr(self, "_sla_cache"):
+            from apps.accounts.models import CompanySettings
+            self._sla_cache = CompanySettings.get_solo().first_contact_sla_min
+        return self._sla_cache
+
+    def _first_contact(self, obj):
+        times = [a.created_at for a in obj.activities.all()]   # prefetched
+        return min(times) if times else None
+
+    def get_first_response_min(self, obj):
+        fc = self._first_contact(obj)
+        return round((fc - obj.created_at).total_seconds() / 60.0, 1) if fc else None
+
+    def get_sla_status(self, obj):
+        from django.utils import timezone
+        sla, fc = self._sla_min(), self._first_contact(obj)
+        if fc:
+            mins = (fc - obj.created_at).total_seconds() / 60.0
+            return "within_sla" if mins <= sla else "breached"
+        # not contacted yet — breached once the SLA window has already elapsed
+        mins = (timezone.now() - obj.created_at).total_seconds() / 60.0
+        return "breached" if mins > sla else "pending"
+
+    def get_days_open(self, obj):
+        from django.utils import timezone
+        end = obj.converted_at.date() if (obj.status == "converted" and obj.converted_at) else timezone.localdate()
+        return (end - obj.created_at.date()).days
+
+    def get_follow_up_status(self, obj):
+        from django.utils import timezone
+        acts = list(obj.activities.all())
+        due = [a.followup_date for a in acts if a.followup_date]
+        if not due:
+            return "none"
+        latest = max(due)
+        if latest >= timezone.localdate():
+            return "scheduled"
+        return "done" if any(a.created_at.date() > latest for a in acts) else "overdue"
 
     class Meta:
         model = Lead
@@ -172,6 +217,7 @@ class LeadSerializer(serializers.ModelSerializer):
                   "source_name", "business", "business_name", "assigned_to", "assigned_name",
                   "created_by", "status", "priority", "campaign", "expected_value",
                   "probability", "weighted_pipeline", "lost_reason",
+                  "first_response_min", "sla_status", "days_open", "follow_up_status",
                   "score", "interests", "activity_count", "created_at"]
         read_only_fields = ["created_at", "score"]
 

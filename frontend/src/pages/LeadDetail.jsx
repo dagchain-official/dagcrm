@@ -164,6 +164,28 @@ export default function LeadDetail() {
             </div>
           ))}
         </div>
+
+        {/* Lead Register qualifiers + SLA analytics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-ink-100 text-sm">
+          {[
+            ["Priority", <Badge value={l.priority} map={STATUS_COLORS} />],
+            ["Expected value", `$${Number(l.expected_value || 0).toLocaleString()}`],
+            ["Probability", `${l.probability || 0}%`],
+            ["Weighted pipeline", `$${Number(l.weighted_pipeline || 0).toLocaleString()}`],
+            ["First response", l.first_response_min == null ? "—" : `${l.first_response_min} min`],
+            ["SLA", <Badge value={l.sla_status} map={STATUS_COLORS} />],
+            ["Days open", l.days_open],
+            ["Follow-up", <Badge value={l.follow_up_status} map={STATUS_COLORS} />],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <p className="text-[11px] text-ink-400 uppercase tracking-wide">{k}</p>
+              <p className="font-semibold text-ink-800 mt-0.5">{v}</p>
+            </div>
+          ))}
+        </div>
+        {l.status === "lost" && l.lost_reason && (
+          <p className="text-sm text-rose-600 mt-3"><b>Lost reason:</b> {l.lost_reason}</p>
+        )}
       </div>
 
       {/* action buttons */}
