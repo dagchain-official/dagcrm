@@ -449,7 +449,7 @@ def hr_dashboard(request):
     })
 
 
-def _pnl_rows(gross, net, commissions, expenses, payroll):
+def _pnl_rows(gross, net, commissions, expenses, payroll, outstanding=0.0):
     """The P&L health table (Excel monitor), computed live. Data-driven: the
     frontend just renders whatever rows come back, so adding a metric here makes
     it appear on the dashboard with no UI change.
@@ -457,8 +457,13 @@ def _pnl_rows(gross, net, commissions, expenses, payroll):
     `rate` rows are shown as a percentage; the rest as money. `status` bands:
     a profit/margin is Healthy when >= 0, Critical below; a rate uses 90/70;
     pure cost lines (Direct Cost, Operating Expenses) are informational.
+
+    `outstanding` = the still-uncollected balance on sales (a sale's gross value
+    minus what's been collected). It reduces Collected below Gross; when nothing is
+    outstanding, Collected == Gross exactly.
     """
-    collected = gross                      # no partial-collection tracking yet
+    outstanding = max(min(outstanding, gross), 0.0)
+    collected = gross - outstanding
     revenue = net
     direct_cost = commissions
     gross_profit = revenue - direct_cost
@@ -477,6 +482,8 @@ def _pnl_rows(gross, net, commissions, expenses, payroll):
     return [
         {"metric": "Gross Sales", "amount": round(gross, 2), "rate": False, "status": "Healthy"},
         {"metric": "Collected", "amount": round(collected, 2), "rate": False, "status": "Healthy"},
+        {"metric": "Outstanding", "amount": round(outstanding, 2), "rate": False,
+         "status": "Healthy" if outstanding == 0 else "Watch"},
         {"metric": "Revenue", "amount": round(revenue, 2), "rate": False, "status": sign(revenue)},
         {"metric": "Direct Cost", "amount": round(direct_cost, 2), "rate": False, "status": "Healthy"},
         {"metric": "Gross Profit", "amount": round(gross_profit, 2), "rate": False, "status": sign(gross_profit)},
@@ -499,6 +506,10 @@ def finance_dashboard(request):
     commissions = _money(Commission.objects.all(), "amount")
     payroll = _money(Payroll.objects.filter(month=today.month, year=today.year), "final_salary")
     profit = float(net) - float(expenses) - float(commissions) - float(payroll)
+    # Uncollected balance across sales — a sale's gross value minus what's collected.
+    from apps.crm.models import PostSale
+    outstanding = sum(max(float(s.gross_value) - float(s.collected_value), 0.0)
+                      for s in PostSale.objects.only("gross_value", "collected_value"))
     return Response({
         "gross_revenue": gross,
         "net_revenue": net,
@@ -507,7 +518,7 @@ def finance_dashboard(request):
         "payroll_this_month": payroll,
         "profit": profit,
         "pnl": _pnl_rows(float(gross), float(net), float(commissions),
-                         float(expenses), float(payroll)),
+                         float(expenses), float(payroll), outstanding),
         "revenue_by_business": [
             {"business": d["business__name"] or "Unknown", "net": d["net"] or 0}
             for d in rev.values("business__name").annotate(net=Sum("net_revenue")).order_by("-net")
