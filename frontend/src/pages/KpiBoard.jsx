@@ -3,6 +3,7 @@ import { BarChart4, ChevronRight, ChevronDown } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Spinner, EmptyState } from "../components/ui";
+import { useAuth } from "../context/AuthContext";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const now = new Date();
@@ -42,6 +43,10 @@ function Row({ n, metrics, depth }) {
 }
 
 export default function KpiBoard() {
+  const { can } = useAuth();
+  // Managers see the rolled-up "Company total"; an RM's scope is just themselves,
+  // so the total would only repeat their own row — hide it for them.
+  const isManager = can("reports", "view");
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
   const [businesses, setBusinesses] = useState([]);
@@ -100,13 +105,15 @@ export default function KpiBoard() {
                 </span>
               ))}
             </div>
-            {/* company totals */}
-            <div className="flex items-center gap-2 py-2.5 border-b border-ink-200 bg-ink-50/40 px-2">
-              <span className="flex-1 min-w-[180px] text-sm font-bold text-ink-800">Company total</span>
-              {metrics.map((m) => (
-                <span key={m.id} className="w-28 text-right text-sm font-bold text-ink-900 tabular-nums">{fmt(d.company[m.id], m.unit)}</span>
-              ))}
-            </div>
+            {/* company totals — managers only; an RM just sees their own row */}
+            {isManager && (
+              <div className="flex items-center gap-2 py-2.5 border-b border-ink-200 bg-ink-50/40 px-2">
+                <span className="flex-1 min-w-[180px] text-sm font-bold text-ink-800">Company total</span>
+                {metrics.map((m) => (
+                  <span key={m.id} className="w-28 text-right text-sm font-bold text-ink-900 tabular-nums">{fmt(d.company[m.id], m.unit)}</span>
+                ))}
+              </div>
+            )}
             {/* tree */}
             {d.tree?.length ? d.tree.map((n) => <Row key={n.id} n={n} metrics={metrics} depth={0} />)
               : <EmptyState title="No data" hint="No employees in the hierarchy yet." />}
