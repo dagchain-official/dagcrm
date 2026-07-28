@@ -429,6 +429,11 @@ class MetricDefinition(models.Model):
         ("lead_activity:meeting", "Meetings logged (Lead Activity)"),
         ("lead_activity:call", "Calls logged (Lead Activity)"),
         ("lead:converted", "Leads converted"),
+        ("lead:received", "Leads received (assigned)"),
+        ("fxartha:deposits", "FX Artha deposits ($)"),
+        ("dagchain:nodes", "DAGChain node purchases"),
+        ("revenue", "Revenue ($, net)"),
+        ("training:completed", "Training modules completed"),
     ]
     name = models.CharField(max_length=120)
     key = models.SlugField(max_length=140, unique=True, blank=True)

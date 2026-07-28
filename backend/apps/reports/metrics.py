@@ -116,6 +116,43 @@ def _leaf_stats(mdefs, month, year, date_from=None, date_to=None):
                     eid = u2e.get(r["assigned_to"])
                     if eid:
                         stats[(eid, m.id)] = (float(r["c"]), r["c"])
+            elif m.derived_key == "lead:received":
+                rows = (Lead.objects.pipeline().filter(**_flt("created_at", True))
+                        .values("assigned_to").annotate(c=Count("id")))
+                for r in rows:
+                    eid = u2e.get(r["assigned_to"])
+                    if eid:
+                        stats[(eid, m.id)] = (float(r["c"]), r["c"])
+            elif m.derived_key == "fxartha:deposits":
+                from apps.crm.models import AumEntry
+                rows = (AumEntry.objects.filter(entry_type="deposit", **_flt("date", False))
+                        .values("employee").annotate(s=Sum("amount"), c=Count("id")))
+                for r in rows:
+                    if r["employee"]:
+                        stats[(r["employee"], m.id)] = (float(r["s"] or 0), r["c"])
+            elif m.derived_key == "dagchain:nodes":
+                from apps.integrations.models import DagChainNode
+                rows = (DagChainNode.objects.filter(payment_status="completed", **_flt("opened_at", True))
+                        .values("customer__assigned_to").annotate(c=Count("id")))
+                for r in rows:
+                    eid = u2e.get(r["customer__assigned_to"])
+                    if eid:
+                        stats[(eid, m.id)] = (float(r["c"]), r["c"])
+            elif m.derived_key == "revenue":
+                from apps.sales.models import Revenue
+                rows = (Revenue.objects.filter(**_flt("created_at", True))
+                        .values("customer__assigned_to").annotate(s=Sum("net_revenue"), c=Count("id")))
+                for r in rows:
+                    eid = u2e.get(r["customer__assigned_to"])
+                    if eid:
+                        stats[(eid, m.id)] = (float(r["s"] or 0), r["c"])
+            elif m.derived_key == "training:completed":
+                from apps.hr.models import TrainingAssignment
+                rows = (TrainingAssignment.objects.filter(status="completed", **_flt("completion_date", False))
+                        .values("employee").annotate(c=Count("id")))
+                for r in rows:
+                    if r["employee"]:
+                        stats[(r["employee"], m.id)] = (float(r["c"]), r["c"])
     return stats
 
 
