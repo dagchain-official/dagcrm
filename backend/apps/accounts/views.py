@@ -193,14 +193,24 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def assignable(self, request):
         """Users a lead can be assigned to — sales roles only.
-        (Super Admin / Business Head / Support / HR / Finance excluded.)"""
+        (Super Admin / Business Head / Support / HR / Finance excluded.)
+
+        A front-line RM (Sales Executive) appears ONLY when clocked in today — a
+        lead can't be handed to an inactive agent, so an RM who hasn't marked
+        attendance is hidden from the picker. Team Leaders / Sales Managers aren't
+        subject to that rule and always appear."""
         from .access import ASSIGNABLE_LEAD_ROLES
+        from apps.crm.assignment import active_agent_ids, FRONTLINE_ROLE
+        active = active_agent_ids()
         users = (User.objects.filter(role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True)
                  .select_related("role").order_by("name"))
-        return Response([
-            {"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", "")}
-            for u in users
-        ])
+        out = []
+        for u in users:
+            # skip a front-line RM who isn't clocked in right now
+            if getattr(u.role, "name", "") == FRONTLINE_ROLE and u.id not in active:
+                continue
+            out.append({"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", "")})
+        return Response(out)
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def managers(self, request):
