@@ -156,6 +156,22 @@ def kpi_scorecard(user_ids):
     callbacks_due = acts.filter(outcome="callback").count()       # a callback was requested
     callbacks_completed = acts.filter(activity_type="callback").count()   # a callback was made
 
+    # --- Platform contribution: FX Artha lots & deposits, DAGChain node buys.
+    # Their revenue already rolls into `revenue` above (attributed by customer
+    # ownership); these tiles make the platform activity visible on the scorecard.
+    from apps.crm.models import AumEntry
+    from apps.integrations.models import DagChainNode
+    from apps.sales.models import Revenue as _Rev
+    lots = metric_sum("Lots Traded")
+    deposits = float(AumEntry.objects.filter(employee_id__in=emp_ids, entry_type="deposit")
+                     .aggregate(s=Sum("amount"))["s"] or 0)
+    node_purchases = DagChainNode.objects.filter(
+        customer__assigned_to_id__in=uids, payment_status="completed").count()
+    platform_revenue = float(_Rev.objects.filter(customer__assigned_to_id__in=uids)
+                             .exclude(customer__external_id="")
+                             .filter(created_at__year=y, created_at__month=m)
+                             .aggregate(s=Sum("net_revenue"))["s"] or 0)
+
     return {
         "leads": n_leads,
         "calls": n_calls,
@@ -163,6 +179,11 @@ def kpi_scorecard(user_ids):
         "meetings": acts.filter(activity_type="meeting").count(),
         "sales": leads.filter(status="converted").count(),
         "revenue": revenue,
+        # FX Artha + DAGChain contribution
+        "lots": round(lots, 2),
+        "deposits": round(deposits, 2),
+        "node_purchases": node_purchases,
+        "platform_revenue": round(platform_revenue, 2),
         "overall_kpi": overall,
         "incentive_earned": earned,
         "incentive_paid": round(paid, 2),
