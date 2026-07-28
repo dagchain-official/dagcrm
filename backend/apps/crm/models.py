@@ -89,6 +89,7 @@ class Lead(models.Model):
     lost_reason = models.CharField(max_length=255, blank=True)   # set when Closed Lost
     score = models.PositiveIntegerField(default=0)  # AI lead score (0-100)
     converted_at = models.DateTimeField(null=True, blank=True)  # set when status -> converted
+    assigned_at = models.DateTimeField(null=True, blank=True)   # set when the owner (re)assigns
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -99,15 +100,24 @@ class Lead(models.Model):
     objects = LeadQuerySet.as_manager()
 
     def save(self, *args, **kwargs):
+        from django.utils import timezone
+        update_fields = kwargs.get("update_fields")
+        extra = set()
         # stamp the moment of conversion so KPIs credit the right month
         if self.status == "converted" and not self.converted_at:
-            from django.utils import timezone
             self.converted_at = timezone.now()
-            # callers convert with save(update_fields=["status"]) — without adding
-            # the stamp here it would be silently dropped and the KPI would miss it.
-            update_fields = kwargs.get("update_fields")
-            if update_fields is not None:
-                kwargs["update_fields"] = set(update_fields) | {"converted_at"}
+            extra.add("converted_at")
+        # stamp the moment the owner changes, so the 5-minute reassignment sweep
+        # can measure how long a lead has sat un-actioned on an agent.
+        if self.assigned_to_id:
+            prev = (type(self).objects.filter(pk=self.pk).values_list("assigned_to_id", flat=True).first()
+                    if self.pk else None)
+            if prev != self.assigned_to_id:
+                self.assigned_at = timezone.now()
+                extra.add("assigned_at")
+        # callers often save(update_fields=[...]) — add our stamps or they'd be dropped.
+        if extra and update_fields is not None:
+            kwargs["update_fields"] = set(update_fields) | extra
         super().save(*args, **kwargs)
 
     def __str__(self):

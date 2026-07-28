@@ -22,6 +22,7 @@ class IntegrationsConfig(AppConfig):
             return
         IntegrationsConfig._autosync_started = True
         threading.Thread(target=_autosync_loop, daemon=True).start()
+        threading.Thread(target=_reassign_loop, daemon=True).start()
 
 
 def _autosync_loop():
@@ -36,6 +37,41 @@ def _autosync_loop():
         except Exception:  # noqa: BLE001 — never let the loop die
             pass
         time.sleep(interval)
+
+
+def _reassign_loop():
+    """Every 60s, reassign any lead an agent has left un-actioned past the SLA
+    (default 5 min) to the next clocked-in agent, and hand out unassigned leads.
+    Independent of the sync loop so the 5-minute SLA is measured tightly."""
+    interval = int(os.environ.get("LEAD_REASSIGN_INTERVAL", "60"))
+    time.sleep(30)
+    while True:
+        try:
+            _run_reassign_once()
+        except Exception:  # noqa: BLE001 — never let the loop die
+            pass
+        time.sleep(interval)
+
+
+_REASSIGN_LOCK_KEY = 918273646        # its own advisory lock, distinct from sync
+
+
+def _run_reassign_once():
+    """One reassignment pass, advisory-locked so only ONE gunicorn worker runs it."""
+    from django.db import close_old_connections, connection
+
+    close_old_connections()
+    with connection.cursor() as cur:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", [_REASSIGN_LOCK_KEY])
+        if not cur.fetchone()[0]:
+            return
+    try:
+        from apps.crm.assignment import reassign_stale_leads
+        reassign_stale_leads()
+    finally:
+        with connection.cursor() as cur:
+            cur.execute("SELECT pg_advisory_unlock(%s)", [_REASSIGN_LOCK_KEY])
+        close_old_connections()
 
 
 # a fixed key so every worker contends for the SAME Postgres advisory lock

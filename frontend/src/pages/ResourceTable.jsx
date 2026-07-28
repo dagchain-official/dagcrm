@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Plus, Pencil, Trash2, Search, Eye, Download, Check, X, Upload, FileSpreadsheet, Calculator, FileDown, Shuffle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, Lock, Download, Check, X, Upload, FileSpreadsheet, Calculator, FileDown, Shuffle, ChevronLeft, ChevronRight } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../api/client";
@@ -441,9 +441,16 @@ export default function ResourceTable({ resource: propResource }) {
                           );
                         })}
                         {cfg.detailPath && (
-                          <Link to={`${cfg.detailPath}/${row.id}`} className="btn-ghost p-1.5 text-brand-600" title="Open 360 view">
-                            <Eye size={15} />
-                          </Link>
+                          row.locked ? (
+                            <span className="btn-ghost p-1.5 text-ink-300 cursor-not-allowed"
+                              title="Locked — work your earlier lead first (it has no activity yet)">
+                              <Lock size={15} />
+                            </span>
+                          ) : (
+                            <Link to={`${cfg.detailPath}/${row.id}`} className="btn-ghost p-1.5 text-brand-600" title="Open 360 view">
+                              <Eye size={15} />
+                            </Link>
+                          )
                         )}
                         {canEdit && (
                           <button className="btn-ghost p-1.5" onClick={() => setModal({ mode: "edit", row })}>

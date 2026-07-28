@@ -171,6 +171,22 @@ class LeadSerializer(serializers.ModelSerializer):
     sla_status = serializers.SerializerMethodField()
     days_open = serializers.SerializerMethodField()
     follow_up_status = serializers.SerializerMethodField()
+    locked = serializers.SerializerMethodField()
+
+    def get_locked(self, obj):
+        """A front-line agent must work their leads oldest-first: every un-actioned
+        lead except their oldest is locked (its detail can't be opened yet).
+        Managers and above are never locked."""
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        from apps.crm.assignment import is_frontline, unlocked_lead_id
+        if not is_frontline(user) or obj.assigned_to_id != user.id:
+            return False
+        if obj.activities.all():          # prefetched — already worked, never locked
+            return False
+        if not hasattr(self, "_unlocked_id"):
+            self._unlocked_id = unlocked_lead_id(user)
+        return self._unlocked_id is not None and obj.id != self._unlocked_id
 
     def _sla_min(self):
         if not hasattr(self, "_sla_cache"):
@@ -219,7 +235,7 @@ class LeadSerializer(serializers.ModelSerializer):
                   "created_by", "status", "priority", "campaign", "expected_value",
                   "probability", "weighted_pipeline", "lost_reason",
                   "first_response_min", "sla_status", "days_open", "follow_up_status",
-                  "score", "interests", "activity_count", "created_at"]
+                  "locked", "score", "interests", "activity_count", "created_at"]
         read_only_fields = ["created_at", "score"]
 
     # Lead phone numbers are visible to every user now (they need it to call /

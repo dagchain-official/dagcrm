@@ -165,11 +165,12 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self._enforce_assignment(serializer)
-        # Auto-distribute: if no RM was chosen, load-balance to the least-busy rep
-        # (round-robin) so a new lead never sits unassigned.
+        # Auto-distribute: if no RM was chosen, load-balance to the least-busy
+        # agent who is CLOCKED IN right now. If nobody is active it stays
+        # unassigned and the 5-minute sweep hands it out once someone clocks in.
         if not serializer.validated_data.get("assigned_to"):
-            from apps.integrations.services import _next_rm
-            rm = _next_rm()
+            from .assignment import next_active_agent
+            rm = next_active_agent()
             if rm:
                 serializer.validated_data["assigned_to"] = rm
         lead = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)

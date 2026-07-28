@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Phone, MessageCircle, Mail, FileText, Mic, StickyNote,
-  Calendar, MapPin, Target as TargetIcon, Clock, Send,
+  Calendar, MapPin, Target as TargetIcon, Clock, Send, Lock,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -120,6 +120,25 @@ export default function LeadDetail() {
   if (err) return <EmptyState title="Lead not found" />;
   if (!d) return <Spinner label="Loading lead…" />;
   const l = d.lead;
+  if (l.locked) {
+    return (
+      <div className="space-y-5">
+        <Link to="/m/leads" className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-ink-800">
+          <ArrowLeft size={16} /> Back to Leads
+        </Link>
+        <div className="card p-10 text-center max-w-lg mx-auto">
+          <div className="grid place-items-center w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 mx-auto mb-4">
+            <Lock size={24} />
+          </div>
+          <h2 className="text-xl font-extrabold text-ink-900">This lead is locked</h2>
+          <p className="text-sm text-ink-500 mt-2">
+            Work your earlier lead first — log a call, message or any activity on it, and this one unlocks automatically.
+          </p>
+          <Link to="/m/leads" className="btn-primary inline-flex mt-5">Go to my leads</Link>
+        </div>
+      </div>
+    );
+  }
   const rank = FUNNEL.indexOf(l.status);
 
   const onAction = (type) => {
