@@ -1,6 +1,6 @@
 import { Phone, PhoneCall, Clock, Timer, Target, Repeat, Users, CalendarClock,
   CalendarCheck2, CheckCircle2, Gauge, Coins, Wallet, GraduationCap,
-  ShieldCheck, CalendarCheck, UserCheck, CandlestickChart, Landmark, Boxes, TrendingUp } from "lucide-react";
+  ShieldCheck, CalendarCheck, UserCheck } from "lucide-react";
 
 // The sales scorecard, styled like the dashboard's top KPI cards. Leads and
 // Revenue are intentionally NOT here — they already appear in the cards above,
@@ -28,11 +28,6 @@ const CARDS = [
   { key: "incentive_earned", label: "Incentive Earned", icon: Coins, color: "bg-teal-100 text-teal-600", fmt: money },
   { key: "incentive_paid", label: "Incentive Paid", icon: Wallet, color: "bg-rose-100 text-rose-500", fmt: money },
   { key: "training", label: "Training", icon: GraduationCap, color: "bg-orange-100 text-orange-600", fmt: pct },
-  // FX Artha + DAGChain contribution
-  { key: "lots", label: "Lots (FX Artha)", icon: CandlestickChart, color: "bg-sky-100 text-sky-700", fmt: num },
-  { key: "deposits", label: "Deposits (FX Artha)", icon: Landmark, color: "bg-emerald-100 text-emerald-700", fmt: money },
-  { key: "node_purchases", label: "Node Buys (DAGChain)", icon: Boxes, color: "bg-violet-100 text-violet-700", fmt: num },
-  { key: "platform_revenue", label: "Platform Revenue", icon: TrendingUp, color: "bg-teal-100 text-teal-700", fmt: money },
 ];
 
 export default function KpiScorecard({ data, title = "KPIs · This Month" }) {
