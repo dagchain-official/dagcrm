@@ -140,7 +140,7 @@ class LeadSourceViewSet(viewsets.ModelViewSet):
 class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.select_related("source", "assigned_to").prefetch_related("interests", "activities").all().order_by("-created_at")
     serializer_class = LeadSerializer
-    filterset_fields = ["status", "source", "assigned_to", "country"]
+    filterset_fields = ["status", "source", "assigned_to", "country", "priority"]
     search_fields = ["name", "email", "phone", "lead_code"]
 
     def get_queryset(self):
