@@ -4,8 +4,9 @@ import ResourceTable from "./ResourceTable";
 import KpiBoard from "./KpiBoard";
 import Performance from "./Performance";
 import KpiPerformance from "./KpiPerformance";
+import { useAuth } from "../context/AuthContext";
 
-const TABS = [
+const ALL_TABS = [
   { k: "board", l: "KPI Board" },
   { k: "auto", l: "Auto Performance" },
   { k: "entries", l: "KPI Entries" },
@@ -13,6 +14,12 @@ const TABS = [
 ];
 
 export default function KpiHub() {
+  const { can } = useAuth();
+  // A manager (reports access) gets every tab; an RM / Sales Executive gets only
+  // the two scoped views — their own KPI Board and Performance — so they never
+  // see the team-wide Auto Performance or KPI-entry tools.
+  const isManager = can("reports", "view");
+  const TABS = isManager ? ALL_TABS : ALL_TABS.filter((t) => t.k === "board" || t.k === "performance");
   const [tab, setTab] = useState("board");
   return (
     <div className="space-y-5">

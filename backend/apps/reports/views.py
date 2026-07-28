@@ -1385,6 +1385,12 @@ def kpi_performance(request):
     stats = _leaf_stats(mdefs, month, year)
 
     emps = list(Employee.objects.select_related("user").exclude(user__is_superuser=True))
+    # scope to the caller's own subtree (admins / Finance / HR see everyone)
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
+    role = getattr(getattr(request.user, "role", None), "name", "")
+    if not (is_admin_view(request.user) or role in ("Finance", "HR")):
+        allowed = subordinate_user_ids(request.user, include_self=True)
+        emps = [e for e in emps if e.user_id in allowed]
     if employee_id:
         emps = [e for e in emps if str(e.id) == str(employee_id)]
 

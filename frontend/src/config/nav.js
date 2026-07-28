@@ -12,7 +12,8 @@ import {
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
-  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/kpi", "/performance", "/incentive-board"].includes(to)) return "reports";
+  if (to === "/kpi") return "kpi";   // its own module — RMs get their scoped KPI without the company reports/P&L
+  if (["/reports", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
   // FX Artha & DAGChain: each sub-page has its own permission module so access
   // can be granted/denied per page (Overview / Traders / Lots, Users / Nodes…).
   if (to === "/fxartha") return "fxartha";                                   // Overview

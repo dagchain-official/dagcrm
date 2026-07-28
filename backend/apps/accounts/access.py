@@ -74,7 +74,7 @@ MODULES = [
     "leave-types", "payrolls", "incentives", "incentive-rules", "cost-categories", "employee-costs",
     "training-modules", "training-assignments", "assessments",
     "target-multipliers", "performance-weights", "incentive-slabs", "activity-incentives",
-    "formula-rules", "expenses", "commissions", "users", "roles", "teams", "reports",
+    "formula-rules", "expenses", "commissions", "users", "roles", "teams", "reports", "kpi",
     # FX Artha and DAGChain are split per sub-page so each can be granted/denied
     # separately (the sidebar item + its endpoint use these keys).
     "fxartha", "fxartha-traders", "fxartha-lots",
@@ -108,7 +108,7 @@ ROLE_MATRIX = {
     "Sales Director": {
         **_full(_split("leads lead-activities opportunities proposals customers communications targets "
                        "metric-entries aum-entries contribution-entries teams")),
-        **_view(_split("revenues products businesses lead-sources tickets reports users "
+        **_view(_split("revenues products businesses lead-sources tickets reports kpi users "
                        "metric-definitions employees fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
         "leaves": "vce", "leave-types": "v",
         "assign-targets": "c",
@@ -116,7 +116,7 @@ ROLE_MATRIX = {
     "Sales Manager": {
         **_full(_split("leads lead-activities opportunities proposals customers communications targets "
                        "metric-entries aum-entries contribution-entries")),
-        **_view(_split("revenues products businesses lead-sources tickets reports teams users "
+        **_view(_split("revenues products businesses lead-sources tickets reports kpi teams users "
                        "metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
@@ -126,7 +126,7 @@ ROLE_MATRIX = {
     "Team Leader": {
         **_full(_split("leads lead-activities opportunities proposals customers communications "
                        "metric-entries aum-entries contribution-entries")),
-        **_view(_split("targets tickets reports metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
+        **_view(_split("targets tickets reports kpi metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
         # team leave management
         "leaves": "vce", "leave-types": "v", "employees": "v",
         # may set targets — for their own team only (see can_assign_to)
@@ -135,7 +135,7 @@ ROLE_MATRIX = {
     "Sales Executive": {
         **_full(_split("leads lead-activities opportunities proposals customers communications "
                        "metric-entries aum-entries contribution-entries")),
-        **_view(_split("tickets businesses products metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
+        **_view(_split("tickets businesses products kpi metric-definitions fxartha fxartha-traders fxartha-lots dagchain dagchain-users dagchain-nodes")),
     },
     "Support": {
         **_full(_split("tickets")),
