@@ -114,6 +114,16 @@ class LeadSourceViewSet(viewsets.ModelViewSet):
     queryset = LeadSource.objects.all()
     serializer_class = LeadSourceSerializer
 
+    def get_permissions(self):
+        # The `social` list feeds the Source dropdown on the lead form — EVERY
+        # user who can create a lead (Sales Executive, RM…) must be able to read
+        # it, so it's open to any authenticated user. Creating / editing / deleting
+        # lead sources stays admin-gated via the default ModuleAccess permission.
+        if self.action == "social":
+            from rest_framework.permissions import IsAuthenticated
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
     @action(detail=False, methods=["get"])
     def social(self, request):
         """Social / marketing lead sources for the Leads filters and forms.
