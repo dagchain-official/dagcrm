@@ -269,31 +269,31 @@ export default function Customer360() {
           <span className="text-xs font-normal text-ink-400">(auto-synced from FXArtha)</span>
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl bg-brand-50 border border-brand-100 p-4">
+          <div className="rounded-2xl bg-brand-500/10 border border-brand-500/20 p-4">
             <div className="flex items-center gap-2 text-brand-600"><CandlestickChart size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Lots Traded</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">{num(tr.lots_traded)}</p>
           </div>
-          <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
             <div className="flex items-center gap-2 text-emerald-600"><ArrowDownToLine size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Deposits</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.deposits)}</p>
           </div>
-          <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4">
+          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4">
             <div className="flex items-center gap-2 text-rose-500"><ArrowUpFromLine size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Withdrawals</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.withdrawals)}</p>
           </div>
-          <div className="rounded-2xl bg-ink-50 border border-ink-100 p-4">
-            <div className="flex items-center gap-2 text-ink-600"><Wallet size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Net AUM</span></div>
+          <div className="rounded-2xl bg-ink-500/10 border border-ink-500/20 p-4">
+            <div className="flex items-center gap-2 text-ink-500"><Wallet size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Net AUM</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.net_aum)}</p>
           </div>
-          <div className="rounded-2xl bg-violet-50 border border-violet-100 p-4">
+          <div className="rounded-2xl bg-violet-500/10 border border-violet-500/20 p-4">
             <div className="flex items-center gap-2 text-violet-600"><DollarSign size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Gross Brokerage</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.gross_brokerage)}</p>
           </div>
-          <div className="rounded-2xl bg-sky-50 border border-sky-100 p-4">
+          <div className="rounded-2xl bg-sky-500/10 border border-sky-500/20 p-4">
             <div className="flex items-center gap-2 text-sky-600"><Coins size={16} /><span className="text-xs font-semibold uppercase tracking-wide">IB Commission</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.ib_commission)}</p>
           </div>
-          <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4">
             <div className="flex items-center gap-2 text-amber-600"><TrendingDown size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Trading Loss</span></div>
             <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.trading_loss)}</p>
           </div>
