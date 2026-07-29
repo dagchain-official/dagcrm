@@ -88,7 +88,7 @@ def _num(v):
         return 0.0
 
 
-def _sync_user(item, rm_user):
+def _sync_user(item):
     """One DAGChain user -> CRM Customer + DagChainProfile (full detail)."""
     from apps.crm.models import Customer
     from .models import DagChainProfile
@@ -111,10 +111,14 @@ def _sync_user(item, rm_user):
             "phone": item.get("phone") or "",
         },
     )
-    # seed the owner once; never clobber a manual reassignment
+    # seed the owner once — an active clocked-in RM only; never clobber a manual
+    # reassignment. No one active -> stays unassigned until an RM marks attendance.
     if cust.assigned_to_id is None:
-        cust.assigned_to = rm_user
-        cust.save(update_fields=["assigned_to"])
+        from apps.crm.assignment import next_active_agent
+        rm = next_active_agent()
+        if rm:
+            cust.assigned_to = rm
+            cust.save(update_fields=["assigned_to"])
 
     DagChainProfile.objects.update_or_create(
         external_id=uid,
@@ -318,11 +322,10 @@ def sync_dagchain(conn):
         dashboard = client.get("/admin/dashboard").get("result", {})
         node_stats = client.get("/admin/node-stats").get("result", {})
         business, _ = Business.objects.get_or_create(name="DAGChain")
-        rm_user, _ = _demo_rm()
 
         users = 0
         for item in client.paginate("/admin/userList"):
-            if _sync_user(item, rm_user):
+            if _sync_user(item):
                 users += 1
 
         revenue_rows = 0
