@@ -1,20 +1,13 @@
 """Identity-match a converted lead to their live platform account.
 
 When a lead is Closed Won we check whether that same person already exists as a
-synced FX Artha trader or DAGChain user (matched on email, or a full phone
-number). If so, the lead IS that account: we attach the lead to it and hand the
+synced FX Artha trader or DAGChain user (matched on email). If so, the lead IS
+that account: we attach the lead to it and hand the
 account to the lead's RM, so the person's real purchases and revenue — which the
 integrations already sync every few minutes — start showing on the customer and
 crediting the RM. Every future purchase keeps flowing in through the same sync;
 nothing here has to run again.
 """
-import re
-
-
-def _digits(s):
-    return re.sub(r"\D", "", s or "")
-
-
 def platform_of(customer):
     """Which platform a synced customer belongs to (for labels/badges)."""
     if not customer or not customer.external_id:
@@ -24,29 +17,16 @@ def platform_of(customer):
     return "DAGChain" if hasattr(customer, "dagchain") else "FX Artha"
 
 
-def find_platform_twin(email, phone):
-    """A synced platform account that is the same person as this lead, or None.
-
-    Email is the primary key (unique enough to auto-link). Phone is a fallback,
-    but only for a real number — DAGChain stores just a dial code in `phone`, so
-    we require >= 8 digits and compare the last 10 to avoid dial-code collisions.
-    """
+def find_platform_twin(email, phone=None):
+    """A synced platform account with the same email as this lead, or None.
+    Email only — unique enough to auto-link (phone is ignored)."""
     from .models import Customer
 
     email = (email or "").strip().lower()
-    digits = _digits(phone)
-    phone10 = digits[-10:] if len(digits) >= 8 else ""
-
-    synced = Customer.objects.exclude(external_id="")
-    if email:
-        hit = synced.filter(email__iexact=email).first()
-        if hit:
-            return hit
-    if phone10:
-        for c in synced.exclude(phone="").only("id", "phone"):
-            if _digits(c.phone)[-10:] == phone10:
-                return c
-    return None
+    if not email:
+        return None
+    # match on email only (per request)
+    return Customer.objects.exclude(external_id="").filter(email__iexact=email).first()
 
 
 def ensure_customer_for_lead(lead):
