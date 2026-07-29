@@ -101,6 +101,13 @@ def _run_sync_once():
                 syncers[conn.platform](conn)
             except Exception:  # noqa: BLE001 — one bad connection can't stop the rest
                 pass
+        # fresh platform accounts just synced — link any converted customer who
+        # opened an FX Artha / DAGChain account after they converted.
+        try:
+            from apps.crm.linking import link_pending_conversions
+            link_pending_conversions()
+        except Exception:  # noqa: BLE001
+            pass
     finally:
         with connection.cursor() as cur:
             cur.execute("SELECT pg_advisory_unlock(%s)", [_SYNC_LOCK_KEY])

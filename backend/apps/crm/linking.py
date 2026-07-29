@@ -105,3 +105,47 @@ def ensure_postsale_for_lead(lead, customer):
         close_date=timezone.now().date(), sale_type="new", sale_status="closed_won",
         gross_value=lead.expected_value or 0,
     )
+
+
+def _merge_customer(loser, keeper):
+    """Move a placeholder customer's records onto the real (platform) one, delete it."""
+    from apps.sales.models import Revenue
+    from apps.support.models import Ticket
+    from .models import (Attachment, AumEntry, Communication, ContributionEntry,
+                         CustomerProduct, MetricEntry, PostSale)
+    if loser.id == keeper.id:
+        return
+    for Model in (Revenue, PostSale, CustomerProduct, Communication, AumEntry,
+                  ContributionEntry, MetricEntry, Attachment, Ticket):
+        Model.objects.filter(customer=loser).update(customer=keeper)
+    loser.delete()
+
+
+def link_pending_conversions():
+    """Catch converted customers who open an FX Artha / DAGChain account AFTER
+    converting: on each sync, re-match the still-unlinked ones by email/phone and
+    attach the platform account (with its purchases & revenue) to the lead's RM.
+    Returns how many were newly linked.
+
+    ponytail: re-scans all CRM-own converted leads each sync; add a 'checked' flag
+    on Lead if this ever gets slow.
+    """
+    from .models import Lead
+    linked = 0
+    for lead in (Lead.objects.pipeline().filter(status="converted")
+                 .prefetch_related("customers")):
+        custs = list(lead.customers.all())
+        # skip if already on a platform account, or no placeholder customer exists
+        if not custs or any(c.external_id for c in custs):
+            continue
+        twin = find_platform_twin(lead.email, lead.phone)
+        if not twin or twin.lead_id:          # no match, or already linked elsewhere
+            continue
+        twin.lead = lead
+        if lead.assigned_to_id:
+            twin.assigned_to = lead.assigned_to
+        twin.save(update_fields=["lead", "assigned_to"])
+        for c in custs:                       # fold the placeholder(s) into the twin
+            _merge_customer(c, twin)
+        linked += 1
+    return linked
