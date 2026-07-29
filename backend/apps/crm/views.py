@@ -539,6 +539,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             from django.db.models import Q
             qs = qs.filter(Q(external_id="") | Q(lead__external_id=""))
+            # Each RM sees only their own customers (owner = assigned_to, else the
+            # lead's RM); managers see their team. Same scope as Leads.
+            if not is_admin_view(self.request.user):
+                from apps.accounts.access import subordinate_user_ids
+                ids = subordinate_user_ids(self.request.user, include_self=True)
+                qs = qs.filter(Q(assigned_to_id__in=ids)
+                               | Q(assigned_to__isnull=True, lead__assigned_to_id__in=ids))
         return qs
 
     @action(detail=True, methods=["get"])
