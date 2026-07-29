@@ -50,20 +50,11 @@ def normalize(platform, payload):
 
 
 def _next_rm(business=None):
-    """Pick the least-busy sales rep (load-balanced). If a business is given,
-    only reps who can access that business are eligible (fallback to all)."""
-    from django.contrib.auth import get_user_model
-    from apps.accounts.access import ASSIGNABLE_LEAD_ROLES, allowed_business_ids
-    from apps.crm.models import Lead
-    User = get_user_model()
-    rms = list(User.objects.filter(role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True))
-    if business is not None:
-        scoped = [u for u in rms
-                  if (allowed_business_ids(u) is None) or (business.id in allowed_business_ids(u))]
-        rms = scoped or rms  # if nobody is scoped to this business, don't block ingestion
-    if not rms:
-        return None
-    return min(rms, key=lambda u: Lead.objects.filter(assigned_to=u).count())
+    """Least-busy CLOCKED-IN front-line agent — anything auto-assigned (CRM leads
+    AND synced FX Artha traders) goes only to an active RM. None if nobody is
+    clocked in, so the record stays unassigned until an RM marks attendance."""
+    from apps.crm.assignment import next_active_agent
+    return next_active_agent()
 
 
 def ingest_lead(conn, fields):
