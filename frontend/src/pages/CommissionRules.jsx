@@ -147,14 +147,11 @@ export default function CommissionRules() {
           const isOpen = open[p.key];
           const overriddenCount = employees.filter((e) => overrides[e.id]?.[p.key] != null).length;
           return (
-            <div key={p.key} className={`card overflow-hidden ${p.instrument ? "ml-6 border-l-2 border-l-brand-200" : ""}`}>
+            <div key={p.key} className="card overflow-hidden">
               <div className="flex flex-wrap items-center gap-3 p-4">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-ink-900 truncate">{p.label}
-                    {p.custom && <span className="ml-1.5 badge bg-ink-100 text-ink-500">custom</span>}
-                    {p.instrument && <span className="ml-1.5 badge bg-brand-50 text-brand-600">instrument</span>}
-                  </p>
-                  <p className="text-xs text-ink-400">{p.instrument ? "per-instrument lots rate · " : p.kind && p.kind !== "custom" ? `${p.kind} · ` : ""}{p.unit}</p>
+                  <p className="font-bold text-ink-900 truncate">{p.label}{p.custom && <span className="ml-1.5 badge bg-ink-100 text-ink-500">custom</span>}</p>
+                  <p className="text-xs text-ink-400">{p.kind && p.kind !== "custom" ? `${p.kind} · ` : ""}{p.unit}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-ink-400">Universal</span>
@@ -185,6 +182,11 @@ export default function CommissionRules() {
                     </div>
                   ))}
                 </div>
+              )}
+              {/* FX Artha: a searchable per-instrument rate picker lives under Lots */}
+              {platform === "fxartha" && p.key === "lots" && (
+                <LotsInstruments instruments={d.instruments?.fxartha || []} lotsRate={p.rate}
+                  employees={employees} overrides={overrides} canEdit={canEdit} save={save} />
               )}
             </div>
           );
@@ -262,6 +264,78 @@ function FxCatalogue({ cat }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Searchable per-instrument lots-rate picker, shown under the FX Artha "Lots" row.
+// All catalogue instruments are searchable; a rate is stored as "lots:<SYMBOL>".
+// Instruments that already carry a rate (universal or per-RM) are always shown.
+function LotsInstruments({ instruments, lotsRate, employees, overrides, canEdit, save }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [rmFor, setRmFor] = useState(null);   // symbol whose per-RM panel is expanded
+
+  const rated = new Set();
+  instruments.forEach((it) => { if (Number(it.rate) > 0) rated.add(it.symbol); });
+  employees.forEach((e) => Object.keys(overrides[e.id] || {}).forEach((k) => {
+    if (k.startsWith("lots:")) rated.add(k.slice(5));
+  }));
+
+  const query = q.trim().toUpperCase();
+  const shown = instruments.filter((it) =>
+    query ? (it.symbol.includes(query) || (it.name || "").toUpperCase().includes(query)) : rated.has(it.symbol)
+  ).slice(0, 40);
+  const configured = query ? 0 : rated.size;
+
+  return (
+    <div className="border-t border-ink-100 bg-ink-50/40">
+      <button onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-ink-600 hover:text-ink-800">
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        Per-instrument rate{configured ? ` (${configured})` : ""}
+        <span className="font-normal text-ink-400 text-xs">— overrides the $ / lot for a specific instrument</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2">
+          <input className="input" placeholder="Search instrument (e.g. XAUUSD, gold, EURUSD)…"
+            value={q} onChange={(e) => setQ(e.target.value)} />
+          {shown.length === 0 && (
+            <p className="text-xs text-ink-400 px-1">
+              {query ? "No instrument matches." : "No per-instrument rates yet — search above to set one."}
+            </p>
+          )}
+          {shown.map((it) => (
+            <div key={it.symbol} className="rounded-xl bg-ink-0 border border-ink-100">
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-ink-900">{it.symbol}</p>
+                  {it.name && <p className="text-[11px] text-ink-400 truncate">{it.name}{it.segment ? ` · ${it.segment}` : ""}</p>}
+                </div>
+                <RateInput value={it.rate || ""} disabled={!canEdit} placeholder={`${lotsRate}`} suffix="$"
+                  onSave={(v) => save(`lots:${it.symbol}`, v, null)} />
+                <button onClick={() => setRmFor((s) => (s === it.symbol ? null : it.symbol))}
+                  className="chip !py-1.5 text-xs inline-flex items-center gap-1">
+                  {rmFor === it.symbol ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Per-RM
+                </button>
+              </div>
+              {rmFor === it.symbol && (
+                <div className="border-t border-ink-100 divide-y divide-ink-50">
+                  {employees.length === 0 && <p className="p-3 text-xs text-ink-400">No RMs to override.</p>}
+                  {employees.map((e) => (
+                    <div key={e.id} className="flex items-center gap-3 px-3 py-2">
+                      <span className="flex-1 text-sm text-ink-600">{e.name}</span>
+                      <RateInput value={overrides[e.id]?.[`lots:${it.symbol}`]} disabled={!canEdit}
+                        placeholder={`${it.rate || lotsRate}`} suffix="$"
+                        onSave={(v) => save(`lots:${it.symbol}`, v, e.id)} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

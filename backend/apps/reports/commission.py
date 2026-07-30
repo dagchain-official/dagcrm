@@ -70,27 +70,41 @@ def _custom_unit(basis):
 def fxartha_products():
     universal, _ = load_rules("fxartha")
     basis = load_basis("fxartha")
-    out = []
-    for b in FXARTHA_BASES:
-        out.append({**b, "rate": universal.get(b["key"], 0.0)})
-        # per-instrument lots rates sit right under the universal "Lots" row — one
-        # per instrument actually traded (+ any already configured). Key
-        # "lots:<SYMBOL>" overrides the universal Lots rate for that instrument;
-        # falls back to the universal Lots rate when unset.
-        if b["key"] == "lots":
-            from apps.integrations.models import FxSymbolLots
-            symbols = set(FxSymbolLots.objects.values_list("symbol", flat=True).distinct())
-            symbols |= {k.split(":", 1)[1] for k in universal if k.startswith("lots:")}
-            for sym in sorted(symbols):
-                key = f"lots:{sym}"
-                out.append({"key": key, "label": sym, "unit": "$ / lot", "basis": "amount",
-                            "rate": universal.get(key, 0.0), "instrument": True})
-    # anything the admin added by hand (a custom base) — kept so its rate persists
+    out = [{**b, "rate": universal.get(b["key"], 0.0)} for b in FXARTHA_BASES]
+    # anything the admin added by hand (a custom base) — kept so its rate persists.
+    # Per-instrument lots rates ("lots:<SYMBOL>") are NOT listed here — they live
+    # in the searchable per-instrument picker under the Lots row (fxartha_instruments).
     for k, v in sorted(universal.items()):
         if k not in _FX_BUILTIN and not k.startswith("lots:"):
             b = basis.get(k, "amount")
             out.append({"key": k, "label": k, "unit": _custom_unit(b),
                         "basis": b, "rate": v, "custom": True})
+    return out
+
+
+def fxartha_instruments():
+    """Every tradeable FX Artha instrument (from the /products catalogue) plus any
+    actually traded or already rated — each with its per-instrument lots rate
+    (universal `lots:<SYMBOL>`). Powers the searchable per-instrument picker under
+    the Lots row in Commission Rules. Unset (rate 0) → the universal Lots rate applies."""
+    from apps.integrations.models import FxSymbolLots
+    universal, _ = load_rules("fxartha")
+    cat = fxartha_catalogue()
+    seen, out = set(), []
+    for ins in cat.get("instruments") or []:
+        sym = (ins.get("symbol") or "").upper().strip()
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        out.append({"symbol": sym, "name": ins.get("display_name") or "",
+                    "segment": ins.get("segment") or "",
+                    "rate": universal.get(f"lots:{sym}", 0.0)})
+    extra = set(FxSymbolLots.objects.values_list("symbol", flat=True).distinct())
+    extra |= {k.split(":", 1)[1] for k in universal if k.startswith("lots:")}
+    for sym in sorted(extra - seen):
+        out.append({"symbol": sym, "name": "", "segment": "",
+                    "rate": universal.get(f"lots:{sym}", 0.0)})
+    out.sort(key=lambda x: x["symbol"])
     return out
 
 
