@@ -328,7 +328,6 @@ export default function LeadDetail() {
 
       {callModal && (
         <CallModal lead={l} busy={busy} onClose={() => setCallModal(false)}
-          onCall={() => engage("call", { place_call: true, remarks: "Call placed" })}
           onSubmit={(payload) => engage("call", payload).then(() => setCallModal(false))} />
       )}
       {meetModal && (
@@ -352,7 +351,7 @@ const MEETING_STATUSES = [
 
 // Log a call: outcome + duration + notes. The outcome auto-moves the lead's
 // status. "Call now" places a Twilio call as a separate step.
-function CallModal({ lead, busy, onClose, onSubmit, onCall }) {
+function CallModal({ lead, busy, onClose, onSubmit }) {
   const [outcome, setOutcome] = useState("connected");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
@@ -383,10 +382,11 @@ function CallModal({ lead, busy, onClose, onSubmit, onCall }) {
         </div>
         <p className="text-xs text-ink-400">The outcome auto-updates the lead's status (e.g. Interested → Qualified, Meeting Booked → Meeting Booked, Not Interested → Nurture).</p>
         <div className="flex justify-between gap-2 pt-1">
-          <button className="chip !py-2 inline-flex items-center gap-1.5" disabled={busy || !lead.phone}
-            onClick={onCall} title={lead.phone ? "Place a Twilio call" : "No phone number"}>
-            <Phone size={14} /> Call now
-          </button>
+          <a href={lead.phone ? `tel:${lead.phone}` : undefined}
+            className={`chip !py-2 inline-flex items-center gap-1.5 ${!lead.phone ? "opacity-50 pointer-events-none" : ""}`}
+            title={lead.phone ? "Open your phone's dialer" : "No phone number"}>
+            <Phone size={14} /> Dial
+          </a>
           <button className="btn-primary" disabled={busy}
             onClick={() => onSubmit({ outcome, duration_min: duration || 0, remarks: notes })}>
             {busy ? "Saving…" : "Save log"}
