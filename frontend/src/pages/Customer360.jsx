@@ -262,49 +262,8 @@ export default function Customer360() {
         <Kpi icon={MessageSquare} label="Communications" value={k.communications_count} tint="bg-blue-100 text-blue-600" />
       </div>
 
-      {/* Trading activity (FXArtha) — per-trader lots & AUM, drives per-lot incentive */}
-      <div className="card p-5">
-        <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2">
-          <CandlestickChart size={18} className="text-brand-600" /> Trading Activity
-          <span className="text-xs font-normal text-ink-400">(auto-synced from FXArtha)</span>
-        </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl bg-brand-500/10 border border-brand-500/20 p-4">
-            <div className="flex items-center gap-2 text-brand-600"><CandlestickChart size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Lots Traded</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">{num(tr.lots_traded)}</p>
-          </div>
-          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
-            <div className="flex items-center gap-2 text-emerald-600"><ArrowDownToLine size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Deposits</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.deposits)}</p>
-          </div>
-          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4">
-            <div className="flex items-center gap-2 text-rose-500"><ArrowUpFromLine size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Withdrawals</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.withdrawals)}</p>
-          </div>
-          <div className="rounded-2xl bg-ink-500/10 border border-ink-500/20 p-4">
-            <div className="flex items-center gap-2 text-ink-500"><Wallet size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Net AUM</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.net_aum)}</p>
-          </div>
-          <div className="rounded-2xl bg-violet-500/10 border border-violet-500/20 p-4">
-            <div className="flex items-center gap-2 text-violet-600"><DollarSign size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Gross Brokerage</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.gross_brokerage)}</p>
-          </div>
-          <div className="rounded-2xl bg-sky-500/10 border border-sky-500/20 p-4">
-            <div className="flex items-center gap-2 text-sky-600"><Coins size={16} /><span className="text-xs font-semibold uppercase tracking-wide">IB Commission</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.ib_commission)}</p>
-          </div>
-          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4">
-            <div className="flex items-center gap-2 text-amber-600"><TrendingDown size={16} /><span className="text-xs font-semibold uppercase tracking-wide">Trading Loss</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">${num(tr.trading_loss)}</p>
-          </div>
-        </div>
-        {(tr.insurance || tr.staking) ? (
-          <div className="flex flex-wrap gap-4 mt-4 text-sm text-ink-500">
-            <span>Insurance: <b className="text-ink-800">${num(tr.insurance)}</b></span>
-            <span>Staking: <b className="text-ink-800">${num(tr.staking)}</b></span>
-          </div>
-        ) : null}
-      </div>
+      {/* Trading activity across BOTH platforms — filter FX Artha / DAGChain */}
+      {d.platforms?.length > 0 && <PlatformActivity platforms={d.platforms} />}
 
       {/* tabs */}
       <div className="flex gap-1 p-1 bg-ink-100 rounded-xl w-full sm:w-fit overflow-x-auto">
@@ -624,6 +583,61 @@ function Chip({ on, label }) {
     <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${on ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-500"}`}>
       {label}
     </span>
+  );
+}
+
+// Trading activity for a customer who may hold FX Artha AND DAGChain accounts —
+// one place, a filter to switch platforms.
+function PlatformActivity({ platforms }) {
+  const [i, setI] = useState(0);
+  const p = platforms[i] || platforms[0];
+  const s = p.stats || {};
+  const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const FX = [
+    ["Lots Traded", num(s.lots_traded), "text-brand-600", CandlestickChart],
+    ["Deposits", money(s.deposits), "text-emerald-600", ArrowDownToLine],
+    ["Withdrawals", money(s.withdrawals), "text-rose-500", ArrowUpFromLine],
+    ["Net AUM", money(s.net_aum), "text-ink-500", Wallet],
+    ["Gross Brokerage", money(s.gross_brokerage), "text-violet-600", DollarSign],
+    ["IB Commission", money(s.ib_commission), "text-sky-600", Coins],
+    ["Trading Loss", money(s.trading_loss), "text-amber-600", TrendingDown],
+  ];
+  const DAG = [
+    ["Nodes", num(s.nodes), "text-brand-600", Boxes],
+    ["Paid Nodes", num(s.nodes_paid), "text-emerald-600", Boxes],
+    ["Node Value", money(s.node_value), "text-violet-600", DollarSign],
+    ["Rewards", money(s.rewards), "text-amber-600", Coins],
+    ["DGC Balance", num(s.dgc_balance), "text-sky-600", Wallet],
+    ["Staked", num(s.staked), "text-teal-600", Coins],
+  ];
+  const tiles = p.platform === "DAGChain" ? DAG : FX;
+  return (
+    <div className="card p-5">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <h3 className="font-bold text-ink-900 flex items-center gap-2">
+          <CandlestickChart size={18} className="text-brand-600" /> Trading Activity
+        </h3>
+        {platforms.length > 1 ? (
+          <div className="flex gap-1 p-1 bg-ink-100 rounded-xl">
+            {platforms.map((pp, idx) => (
+              <button key={pp.platform} onClick={() => setI(idx)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${i === idx ? "bg-ink-0 text-brand-700 shadow-sm" : "text-ink-500 hover:text-ink-700"}`}>
+                {pp.platform}
+              </button>
+            ))}
+          </div>
+        ) : <span className="text-xs font-normal text-ink-400">({p.platform})</span>}
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {tiles.map(([label, val, color, Icon]) => (
+          <div key={label} className="rounded-2xl bg-ink-500/10 border border-ink-500/20 p-4">
+            <div className={`flex items-center gap-2 ${color}`}><Icon size={16} /><span className="text-xs font-semibold uppercase tracking-wide">{label}</span></div>
+            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">{val}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

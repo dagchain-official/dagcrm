@@ -603,6 +603,45 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "date": customer.created_at, "kind": "fx",
             })
 
+        # This person's accounts across BOTH platforms (matched by email), each with
+        # its own stats — Customer 360 shows FX Artha AND DAGChain in one place with
+        # a filter, not only the linked account.
+        from apps.integrations.models import DagChainProfile
+        person_ids = {customer.id}
+        if customer.email:
+            person_ids |= set(Customer.objects.filter(email__iexact=customer.email).values_list("id", flat=True))
+        dag_ids = list(Customer.objects.filter(id__in=person_ids, dagchain__isnull=False).values_list("id", flat=True))
+        fx_ids = list(person_ids - set(dag_ids))     # FX traders + the CRM-own record
+
+        platforms = []
+        if fx_ids:
+            rev = Revenue.objects.filter(customer_id__in=fx_ids)
+            a = AumEntry.objects.filter(customer_id__in=fx_ids)
+            dep = a.filter(entry_type="deposit").aggregate(s=Sum("amount"))["s"] or 0
+            wd = a.filter(entry_type="withdrawal").aggregate(s=Sum("amount"))["s"] or 0
+            c2 = ContributionEntry.objects.filter(customer_id__in=fx_ids).aggregate(
+                i=Sum("insurance"), s=Sum("staking"), tl=Sum("trading_loss"))
+            fxs = {
+                "lots_traded": MetricEntry.objects.filter(customer_id__in=fx_ids, metric__name__icontains="lot").aggregate(s=Sum("value"))["s"] or 0,
+                "gross_brokerage": rev.aggregate(s=Sum("gross_revenue"))["s"] or 0,
+                "ib_commission": rev.aggregate(s=Sum("commission"))["s"] or 0,
+                "deposits": dep, "withdrawals": wd, "net_aum": dep - wd,
+                "insurance": c2["i"] or 0, "staking": c2["s"] or 0, "trading_loss": c2["tl"] or 0,
+            }
+            if customer.external_id == "" or platform == "FX Artha" or any(fxs.values()):
+                platforms.append({"platform": "FX Artha", "stats": fxs})
+        if dag_ids:
+            nodes = DagChainNode.objects.filter(customer_id__in=dag_ids)
+            prof = DagChainProfile.objects.filter(customer_id__in=dag_ids).aggregate(
+                dgc=Sum("dgc_balance"), staked=Sum("staked_amount"))
+            platforms.append({"platform": "DAGChain", "stats": {
+                "nodes": nodes.count(),
+                "nodes_paid": nodes.filter(payment_status="completed").count(),
+                "node_value": nodes.filter(payment_status="completed").aggregate(s=Sum("purchase_price"))["s"] or 0,
+                "rewards": nodes.aggregate(s=Sum("rewards_earned"))["s"] or 0,
+                "dgc_balance": prof["dgc"] or 0, "staked": prof["staked"] or 0,
+            }})
+
         # unified timeline (newest first)
         timeline = []
         for r in revenues:
@@ -646,6 +685,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "trading_loss": con["tl"] or 0,
             },
             "platform": platform,
+            "platforms": platforms,
             "purchases": purchases,
             "sales": PostSaleSerializer(customer.sales.select_related(
                 "product", "business", "agent", "onboarding_owner"), many=True).data,
