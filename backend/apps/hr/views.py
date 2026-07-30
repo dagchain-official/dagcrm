@@ -48,6 +48,21 @@ def _act_payload(act):
     }
 
 
+def reverse_geocode(lat, lng):
+    """lat/lng -> human address via OpenStreetMap Nominatim (free, best-effort)."""
+    try:
+        import requests
+        r = requests.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            params={"lat": lat, "lon": lng, "format": "json", "zoom": 18},
+            headers={"User-Agent": "DAGOS-CRM/1.0"},
+            timeout=6,
+        )
+        return (r.json().get("display_name") or "")[:300]
+    except Exception:
+        return ""
+
+
 class CheckInView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -63,6 +78,7 @@ class CheckInView(APIView):
             try:
                 att.checkin_lat = float(request.data.get("lat"))
                 att.checkin_lng = float(request.data.get("lng"))
+                att.checkin_address = reverse_geocode(att.checkin_lat, att.checkin_lng)
             except (TypeError, ValueError):
                 pass
             att.save()

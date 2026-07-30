@@ -312,6 +312,13 @@ export default function ResourceTable({ resource: propResource }) {
     if (col.bool) return v ? "Yes" : "No";
     if (col.datetime) return dt(v);
     if (col.link) return v ? <a href={v} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">{col.linkLabel || "Open"}</a> : "—";
+    if (col.mapLink) {
+      const url = row.checkin_map;
+      if (!url) return "—";
+      const label = row.checkin_address || "View on map";
+      return <a href={url} target="_blank" rel="noreferrer" title={label}
+        className="text-brand-600 hover:underline">📍 {label}</a>;
+    }
     return v ?? "—";
   };
 

@@ -206,7 +206,8 @@ class AttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
         fields = ["id", "employee", "employee_name", "checkin", "checkout",
-                  "working_hours", "status", "date", "checkin_lat", "checkin_lng", "checkin_map"]
+                  "working_hours", "status", "date", "checkin_lat", "checkin_lng",
+                  "checkin_address", "checkin_map"]
 
     def get_checkin_map(self, obj):
         if obj.checkin_lat is None or obj.checkin_lng is None:

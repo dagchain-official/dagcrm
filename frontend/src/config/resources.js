@@ -536,7 +536,7 @@ export const RESOURCES = {
       { key: "date", label: "Date" },
       { key: "working_hours", label: "Hours" },
       { key: "status", label: "Status", badge: true },
-      { key: "checkin_map", label: "Check-in location", link: true, linkLabel: "📍 View on map" },
+      { key: "checkin_map", label: "Check-in location", mapLink: true },
     ],
     fields: [
       { key: "employee", label: "Employee", type: "ref", ref: "employees", labelKey: "user_name", required: true },
