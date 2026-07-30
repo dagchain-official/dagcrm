@@ -13,7 +13,7 @@ import {
 export const moduleOf = (to) => {
   if (to === "/" || to === "/ai") return null;
   if (to === "/kpi") return "kpi";   // its own module — RMs get their scoped KPI without the company reports/P&L
-  if (["/reports", "/employee-report", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
+  if (["/reports", "/employee-report", "/product-report", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
   // FX Artha & DAGChain: each sub-page has its own permission module so access
   // can be granted/denied per page (Overview / Traders / Lots, Users / Nodes…).
   if (to === "/fxartha") return "fxartha";                                   // Overview
@@ -128,6 +128,7 @@ export const NAV = [
       { to: "/integrations", label: "Integration Hub", icon: Plug },
       { to: "/reports", label: "Reports", icon: BarChart3 },
       { to: "/employee-report", label: "Employee Report", icon: FileText },
+      { to: "/product-report", label: "Product Report", icon: Package },
     ],
   },
 ];
