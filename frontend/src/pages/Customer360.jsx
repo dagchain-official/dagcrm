@@ -655,6 +655,20 @@ function PlatformActivity({ platforms }) {
           </div>
         ))}
       </div>
+      {p.platform !== "DAGChain" && s.symbol_lots?.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xs font-bold text-ink-400 uppercase tracking-wide mb-2">Lots by instrument</p>
+          <div className="flex flex-wrap gap-2">
+            {s.symbol_lots.map((it) => (
+              <div key={it.symbol} className="rounded-xl bg-ink-500/10 border border-ink-500/20 px-3 py-2">
+                <span className="text-sm font-bold text-ink-900">{it.symbol}</span>
+                <span className="text-sm text-ink-600 ml-2 tabular-nums">{num(it.lots)} lots</span>
+                {it.brokerage > 0 && <span className="text-xs text-ink-400 ml-2 tabular-nums">· {money(it.brokerage)} brok.</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

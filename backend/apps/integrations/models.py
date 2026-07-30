@@ -189,6 +189,24 @@ class CommissionRule(models.Model):
         return f"{self.platform}:{self.product_key} [{who}] = {self.rate}"
 
 
+class FxSymbolLots(models.Model):
+    """Per-instrument traded lots for an FX Artha customer. A snapshot refreshed
+    on every sync from /trades (which carries a `symbol` per trade). Powers the
+    per-instrument lots display and per-instrument commission (`lots:<SYMBOL>`)."""
+    customer = models.ForeignKey("crm.Customer", on_delete=models.CASCADE, related_name="symbol_lots")
+    symbol = models.CharField(max_length=40)
+    lots = models.FloatField(default=0)
+    brokerage = models.FloatField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("customer", "symbol")
+        ordering = ["-lots"]
+
+    def __str__(self):
+        return f"{self.customer_id}:{self.symbol} = {self.lots} lots"
+
+
 class IntegrationLog(models.Model):
     connection = models.ForeignKey(IntegrationConnection, on_delete=models.CASCADE, related_name="logs")
     status = models.CharField(max_length=20)   # success / error / skipped

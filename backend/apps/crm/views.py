@@ -704,6 +704,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "deposits": dep, "withdrawals": wd, "net_aum": dep - wd,
                 "insurance": c2["i"] or 0, "staking": c2["s"] or 0, "trading_loss": c2["tl"] or 0,
             }
+            from apps.integrations.models import FxSymbolLots
+            fxs["symbol_lots"] = [
+                {"symbol": s["symbol"], "lots": round(s["lots"], 2), "brokerage": round(s["brokerage"], 2)}
+                for s in FxSymbolLots.objects.filter(customer_id__in=fx_ids)
+                .values("symbol").annotate(lots=Sum("lots"), brokerage=Sum("brokerage")).order_by("-lots")
+            ]
             if customer.external_id == "" or platform == "FX Artha" or any(fxs.values()):
                 platforms.append({"platform": "FX Artha", "stats": fxs})
         if dag_ids:

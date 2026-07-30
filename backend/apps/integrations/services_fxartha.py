@@ -189,6 +189,16 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
     else:
         lots = float(item.get("lots_traded") or 0)
         trades = int(item.get("trades_count") or 0)
+    # per-instrument lots snapshot (refresh: add/update present symbols, drop the rest)
+    if _tr is not None and cust:
+        from .models import FxSymbolLots
+        syms = _tr.get("symbols") or {}
+        for sym, agg in syms.items():
+            FxSymbolLots.objects.update_or_create(
+                customer=cust, symbol=sym,
+                defaults={"lots": round(float(agg.get("lots") or 0), 4),
+                          "brokerage": round(float(agg.get("brokerage") or 0), 4)})
+        cust.symbol_lots.exclude(symbol__in=list(syms.keys())).delete()
     if emp and lots:
         md = lots_metric or MetricDefinition.objects.filter(name__icontains="lot").first()
         if md:
@@ -256,16 +266,24 @@ def _aggregate_transactions(client):
 
 
 def _aggregate_trades(client):
-    """Roll up /trades into {user_id: {"lots": total_lots, "count": n_trades}}.
-    `count` is how many trades the trader placed; `lots` their summed volume."""
+    """Roll up /trades into {user_id: {"lots", "count", "symbols": {SYM: {lots, brokerage}}}}.
+    `count` = trades placed; `lots` = summed volume; `symbols` = per-instrument split
+    (each /trades row carries a `symbol`), used for per-instrument display + commission."""
     out = {}
     try:
         for tr in client.paginate("/trades"):
             uid = tr.get("user_id")
-            if uid:
-                row = out.setdefault(uid, {"lots": 0.0, "count": 0})
-                row["lots"] += float(tr.get("lots") or 0)
-                row["count"] += 1
+            if not uid:
+                continue
+            row = out.setdefault(uid, {"lots": 0.0, "count": 0, "symbols": {}})
+            lots = float(tr.get("lots") or 0)
+            row["lots"] += lots
+            row["count"] += 1
+            sym = (tr.get("symbol") or "").upper().strip()
+            if sym:
+                s = row["symbols"].setdefault(sym, {"lots": 0.0, "brokerage": 0.0})
+                s["lots"] += lots
+                s["brokerage"] += float(tr.get("brokerage") or 0)
     except (RuntimeError, requests.RequestException):
         pass
     return out

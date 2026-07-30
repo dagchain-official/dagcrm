@@ -70,10 +70,24 @@ def _custom_unit(basis):
 def fxartha_products():
     universal, _ = load_rules("fxartha")
     basis = load_basis("fxartha")
-    out = [{**b, "rate": universal.get(b["key"], 0.0)} for b in FXARTHA_BASES]
+    out = []
+    for b in FXARTHA_BASES:
+        out.append({**b, "rate": universal.get(b["key"], 0.0)})
+        # per-instrument lots rates sit right under the universal "Lots" row — one
+        # per instrument actually traded (+ any already configured). Key
+        # "lots:<SYMBOL>" overrides the universal Lots rate for that instrument;
+        # falls back to the universal Lots rate when unset.
+        if b["key"] == "lots":
+            from apps.integrations.models import FxSymbolLots
+            symbols = set(FxSymbolLots.objects.values_list("symbol", flat=True).distinct())
+            symbols |= {k.split(":", 1)[1] for k in universal if k.startswith("lots:")}
+            for sym in sorted(symbols):
+                key = f"lots:{sym}"
+                out.append({"key": key, "label": sym, "unit": "$ / lot", "basis": "amount",
+                            "rate": universal.get(key, 0.0), "instrument": True})
     # anything the admin added by hand (a custom base) — kept so its rate persists
     for k, v in sorted(universal.items()):
-        if k not in _FX_BUILTIN:
+        if k not in _FX_BUILTIN and not k.startswith("lots:"):
             b = basis.get(k, "amount")
             out.append({"key": k, "label": k, "unit": _custom_unit(b),
                         "basis": b, "rate": v, "custom": True})

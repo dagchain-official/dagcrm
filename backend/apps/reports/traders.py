@@ -53,6 +53,34 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
             return preview
         return rate_for(universal, overrides, "lots", emp_id, fallback=fallback)
 
+    # per-instrument lots snapshot (customer -> {symbol: lots}) for per-instrument rates
+    from apps.integrations.models import FxSymbolLots
+    sym_lots = defaultdict(dict)
+    for r in FxSymbolLots.objects.values("customer_id", "symbol", "lots"):
+        sym_lots[r["customer_id"]][r["symbol"]] = float(r["lots"] or 0)
+
+    def _sym_rate(emp_id, sym, base):
+        """Per-instrument lots rate if set (RM override → universal), else the base lot rate."""
+        key = f"lots:{sym}"
+        over = overrides.get(emp_id)
+        if over and key in over:
+            return over[key]
+        if key in universal:
+            return universal[key]
+        return base
+
+    def eff_lot_rate(emp_id, customer_id, base):
+        """Effective per-lot rate for a customer: lots-weighted blend of the
+        per-instrument rates. Falls back to the flat base rate when there is no
+        per-symbol data or no per-instrument rate is configured."""
+        syms = sym_lots.get(customer_id)
+        if preview is not None or not syms:
+            return base
+        total = sum(syms.values())
+        if total <= 0:
+            return base
+        return sum(l * _sym_rate(emp_id, s, base) for s, l in syms.items()) / total
+
     def pct_of(emp_id, key):
         # brokerage / deposit rates are only ever from the rules (no legacy source)
         return rate_for(universal, overrides, key, emp_id) / 100
@@ -90,15 +118,17 @@ def compute_traders_lots(month, year, rate=None, employee_id=None):
         emp_meta[key] = (getattr(owner, "id", None), getattr(owner, "name", None) or "Unassigned")
         eid = emp.id if emp else None
         r = lot_rate_of(eid)
+        eff = eff_lot_rate(eid, c.id, r)   # per-instrument blended rate
         lm, lt = mon.get(c.id, 0.0), tot.get(c.id, 0.0)
-        # commission = lots × per-lot + brokerage % + net-deposit %
+        # commission = lots × per-lot (per-instrument blended) + brokerage % + net-deposit %
         extra = (brok.get(c.id, 0.0) * pct_of(eid, "brokerage")
                  + max(aum.get(c.id, 0.0), 0.0) * pct_of(eid, "deposit")) if eid else 0.0
         by_emp[key].append({
             "customer_id": c.id, "customer_name": c.name,
             "lots_month": round(lm, 2), "lots_total": round(lt, 2),
-            "commission_month": round(lm * r, 2),
-            "commission_total": round(lt * r + extra, 2),
+            "symbols": sym_lots.get(c.id, {}),
+            "commission_month": round(lm * eff, 2),
+            "commission_total": round(lt * eff + extra, 2),
         })
 
     employees = []

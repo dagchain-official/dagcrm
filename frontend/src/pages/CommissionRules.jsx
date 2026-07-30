@@ -147,11 +147,14 @@ export default function CommissionRules() {
           const isOpen = open[p.key];
           const overriddenCount = employees.filter((e) => overrides[e.id]?.[p.key] != null).length;
           return (
-            <div key={p.key} className="card overflow-hidden">
+            <div key={p.key} className={`card overflow-hidden ${p.instrument ? "ml-6 border-l-2 border-l-brand-200" : ""}`}>
               <div className="flex flex-wrap items-center gap-3 p-4">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-ink-900 truncate">{p.label}{p.custom && <span className="ml-1.5 badge bg-ink-100 text-ink-500">custom</span>}</p>
-                  <p className="text-xs text-ink-400">{p.kind && p.kind !== "custom" ? `${p.kind} · ` : ""}{p.unit}</p>
+                  <p className="font-bold text-ink-900 truncate">{p.label}
+                    {p.custom && <span className="ml-1.5 badge bg-ink-100 text-ink-500">custom</span>}
+                    {p.instrument && <span className="ml-1.5 badge bg-brand-50 text-brand-600">instrument</span>}
+                  </p>
+                  <p className="text-xs text-ink-400">{p.instrument ? "per-instrument lots rate · " : p.kind && p.kind !== "custom" ? `${p.kind} · ` : ""}{p.unit}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-ink-400">Universal</span>
