@@ -219,6 +219,10 @@ class Customer(models.Model):
     account_type = models.CharField(max_length=40, blank=True)      # e.g. Elite, Micro, VIP
     account_number = models.CharField(max_length=40, blank=True)
     balance = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    # Onboarding status (FX Artha): where the account is in the journey
+    kyc_status = models.CharField(max_length=30, blank=True)        # pending / approved / rejected
+    account_status = models.CharField(max_length=30, blank=True)    # active / suspended …
+    account_opened_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = CustomerQuerySet.as_manager()

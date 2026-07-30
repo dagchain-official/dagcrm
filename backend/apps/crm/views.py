@@ -686,6 +686,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
         fx_ids = list(person_ids - set(dag_ids))     # FX traders + the CRM-own record
 
         platforms = []
+        onboarding = []   # per-platform account journey (registered → KYC → account → funded → trading)
+
+        def _stage(steps):
+            return next((s["label"] for s in reversed(steps) if s["done"]), "—")
+
         if fx_ids:
             rev = Revenue.objects.filter(customer_id__in=fx_ids)
             a = AumEntry.objects.filter(customer_id__in=fx_ids)
@@ -712,6 +717,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
             ]
             if customer.external_id == "" or platform == "FX Artha" or any(fxs.values()):
                 platforms.append({"platform": "FX Artha", "stats": fxs})
+            # onboarding journey
+            opened_at = next((c.account_opened_at for c in fxcusts if c.account_opened_at), None)
+            primary = next((c for c in fxcusts if c.account_number), fxcusts[0] if fxcusts else None)
+            kyc = (primary.kyc_status if primary else "") or ""
+            acct_no = [c.account_number for c in fxcusts if c.account_number]
+            n_acct = len(acct_no)
+            fx_lots = float(fxs.get("lots_traded") or 0)
+            fx_dep = float(dep or 0)
+            fx_steps = [
+                {"label": "Registered", "done": True, "at": opened_at, "detail": ""},
+                {"label": "KYC", "done": kyc.lower() in ("approved", "verified", "completed"), "detail": kyc or "pending"},
+                {"label": "Trading account", "done": n_acct > 0,
+                 "detail": (f"{n_acct} account{'s' if n_acct != 1 else ''} · {', '.join(acct_no)}") if n_acct else "not opened yet"},
+                {"label": "Funded", "done": fx_dep > 0, "detail": f"${fx_dep:,.0f} deposited" if fx_dep else "no deposit yet"},
+                {"label": "Trading", "done": fx_lots > 0, "detail": f"{fx_lots:g} lots traded" if fx_lots else "no trades yet"},
+            ]
+            onboarding.append({"platform": "FX Artha", "accounts": n_acct,
+                               "stage": _stage(fx_steps), "steps": fx_steps})
         if dag_ids:
             nodes = DagChainNode.objects.filter(customer_id__in=dag_ids)
             prof = DagChainProfile.objects.filter(customer_id__in=dag_ids).aggregate(
@@ -726,6 +749,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "rewards": nodes.aggregate(s=Sum("rewards_earned"))["s"] or 0,
                 "dgc_balance": prof["dgc"] or 0, "staked": prof["staked"] or 0,
             }})
+            # onboarding journey
+            profiles = list(DagChainProfile.objects.filter(customer_id__in=dag_ids))
+            dp = profiles[0] if profiles else None
+            dnodes = nodes.count()
+            vnodes = nodes.filter(kind="validator").count()
+            snodes = nodes.filter(kind="storage").count()
+            joined = next((getattr(p, "joined_at", None) for p in profiles if getattr(p, "joined_at", None)), None)
+            dkyc = (getattr(dp, "kyc_status", "") if dp else "") or ""
+            verified = bool(dp and getattr(dp, "email_verified", False))
+            dag_steps = [
+                {"label": "Registered", "done": True, "at": joined, "detail": ""},
+                {"label": "Email verified", "done": verified, "detail": "verified" if verified else "not verified"},
+                {"label": "KYC", "done": dkyc.lower() in ("approved", "verified", "completed"), "detail": dkyc or "pending"},
+                {"label": "Nodes", "done": dnodes > 0,
+                 "detail": (f"{vnodes} validator · {snodes} storage") if dnodes else "no nodes yet"},
+            ]
+            onboarding.append({"platform": "DAGChain", "accounts": len(profiles) or (1 if dag_ids else 0),
+                               "stage": _stage(dag_steps), "steps": dag_steps})
 
         # unified timeline (newest first)
         timeline = []
@@ -771,6 +812,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
             },
             "platform": platform,
             "platforms": platforms,
+            "onboarding": onboarding,
             "purchases": purchases,
             "sales": PostSaleSerializer(customer.sales.select_related(
                 "product", "business", "agent", "onboarding_owner"), many=True).data,

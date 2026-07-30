@@ -5,7 +5,7 @@ import {
   MessageSquare, Calendar, Ticket as TicketIcon, Activity, UserPlus, Clock,
   Plus, Upload, FileText, Download, Paperclip, UserCog,
   CandlestickChart, ArrowDownToLine, ArrowUpFromLine, Wallet, Coins, TrendingDown,
-  ShoppingBag, Boxes,
+  ShoppingBag, Boxes, CheckCircle2, Circle, GitBranch,
 } from "lucide-react";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
@@ -177,6 +177,7 @@ export default function Customer360() {
     let at = 1;
     if (purchases.length) t.splice(at++, 0, "Purchases");
     t.splice(at, 0, "Sales");                   // always available (can add manually)
+    if (d.onboarding?.length) t.push("Status"); // account journey per platform
     return t;
   })();
 
@@ -543,6 +544,43 @@ export default function Customer360() {
           </div>
           <Timeline items={d.timeline} />
         </Section>
+      )}
+
+      {/* STATUS — per-platform account journey */}
+      {tab === "Status" && (
+        <div className="space-y-4">
+          {(d.onboarding || []).map((o) => (
+            <Section key={o.platform}>
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <GitBranch size={18} className="text-brand-600" />
+                <span className="font-bold text-ink-900">{o.platform}</span>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${PLATFORM_BADGE[o.platform] || "bg-ink-100 text-ink-600"}`}>
+                  {o.accounts} account{o.accounts === 1 ? "" : "s"}
+                </span>
+                <span className="ml-auto text-xs text-ink-400">Current stage:</span>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">{o.stage}</span>
+              </div>
+              <div className="space-y-0.5">
+                {o.steps.map((s, i) => (
+                  <div key={s.label} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      {s.done
+                        ? <CheckCircle2 size={22} className="text-emerald-500 shrink-0" />
+                        : <Circle size={22} className="text-ink-300 shrink-0" />}
+                      {i < o.steps.length - 1 && <div className={`w-px flex-1 my-1 ${s.done ? "bg-emerald-300" : "bg-ink-200"}`} />}
+                    </div>
+                    <div className="pb-4 min-w-0">
+                      <p className={`text-sm font-semibold ${s.done ? "text-ink-900" : "text-ink-400"}`}>{s.label}</p>
+                      {s.detail && <p className="text-xs text-ink-500">{s.detail}</p>}
+                      {s.at && <p className="text-[11px] text-ink-400">{date(s.at)}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          ))}
+          {(d.onboarding || []).length === 0 && <EmptyState title="No platform account" hint="This customer has no linked FX Artha or DAGChain account yet." />}
+        </div>
       )}
 
       {/* quick-action modal */}

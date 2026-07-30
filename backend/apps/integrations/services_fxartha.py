@@ -110,6 +110,10 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
         "account_type": item.get("account_type") or "",
         "account_number": item.get("account_number") or "",
         "balance": float(item.get("balance") or 0),
+        # onboarding status snapshot
+        "kyc_status": item.get("kyc_status") or "",
+        "account_status": item.get("account_status") or "",
+        "account_opened_at": parse_datetime(item.get("account_opened_at")) if item.get("account_opened_at") else None,
     }
     cust, _ = Customer.objects.update_or_create(external_id=uid, defaults=fields)
     # Seed the owner from the lead's RM on first sight; never overwrite a manual
