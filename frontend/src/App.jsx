@@ -4,6 +4,7 @@ import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
+import EmployeeReport from "./pages/EmployeeReport";
 import PnL from "./pages/PnL";
 import TargetBoard from "./pages/TargetBoard";
 import AssignTarget from "./pages/AssignTarget";
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="leaves-mine" element={<MyLeaves />} />
         <Route path="ai" element={<AIAssistant />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="employee-report" element={<EmployeeReport />} />
         <Route path="pnl" element={<PnL />} />
         <Route path="target-board" element={<TargetBoard />} />
         <Route path="assign-target" element={<AssignTarget />} />

@@ -1411,6 +1411,126 @@ def kpi_performance(request):
 
 
 @api_view(["GET"])
+@permission_classes([module_required("reports")])
+def employee_report(request):
+    """One place for upper management: pick an employee, see everything about them
+    for a month — attendance, location check-ins, activity, leads, meetings/field
+    visits, overdue follow-ups, revenue, KPI metrics and the performance scorecard.
+
+    No ?employee -> returns the pickable employee list (scoped to the caller's tree).
+    """
+    from datetime import timedelta
+    from django.db.models import Max
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
+    from apps.crm.models import MetricDefinition
+    from apps.hr.models import EmployeeActivity
+    from .metrics import _leaf_stats
+    from .pnl import _revenue_by_user
+
+    today = timezone.localdate()
+    month = int(request.query_params.get("month") or today.month)
+    year = int(request.query_params.get("year") or today.year)
+    role = getattr(getattr(request.user, "role", None), "name", "")
+    sees_all = is_admin_view(request.user) or role in ("Finance", "HR")
+    allowed = None if sees_all else subordinate_user_ids(request.user, include_self=True)
+
+    # --- picker list (no employee selected yet)
+    emp_id = request.query_params.get("employee")
+    if not emp_id:
+        emps = Employee.objects.select_related("user").exclude(user__is_superuser=True)
+        rows = [{"id": e.id, "name": e.user.name,
+                 "role": getattr(getattr(e.user, "role", None), "name", "")}
+                for e in emps if e.user and (sees_all or e.user_id in allowed)]
+        rows.sort(key=lambda r: r["name"])
+        return Response({"employees": rows})
+
+    emp = (Employee.objects.select_related("user", "hierarchy_level", "manager")
+           .filter(id=emp_id).exclude(user__is_superuser=True).first())
+    if not emp or not emp.user:
+        return Response({"found": False})
+    if not sees_all and emp.user_id not in allowed:
+        return Response({"detail": "Not allowed to view this employee."}, status=403)
+    u = emp.user
+
+    # --- attendance + location check-ins (month)
+    att = Attendance.objects.filter(employee=emp, date__year=year, date__month=month)
+    attendance = {
+        "days": att.count(),
+        "present": att.filter(status__in=["present", "half_day"]).count(),
+        "absent": att.filter(status="absent").count(),
+        "leave": att.filter(status="leave").count(),
+        "hours": round(float(att.aggregate(t=Sum("working_hours"))["t"] or 0), 1),
+    }
+    checkins = [{
+        "date": a.date, "checkin": a.checkin, "checkout": a.checkout,
+        "address": a.checkin_address,
+        "map": f"https://www.google.com/maps?q={a.checkin_lat},{a.checkin_lng}" if a.checkin_lat is not None else "",
+    } for a in att.order_by("-date")[:31]]
+
+    # --- activity tracking (month)
+    agg = (EmployeeActivity.objects.filter(employee=emp, date__year=year, date__month=month)
+           .aggregate(calls=Sum("calls_completed"), notes=Sum("notes_added"),
+                      tickets=Sum("tickets_updated"), active=Sum("active_duration"), idle=Sum("idle_duration")))
+    activity = {k: int(v or 0) for k, v in agg.items()}
+
+    # --- leads owned (current pipeline) + this-month conversions
+    leads = Lead.objects.pipeline().filter(assigned_to=u)
+    live = leads.exclude(status__in=["converted", "lost"])
+    leadstats = {
+        "owned": leads.count(),
+        "converted": leads.filter(status="converted").count(),
+        "converted_month": leads.filter(status="converted", converted_at__year=year, converted_at__month=month).count(),
+        "lost": leads.filter(status="lost").count(),
+        "open": leads.exclude(status__in=["converted", "lost", "nurture"]).count(),
+        "weighted_pipeline": round(sum(float(l.weighted_pipeline or 0) for l in live), 2),
+        "conversion_rate": round(leads.filter(status="converted").count() / leads.count() * 100, 1) if leads.count() else 0.0,
+    }
+
+    # --- meetings + field-visit locations
+    macts = (LeadActivity.objects.filter(user=u, activity_type="meeting")
+             .select_related("lead").order_by("-created_at")[:50])
+    meetings = [{
+        "lead": a.lead.name, "lead_id": a.lead_id, "at": a.meeting_at, "status": a.meeting_status,
+        "planned": a.location, "reached": a.visit_address,
+        "map": f"https://www.google.com/maps?q={a.visit_lat},{a.visit_lng}" if a.visit_lat is not None else "",
+    } for a in macts]
+    meetings_month = LeadActivity.objects.filter(
+        user=u, activity_type="meeting", created_at__year=year, created_at__month=month).count()
+
+    # --- overdue follow-ups (open leads untouched 3+ days)
+    cutoff = timezone.now() - timedelta(days=3)
+    open_leads = (leads.exclude(status__in=["converted", "lost", "nurture"])
+                  .annotate(last=Max("activities__created_at")))
+    overdue = []
+    for l in open_leads:
+        ref = l.last or l.created_at
+        if ref < cutoff:
+            overdue.append({"lead": l.name, "lead_id": l.id, "days": (today - ref.date()).days})
+    overdue.sort(key=lambda x: -x["days"])
+
+    # --- revenue, KPI metrics, performance scorecard
+    by_user, _ = _revenue_by_user(month, year)
+    mdefs = list(MetricDefinition.objects.filter(status="active"))
+    leaf = _leaf_stats(mdefs, month, year)
+    metrics = [{"metric": m.name, "value": round(v, 2), "unit": m.unit, "category": m.category}
+               for m in mdefs for v in [leaf.get((emp.id, m.id), (0.0, 0))[0]] if v]
+    perf = next((r for r in compute_performance(month, year)["rows"] if r["id"] == emp.id), None)
+
+    return Response({
+        "found": True, "month": month, "year": year,
+        "profile": {
+            "name": u.name, "email": u.email, "role": role if u.id == request.user.id else getattr(getattr(u, "role", None), "name", ""),
+            "level": emp.hierarchy_level.level_name if emp.hierarchy_level else None,
+            "manager": emp.manager.name if emp.manager else None,
+        },
+        "attendance": attendance, "checkins": checkins, "activity": activity,
+        "leads": leadstats, "meetings": meetings, "meetings_month": meetings_month,
+        "overdue_followups": overdue[:30],
+        "revenue": round(by_user.get(u.id, 0.0), 2), "metrics": metrics, "performance": perf,
+    })
+
+
+@api_view(["GET"])
 def customer_fx(request):
     """Auto-fill values for the AUM / Contribution forms from a customer's synced
     FXArtha data. Select a customer -> deposits, withdrawals, brokerage, insurance,
