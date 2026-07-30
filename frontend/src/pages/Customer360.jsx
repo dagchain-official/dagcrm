@@ -257,7 +257,7 @@ export default function Customer360() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Kpi icon={DollarSign} label="Net Revenue" value={money(k.total_net_revenue)} tint="bg-emerald-100 text-emerald-600" />
-        <Kpi icon={Package} label="Products" value={k.products_count} tint="bg-brand-100 text-brand-600" />
+        <Kpi icon={Package} label="Products" value={(k.products_count || 0) + (d.platforms?.length || 0)} tint="bg-brand-100 text-brand-600" />
         <Kpi icon={LifeBuoy} label="Open Tickets" value={k.open_tickets} tint="bg-amber-100 text-amber-600" />
         <Kpi icon={MessageSquare} label="Communications" value={k.communications_count} tint="bg-blue-100 text-blue-600" />
       </div>
@@ -413,25 +413,37 @@ export default function Customer360() {
       )}
 
       {/* PRODUCTS */}
-      {tab === "Products" && (
-        <Section>
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
-              <Th>Product</Th><Th>Business</Th><Th>Status</Th>
-            </tr></thead>
-            <tbody>
-              {d.products.map((p) => (
-                <tr key={p.id} className="border-t border-ink-100">
-                  <td className="py-3 px-4 font-medium text-ink-800">{p.product_name || "—"}</td>
-                  <td className="py-3 px-4 text-ink-500">{p.business_name}</td>
-                  <td className="py-3 px-4"><Badge value={p.status} map={STATUS_COLORS} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {d.products.length === 0 && <EmptyState title="No products" />}
-        </Section>
-      )}
+      {tab === "Products" && (() => {
+        // the platform account(s) they opened count as products too
+        const platRows = (d.platforms || []).map((p) => ({
+          id: `plat-${p.platform}`,
+          product_name: p.platform === "DAGChain"
+            ? (p.stats.account_type || "DAGChain Account")
+            : `${p.stats.account_type || "FX Artha"} Account`,
+          business_name: p.platform,
+          status: "active",
+        }));
+        const rows = [...platRows, ...d.products];
+        return (
+          <Section>
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-ink-400 text-xs uppercase tracking-wide">
+                <Th>Product</Th><Th>Business</Th><Th>Status</Th>
+              </tr></thead>
+              <tbody>
+                {rows.map((p) => (
+                  <tr key={p.id} className="border-t border-ink-100">
+                    <td className="py-3 px-4 font-medium text-ink-800">{p.product_name || "—"}</td>
+                    <td className="py-3 px-4 text-ink-500">{p.business_name}</td>
+                    <td className="py-3 px-4"><Badge value={p.status} map={STATUS_COLORS} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length === 0 && <EmptyState title="No products" />}
+          </Section>
+        );
+      })()}
 
       {/* REVENUE */}
       {tab === "Revenue" && (
