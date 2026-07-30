@@ -557,7 +557,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
         from apps.support.serializers import TicketSerializer
 
         customer = self.get_object()
-        revenues = Revenue.objects.filter(customer=customer).select_related("business", "product")
+        # One person may hold several account records (CRM-own + FX Artha + DAGChain)
+        # under one email. Aggregate the money — revenue, AUM, brokerage — across ALL
+        # of them so Customer 360 shows their true total, not just the viewed record.
+        person_ids = {customer.id}
+        if customer.email:
+            person_ids |= set(Customer.objects.filter(email__iexact=customer.email).values_list("id", flat=True))
+        revenues = Revenue.objects.filter(customer_id__in=person_ids).select_related("business", "product")
         tickets = Ticket.objects.filter(customer=customer).select_related("assigned_to")
         comms = customer.communications.all()
         products = customer.products.select_related("business", "product")
@@ -607,9 +613,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
         # its own stats — Customer 360 shows FX Artha AND DAGChain in one place with
         # a filter, not only the linked account.
         from apps.integrations.models import DagChainProfile
-        person_ids = {customer.id}
-        if customer.email:
-            person_ids |= set(Customer.objects.filter(email__iexact=customer.email).values_list("id", flat=True))
         dag_ids = list(Customer.objects.filter(id__in=person_ids, dagchain__isnull=False).values_list("id", flat=True))
         fx_ids = list(person_ids - set(dag_ids))     # FX traders + the CRM-own record
 
