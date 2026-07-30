@@ -106,6 +106,10 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
         "phone": item.get("phone") or "",
         "country": item.get("country") or "",
         "lead": lead,
+        # which account they opened + live balance (blank on the extra-users pass)
+        "account_type": item.get("account_type") or "",
+        "account_number": item.get("account_number") or "",
+        "balance": float(item.get("balance") or 0),
     }
     cust, _ = Customer.objects.update_or_create(external_id=uid, defaults=fields)
     # Seed the owner from the lead's RM on first sight; never overwrite a manual

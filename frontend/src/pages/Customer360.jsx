@@ -595,6 +595,7 @@ function PlatformActivity({ platforms }) {
   const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
   const FX = [
+    ["Balance", money(s.balance), "text-teal-600", Wallet],
     ["Lots Traded", num(s.lots_traded), "text-brand-600", CandlestickChart],
     ["Deposits", money(s.deposits), "text-emerald-600", ArrowDownToLine],
     ["Withdrawals", money(s.withdrawals), "text-rose-500", ArrowUpFromLine],
@@ -629,6 +630,11 @@ function PlatformActivity({ platforms }) {
           </div>
         ) : <span className="text-xs font-normal text-ink-400">({p.platform})</span>}
       </div>
+      <p className="text-sm text-ink-500 mb-4">
+        <b className="text-ink-700">Account:</b> {s.account_type || "—"}
+        {s.account_number ? ` · #${s.account_number}` : ""}
+        {" · "}<b className="text-ink-700">Balance:</b> {p.platform === "DAGChain" ? `${num(s.balance)} DGC` : money(s.balance)}
+      </p>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {tiles.map(([label, val, color, Icon]) => (
           <div key={label} className="rounded-2xl bg-ink-500/10 border border-ink-500/20 p-4">

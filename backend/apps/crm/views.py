@@ -621,7 +621,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
             wd = a.filter(entry_type="withdrawal").aggregate(s=Sum("amount"))["s"] or 0
             c2 = ContributionEntry.objects.filter(customer_id__in=fx_ids).aggregate(
                 i=Sum("insurance"), s=Sum("staking"), tl=Sum("trading_loss"))
+            fxcusts = list(Customer.objects.filter(id__in=fx_ids))
             fxs = {
+                "account_type": next((c.account_type for c in fxcusts if c.account_type), ""),
+                "account_number": next((c.account_number for c in fxcusts if c.account_number), ""),
+                "balance": sum(float(c.balance or 0) for c in fxcusts),
                 "lots_traded": MetricEntry.objects.filter(customer_id__in=fx_ids, metric__name__icontains="lot").aggregate(s=Sum("value"))["s"] or 0,
                 "gross_brokerage": rev.aggregate(s=Sum("gross_revenue"))["s"] or 0,
                 "ib_commission": rev.aggregate(s=Sum("commission"))["s"] or 0,
@@ -634,7 +638,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
             nodes = DagChainNode.objects.filter(customer_id__in=dag_ids)
             prof = DagChainProfile.objects.filter(customer_id__in=dag_ids).aggregate(
                 dgc=Sum("dgc_balance"), staked=Sum("staked_amount"))
+            kinds = [k for k in nodes.values_list("kind", flat=True).distinct() if k]
             platforms.append({"platform": "DAGChain", "stats": {
+                "account_type": ", ".join(k.title() for k in kinds) + (" Node" if kinds else ""),
+                "balance": prof["dgc"] or 0,      # DGC balance = their current balance
                 "nodes": nodes.count(),
                 "nodes_paid": nodes.filter(payment_status="completed").count(),
                 "node_value": nodes.filter(payment_status="completed").aggregate(s=Sum("purchase_price"))["s"] or 0,
