@@ -219,11 +219,11 @@ export default function Customer360() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-extrabold text-ink-900">{c.name}</h1>
-              {d.platform && (
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${PLATFORM_BADGE[d.platform] || "bg-ink-100 text-ink-600"}`}>
-                  {d.platform} account
+              {(d.platforms?.length ? d.platforms.map((p) => p.platform) : (d.platform ? [d.platform] : [])).map((pl) => (
+                <span key={pl} className={`text-xs font-bold px-2.5 py-1 rounded-full ${PLATFORM_BADGE[pl] || "bg-ink-100 text-ink-600"}`}>
+                  {pl} account
                 </span>
-              )}
+              ))}
             </div>
             <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-ink-500">
               {c.email && <span className="inline-flex items-center gap-1.5"><Mail size={14} /> {c.email}</span>}
@@ -602,10 +602,12 @@ function Chip({ on, label }) {
 // one place, a filter to switch platforms.
 function PlatformActivity({ platforms }) {
   const [i, setI] = useState(0);
+  const [showLots, setShowLots] = useState(false);
   const p = platforms[i] || platforms[0];
   const s = p.stats || {};
   const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const hasSymbols = p.platform !== "DAGChain" && s.symbol_lots?.length > 0;
   const FX = [
     ["Balance", money(s.balance), "text-teal-600", Wallet],
     ["Lots Traded", num(s.lots_traded), "text-brand-600", CandlestickChart],
@@ -648,27 +650,32 @@ function PlatformActivity({ platforms }) {
         {" · "}<b className="text-ink-700">Balance:</b> {p.platform === "DAGChain" ? `${num(s.balance)} DGC` : money(s.balance)}
       </p>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {tiles.map(([label, val, color, Icon]) => (
-          <div key={label} className="rounded-2xl bg-ink-500/10 border border-ink-500/20 p-4">
-            <div className={`flex items-center gap-2 ${color}`}><Icon size={16} /><span className="text-xs font-semibold uppercase tracking-wide">{label}</span></div>
-            <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">{val}</p>
-          </div>
-        ))}
+        {tiles.map(([label, val, color, Icon]) => {
+          const clickable = label === "Lots Traded" && hasSymbols;
+          return (
+            <div key={label}
+              onClick={clickable ? () => setShowLots(true) : undefined}
+              className={`rounded-2xl bg-ink-500/10 border border-ink-500/20 p-4 ${clickable ? "cursor-pointer hover:bg-ink-500/20 transition" : ""}`}>
+              <div className={`flex items-center gap-2 ${color}`}><Icon size={16} /><span className="text-xs font-semibold uppercase tracking-wide">{label}</span></div>
+              <p className="text-2xl font-extrabold text-ink-900 mt-2 tabular-nums">{val}</p>
+              {clickable && <p className="text-[11px] text-brand-600 font-semibold mt-1">Click to see instruments →</p>}
+            </div>
+          );
+        })}
       </div>
-      {p.platform !== "DAGChain" && s.symbol_lots?.length > 0 && (
-        <div className="mt-4">
-          <p className="text-xs font-bold text-ink-400 uppercase tracking-wide mb-2">Lots by instrument</p>
-          <div className="flex flex-wrap gap-2">
-            {s.symbol_lots.map((it) => (
-              <div key={it.symbol} className="rounded-xl bg-ink-500/10 border border-ink-500/20 px-3 py-2">
-                <span className="text-sm font-bold text-ink-900">{it.symbol}</span>
-                <span className="text-sm text-ink-600 ml-2 tabular-nums">{num(it.lots)} lots</span>
-                {it.brokerage > 0 && <span className="text-xs text-ink-400 ml-2 tabular-nums">· {money(it.brokerage)} brok.</span>}
-              </div>
-            ))}
-          </div>
+
+      <Modal open={showLots} onClose={() => setShowLots(false)} title="Lots traded by instrument">
+        <div className="space-y-2">
+          {(s.symbol_lots || []).map((it) => (
+            <div key={it.symbol} className="flex items-center gap-3 p-3 rounded-xl bg-ink-500/5 border border-ink-500/10">
+              <span className="text-sm font-bold text-ink-900 flex-1">{it.symbol}</span>
+              <span className="text-sm font-extrabold text-ink-900 tabular-nums">{num(it.lots)} lots</span>
+              {it.brokerage > 0 && <span className="text-xs text-ink-400 tabular-nums w-24 text-right">{money(it.brokerage)} brok.</span>}
+            </div>
+          ))}
+          {(s.symbol_lots || []).length === 0 && <p className="text-sm text-ink-400">No instrument data.</p>}
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
