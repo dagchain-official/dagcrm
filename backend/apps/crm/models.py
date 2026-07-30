@@ -162,6 +162,7 @@ class LeadActivity(models.Model):
     outcome = models.CharField(max_length=20, choices=OUTCOME, blank=True)
     meeting_status = models.CharField(max_length=20, choices=MEETING_STATUS, blank=True)
     meeting_at = models.DateTimeField(null=True, blank=True)   # scheduled meeting time
+    location = models.CharField(max_length=255, blank=True)    # meeting location
     followup_date = models.DateField(null=True, blank=True)
     next_action = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

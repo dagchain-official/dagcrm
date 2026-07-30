@@ -89,6 +89,7 @@ export default function LeadDetail() {
         outcome: opts.outcome || "",
         meeting_status: opts.meeting_status || "",
         meeting_at: opts.meeting_at || null,
+        location: opts.location || "",
       });
       await load();
       const t = data.telephony;
@@ -402,6 +403,7 @@ function CallModal({ lead, busy, onClose, onSubmit }) {
 function MeetingModal({ busy, onClose, onSubmit }) {
   const [status, setStatus] = useState("scheduled");
   const [when, setWhen] = useState("");
+  const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   return (
     <Modal open onClose={onClose} title="Log meeting">
@@ -417,13 +419,18 @@ function MeetingModal({ busy, onClose, onSubmit }) {
           <input className="input" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
         </div>
         <div>
+          <label className="label">Location</label>
+          <input className="input" value={location} onChange={(e) => setLocation(e.target.value)}
+            placeholder="Office / Zoom link / address" />
+        </div>
+        <div>
           <label className="label">Notes</label>
           <textarea className="input min-h-[80px]" value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="Agenda / outcome…" />
         </div>
         <div className="flex justify-end pt-1">
           <button className="btn-primary" disabled={busy}
-            onClick={() => onSubmit({ meeting_status: status, meeting_at: when || null, remarks: notes })}>
+            onClick={() => onSubmit({ meeting_status: status, meeting_at: when || null, location, remarks: notes })}>
             {busy ? "Saving…" : "Save meeting"}
           </button>
         </div>

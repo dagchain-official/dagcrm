@@ -59,6 +59,12 @@ class CheckInView(APIView):
             att.checkin = timezone.now()
             att.checkout = None
             att.status = "present"
+            # geolocation captured by the browser at clock-in (optional)
+            try:
+                att.checkin_lat = float(request.data.get("lat"))
+                att.checkin_lng = float(request.data.get("lng"))
+            except (TypeError, ValueError):
+                pass
             att.save()
         return Response(_att_payload(att))
 

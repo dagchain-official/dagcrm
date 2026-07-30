@@ -13,6 +13,7 @@ import GlobalSearch from "./GlobalSearch";
 import NotificationBell from "./NotificationBell";
 import ErrorBoundary from "./ErrorBoundary";
 import Tour, { GuideButton } from "./Tour";
+import ReminderPopup from "./ReminderPopup";
 
 const today = new Date().toLocaleDateString("en-GB", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -105,6 +106,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <ErrorBoundary silent><Tour /></ErrorBoundary>
+      <ErrorBoundary silent><ReminderPopup /></ErrorBoundary>
       <Sidebar open={open} />
       {open && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setOpen(false)} />}
 

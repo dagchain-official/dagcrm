@@ -187,6 +187,60 @@ class LeadViewSet(viewsets.ModelViewSet):
         from .scoring import rescore
         rescore(lead)
         self._notify_assignee(lead, self.request.user)
+        self._send_ack(lead)
+
+    def _send_ack(self, lead):
+        """Auto-acknowledge a new lead on WhatsApp + email: 'a sales person will
+        get back to you in 12 hours'. Best-effort — logs the message even if the
+        channel isn't live yet."""
+        msg = (f"Hi {lead.name}, thanks for reaching out to us. A sales person "
+               f"will get back to you within 12 hours.")
+        if lead.phone:
+            try:
+                from .telephony import send_whatsapp
+                send_whatsapp(lead.phone, msg)
+            except Exception:  # noqa: BLE001
+                pass
+            Communication.objects.create(lead=lead, channel="whatsapp", direction="outbound", message=msg)
+        if lead.email:
+            try:
+                from django.conf import settings
+                from django.core.mail import send_mail
+                send_mail("Thanks for reaching out", msg,
+                          getattr(settings, "DEFAULT_FROM_EMAIL", None) or None,
+                          [lead.email], fail_silently=True)
+            except Exception:  # noqa: BLE001
+                pass
+            Communication.objects.create(lead=lead, channel="email", direction="outbound", message=msg)
+
+    @action(detail=False, methods=["get"])
+    def reminders(self, request):
+        """Pop-up feed for the logged-in agent: upcoming meetings (next 48h) and
+        open leads not followed up in 3+ days."""
+        from datetime import timedelta
+        from django.db.models import Max
+        user = request.user
+        now = timezone.now()
+        today = timezone.localdate()
+        meetings = (LeadActivity.objects.filter(
+            lead__assigned_to=user, meeting_status__in=["scheduled", "confirmed"],
+            meeting_at__gte=now, meeting_at__lte=now + timedelta(hours=48))
+            .select_related("lead").order_by("meeting_at")[:20])
+        meet = [{"lead": a.lead.name, "lead_id": a.lead_id, "at": a.meeting_at,
+                 "location": a.location} for a in meetings]
+
+        cutoff = now - timedelta(days=3)
+        open_leads = (Lead.objects.pipeline().filter(assigned_to=user)
+                      .exclude(status__in=["converted", "lost", "nurture"])
+                      .annotate(last=Max("activities__created_at")))
+        overdue = []
+        for l in open_leads:
+            ref = l.last or l.created_at
+            if ref < cutoff:
+                overdue.append({"lead": l.name, "lead_id": l.id,
+                                "days": (today - ref.date()).days})
+        overdue.sort(key=lambda x: -x["days"])
+        return Response({"meetings": meet, "overdue_followups": overdue[:20]})
 
     def perform_update(self, serializer):
         prev = self.get_object().assigned_to_id
@@ -240,6 +294,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             outcome=request.data.get("outcome") or "",
             meeting_status=request.data.get("meeting_status") or "",
             meeting_at=request.data.get("meeting_at") or None,
+            location=request.data.get("location") or "",
         )
         lead.refresh_from_db()               # status may have auto-advanced via signal
         from .scoring import rescore

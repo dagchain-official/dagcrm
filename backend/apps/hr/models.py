@@ -101,6 +101,8 @@ class Attendance(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="attendance")
     checkin = models.DateTimeField(null=True, blank=True)
     checkout = models.DateTimeField(null=True, blank=True)
+    checkin_lat = models.FloatField(null=True, blank=True)     # geolocation at clock-in
+    checkin_lng = models.FloatField(null=True, blank=True)
     working_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS, default="present")
     date = models.DateField()

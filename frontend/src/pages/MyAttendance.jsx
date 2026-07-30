@@ -49,16 +49,29 @@ export default function MyAttendance() {
     return () => clearInterval(t);
   }, []);
 
-  const action = async (path) => {
-    setBusy(true);
+  const send = async (path, body) => {
     try {
-      const { data } = await api.post(`/attendance/${path}/`);
+      const { data } = await api.post(`/attendance/${path}/`, body || {});
       setAtt(data);
-      toast.success(path === "checkin" ? "Checked in" : path === "checkout" ? "Checked out" : "Done");
+      toast.success(path.includes("in") ? "Checked in" : "Checked out");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not update attendance");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const action = (path) => {
+    setBusy(true);
+    // capture the browser's location at clock-in (skip silently if denied)
+    if (path === "check-in" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => send(path, { lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => send(path, {}),
+        { timeout: 8000 },
+      );
+    } else {
+      send(path, {});
     }
   };
 
