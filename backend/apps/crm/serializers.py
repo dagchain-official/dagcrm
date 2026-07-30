@@ -143,14 +143,21 @@ class LeadInterestSerializer(serializers.ModelSerializer):
 class LeadActivitySerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.name", read_only=True)
     lead_name = serializers.CharField(source="lead.name", read_only=True)
+    visit_map = serializers.SerializerMethodField()
 
     class Meta:
         model = LeadActivity
         fields = ["id", "lead", "lead_name", "user", "user_name", "activity_type",
                   "direction", "completed", "remarks",
                   "duration_min", "outcome", "meeting_status", "meeting_at", "location",
+                  "visit_lat", "visit_lng", "visit_address", "visit_map",
                   "followup_date", "next_action", "created_at"]
-        read_only_fields = ["created_at"]
+        read_only_fields = ["created_at", "visit_lat", "visit_lng", "visit_address"]
+
+    def get_visit_map(self, obj):
+        if obj.visit_lat is None or obj.visit_lng is None:
+            return ""
+        return f"https://www.google.com/maps?q={obj.visit_lat},{obj.visit_lng}"
 
 
 class LeadSerializer(serializers.ModelSerializer):

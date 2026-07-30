@@ -118,6 +118,24 @@ export default function LeadDetail() {
     }
   };
 
+  // RM taps this at the meeting to record where they actually were.
+  const fetchVisit = (actId) => {
+    if (!navigator.geolocation) { toast.error("Location not supported on this device"); return; }
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await api.post(`/lead-activities/${actId}/set_location/`, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+          await load();
+          toast.success("Meeting location captured");
+        } catch { toast.error("Could not save location"); }
+        finally { setBusy(false); }
+      },
+      () => { setBusy(false); toast.error("Location permission denied — allow location to record it"); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   if (err) return <EmptyState title="Lead not found" />;
   if (!d) return <Spinner label="Loading lead…" />;
   const l = d.lead;
@@ -241,7 +259,7 @@ export default function LeadDetail() {
                   <div className={`grid place-items-center w-9 h-9 rounded-xl ${cfg.tint} shrink-0`}><cfg.icon size={16} /></div>
                   {i < d.activities.length - 1 && <div className="w-px flex-1 bg-ink-200 my-1" />}
                 </div>
-                <div className="pb-5 min-w-0">
+                <div className="pb-5 min-w-0 flex-1">
                   <p className="text-sm font-semibold text-ink-800 capitalize flex flex-wrap items-center gap-1.5">
                     {a.activity_type.replace(/_/g, " ")}
                     {a.outcome && <span className="badge bg-brand-50 text-brand-700">{a.outcome.replace(/_/g, " ")}</span>}
@@ -249,8 +267,21 @@ export default function LeadDetail() {
                     {Number(a.duration_min) > 0 && <span className="text-[11px] font-normal text-ink-400">· {a.duration_min} min</span>}
                   </p>
                   <p className="text-xs text-ink-500">{a.remarks}</p>
+                  {a.location && <p className="text-[11px] text-ink-400 mt-0.5 flex items-center gap-1"><MapPin size={12} /> Planned: {a.location}</p>}
+                  {a.visit_address && (
+                    <a href={a.visit_map} target="_blank" rel="noreferrer"
+                      className="text-[11px] text-brand-600 hover:underline mt-0.5 flex items-center gap-1">
+                      <MapPin size={12} /> Reached: {a.visit_address}
+                    </a>
+                  )}
                   <p className="text-[11px] text-ink-400 mt-0.5">{a.user_name || "—"} · {dt(a.created_at)}{a.meeting_at ? ` · meeting ${dt(a.meeting_at)}` : ""}</p>
                 </div>
+                {a.activity_type === "meeting" && !a.visit_address && (
+                  <button onClick={() => fetchVisit(a.id)} disabled={busy}
+                    className="shrink-0 self-start flex items-center gap-1 text-[11px] font-semibold text-brand-600 border border-brand-200 rounded-lg px-2 py-1 hover:bg-brand-50 disabled:opacity-50 whitespace-nowrap">
+                    <MapPin size={12} /> Fetch location
+                  </button>
+                )}
               </div>
             );
           })}

@@ -543,6 +543,20 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
             qs = qs.filter(user_id__in=subordinate_user_ids(self.request.user, include_self=True))
         return qs
 
+    @action(detail=True, methods=["post"])
+    def set_location(self, request, pk=None):
+        """RM taps 'Fetch location' at the meeting -> capture GPS + resolve to an address."""
+        act = self.get_object()
+        try:
+            act.visit_lat = float(request.data.get("lat"))
+            act.visit_lng = float(request.data.get("lng"))
+        except (TypeError, ValueError):
+            return Response({"detail": "Location not available."}, status=400)
+        from apps.hr.views import reverse_geocode
+        act.visit_address = reverse_geocode(act.visit_lat, act.visit_lng)
+        act.save(update_fields=["visit_lat", "visit_lng", "visit_address"])
+        return Response(LeadActivitySerializer(act).data)
+
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         if user and user.is_superuser:
