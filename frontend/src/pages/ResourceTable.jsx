@@ -311,6 +311,7 @@ export default function ResourceTable({ resource: propResource }) {
     if (col.percent) return <span className="tabular-nums">{v == null || v === "" ? "—" : `${(Number(v) * 100).toFixed(0)}%`}</span>;
     if (col.bool) return v ? "Yes" : "No";
     if (col.datetime) return dt(v);
+    if (col.link) return v ? <a href={v} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">{col.linkLabel || "Open"}</a> : "—";
     return v ?? "—";
   };
 

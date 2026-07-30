@@ -201,11 +201,17 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
 class AttendanceSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    checkin_map = serializers.SerializerMethodField()
 
     class Meta:
         model = Attendance
         fields = ["id", "employee", "employee_name", "checkin", "checkout",
-                  "working_hours", "status", "date"]
+                  "working_hours", "status", "date", "checkin_lat", "checkin_lng", "checkin_map"]
+
+    def get_checkin_map(self, obj):
+        if obj.checkin_lat is None or obj.checkin_lng is None:
+            return ""
+        return f"https://www.google.com/maps?q={obj.checkin_lat},{obj.checkin_lng}"
 
 
 class EmployeeActivitySerializer(serializers.ModelSerializer):
