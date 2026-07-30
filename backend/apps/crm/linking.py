@@ -129,3 +129,29 @@ def link_pending_conversions():
             _merge_customer(c, twin)
         linked += 1
     return linked
+
+
+def sync_postsales_from_platform():
+    """Fill each seeded sale's blank money fields from the person's platform
+    account: Collected = deposits, Commission = brokerage (gross_profit follows).
+    Only touches fields still at 0, so a manual edit is never clobbered.
+
+    ponytail: scans all PostSales each sync; add a filter if this grows.
+    """
+    from django.db.models import Sum
+    from apps.sales.models import Revenue
+    from .models import AumEntry, Customer, PostSale
+    for ps in PostSale.objects.select_related("customer"):
+        cust = ps.customer
+        if not cust or not cust.email:
+            continue
+        ids = list(Customer.objects.filter(email__iexact=cust.email).values_list("id", flat=True))
+        dep = AumEntry.objects.filter(customer_id__in=ids, entry_type="deposit").aggregate(s=Sum("amount"))["s"] or 0
+        brok = Revenue.objects.filter(customer_id__in=ids).aggregate(s=Sum("gross_revenue"))["s"] or 0
+        changed = []
+        if dep and not float(ps.collected_value or 0):
+            ps.collected_value = dep; changed.append("collected_value")
+        if brok and not float(ps.commission or 0):
+            ps.commission = brok; changed.append("commission")
+        if changed:
+            ps.save(update_fields=changed)

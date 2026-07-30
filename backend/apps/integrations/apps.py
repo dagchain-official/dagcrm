@@ -104,8 +104,9 @@ def _run_sync_once():
         # fresh platform accounts just synced — link any converted customer who
         # opened an FX Artha / DAGChain account after they converted.
         try:
-            from apps.crm.linking import link_pending_conversions
+            from apps.crm.linking import link_pending_conversions, sync_postsales_from_platform
             link_pending_conversions()
+            sync_postsales_from_platform()   # fill sale Collected/Commission from platform
         except Exception:  # noqa: BLE001
             pass
     finally:
