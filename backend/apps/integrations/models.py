@@ -207,6 +207,32 @@ class FxSymbolLots(models.Model):
         return f"{self.customer_id}:{self.symbol} = {self.lots} lots"
 
 
+class FxAccount(models.Model):
+    """One FX Artha trading account. A person may hold several sub-accounts under a
+    single login (/customers returns one row per account_number) — this stores each
+    separately (a snapshot refreshed every sync) so Customer 360 can break them down."""
+    customer = models.ForeignKey("crm.Customer", on_delete=models.CASCADE, related_name="fx_accounts")
+    account_number = models.CharField(max_length=40, unique=True)
+    account_type = models.CharField(max_length=40, blank=True)
+    balance = models.FloatField(default=0)
+    lots_traded = models.FloatField(default=0)
+    gross_brokerage = models.FloatField(default=0)
+    ib_commission = models.FloatField(default=0)
+    total_deposit = models.FloatField(default=0)
+    total_withdrawal = models.FloatField(default=0)
+    trading_loss = models.FloatField(default=0)
+    kyc_status = models.CharField(max_length=30, blank=True)
+    account_status = models.CharField(max_length=30, blank=True)
+    opened_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-balance"]
+
+    def __str__(self):
+        return f"{self.account_type} #{self.account_number}"
+
+
 class IntegrationLog(models.Model):
     connection = models.ForeignKey(IntegrationConnection, on_delete=models.CASCADE, related_name="logs")
     status = models.CharField(max_length=20)   # success / error / skipped

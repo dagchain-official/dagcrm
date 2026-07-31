@@ -124,6 +124,25 @@ def _sync_customer(conn, item, business, tx_map=None, trade_map=None,
         cust.assigned_to_id = lead.assigned_to_id
         cust.save(update_fields=["assigned_to"])
 
+    # Per-account snapshot — a trader may hold several sub-accounts (one /customers
+    # row each); keep each separately so Customer 360 can break them down. The
+    # Customer row (keyed by user_id) only keeps the latest account's balance.
+    if item.get("account_number"):
+        from .models import FxAccount
+        FxAccount.objects.update_or_create(
+            account_number=item["account_number"],
+            defaults={"customer": cust, "account_type": item.get("account_type") or "",
+                      "balance": float(item.get("balance") or 0),
+                      "lots_traded": float(item.get("lots_traded") or 0),
+                      "gross_brokerage": float(item.get("gross_brokerage") or 0),
+                      "ib_commission": float(item.get("ib_commission") or 0),
+                      "total_deposit": float(item.get("total_deposit") or 0),
+                      "total_withdrawal": float(item.get("total_withdrawal") or 0),
+                      "trading_loss": float(item.get("trading_loss") or 0),
+                      "kyc_status": item.get("kyc_status") or "",
+                      "account_status": item.get("account_status") or "",
+                      "opened_at": parse_datetime(item["account_opened_at"]) if item.get("account_opened_at") else None})
+
     # Revenue (skip empty). net_revenue is auto (gross − commission).
     gross = float(item.get("gross_brokerage") or 0)
     comm = float(item.get("ib_commission") or 0)

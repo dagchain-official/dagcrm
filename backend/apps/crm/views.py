@@ -718,23 +718,32 @@ class CustomerViewSet(viewsets.ModelViewSet):
             }
 
         if fx_ids:
+            from apps.integrations.models import FxAccount
             fxcusts = list(Customer.objects.filter(id__in=fx_ids))
             fxs = _fx_stats(fx_ids)
             dep = fxs["deposits"]
-            # per-account breakdown — dropdown when the person holds >1 FX account
-            acct_custs = [c for c in fxcusts if c.account_number]
-            if len(acct_custs) > 1:
-                fxs["accounts"] = [
-                    {**_fx_stats([c.id]), "account_type": c.account_type, "account_number": c.account_number}
-                    for c in acct_custs
-                ]
+            # per-account breakdown — each sub-account stored separately (the Customer
+            # row only keeps the latest account's balance, so sum from FxAccount).
+            fxaccts = list(FxAccount.objects.filter(customer_id__in=fx_ids))
+            if fxaccts:
+                fxs["balance"] = sum(a.balance for a in fxaccts)   # correct multi-account balance
+            if len(fxaccts) > 1:
+                fxs["accounts"] = [{
+                    "account_type": a.account_type, "account_number": a.account_number,
+                    "balance": a.balance, "lots_traded": a.lots_traded,
+                    "gross_brokerage": a.gross_brokerage, "ib_commission": a.ib_commission,
+                    "deposits": a.total_deposit, "withdrawals": a.total_withdrawal,
+                    "net_aum": a.total_deposit - a.total_withdrawal, "trading_loss": a.trading_loss,
+                    "insurance": 0, "staking": 0, "symbol_lots": [],
+                } for a in fxaccts]
             if customer.external_id == "" or platform == "FX Artha" or any(v for k, v in fxs.items() if k != "accounts"):
                 platforms.append({"platform": "FX Artha", "stats": fxs})
             # onboarding journey
-            opened_at = next((c.account_opened_at for c in fxcusts if c.account_opened_at), None)
+            opened_at = next((a.opened_at for a in fxaccts if a.opened_at), None) \
+                or next((c.account_opened_at for c in fxcusts if c.account_opened_at), None)
             primary = next((c for c in fxcusts if c.account_number), fxcusts[0] if fxcusts else None)
             kyc = (primary.kyc_status if primary else "") or ""
-            acct_no = [c.account_number for c in fxcusts if c.account_number]
+            acct_no = [a.account_number for a in fxaccts] or [c.account_number for c in fxcusts if c.account_number]
             n_acct = len(acct_no)
             fx_lots = float(fxs.get("lots_traded") or 0)
             fx_dep = float(dep or 0)
