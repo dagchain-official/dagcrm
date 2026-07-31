@@ -291,6 +291,7 @@ export const RESOURCES = {
   },
   opportunities: {
     title: "Opportunities", endpoint: "opportunities", search: true,
+    detailPath: "/leads", detailKey: "lead",   // open the lead to keep working the deal
     filters: [
       { key: "stage", label: "Stage", options: sel("negotiation", "won", "lost", "active") },
       { key: "status", label: "Status", options: sel("open", "closed") },

@@ -8,7 +8,14 @@ closes it won — all without the RM touching the status field.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import Lead, LeadActivity
+from .models import Lead, LeadActivity, Opportunity
+
+# once a lead is Qualified it becomes a deal (Opportunity) and leaves the leads
+# list; these lead statuses map to the open opportunity's stage.
+OPP_OPEN_STAGES = {
+    "qualified": "active", "meeting_booked": "active",
+    "meeting_done": "active", "negotiation": "negotiation",
+}
 
 # funnel order (bigger = further along)
 RANK = {
@@ -60,11 +67,40 @@ def on_activity(sender, instance, created, **kwargs):
         advance_lead_status(instance.lead, instance)
 
 
+def sync_opportunity(lead):
+    """Keep the deal pipeline in step with the lead's status (CRM-own leads only):
+      Qualified … Negotiation  -> an OPEN Opportunity (lead has left the leads list)
+      Converted                -> that Opportunity is Won + closed (moves to Customers)
+      Lost                     -> that Opportunity is Lost + closed
+    """
+    opp = lead.opportunities.order_by("-id").first()
+    st = lead.status
+    if st in OPP_OPEN_STAGES:
+        if opp is None:
+            Opportunity.objects.create(
+                lead=lead, assigned_to=lead.assigned_to,
+                stage=OPP_OPEN_STAGES[st], status="open",
+                expected_revenue=lead.expected_value or 0)
+        elif opp.status == "open":
+            opp.stage = OPP_OPEN_STAGES[st]
+            opp.assigned_to = lead.assigned_to
+            if not opp.expected_revenue and lead.expected_value:
+                opp.expected_revenue = lead.expected_value
+            opp.save(update_fields=["stage", "assigned_to", "expected_revenue"])
+    elif st in ("converted", "lost") and opp and opp.status == "open":
+        opp.stage = "won" if st == "converted" else "lost"
+        opp.status = "closed"
+        opp.save(update_fields=["stage", "status"])
+
+
 @receiver(post_save, sender=Lead)
-def on_lead_converted(sender, instance, **kwargs):
-    """The moment a lead is Closed Won, make sure it has a Customer — linking it
-    to the person's live FX Artha / DAGChain account if one exists, so their real
-    purchases and revenue surface on the customer and keep updating via sync."""
+def on_lead_saved(sender, instance, **kwargs):
+    """Pipeline movement: Qualified -> Opportunity, Converted -> Customer (+ won),
+    Lost -> lost. The Customer link also pulls in the person's live FX Artha /
+    DAGChain account if one exists, so real purchases/revenue surface and keep
+    updating via sync."""
+    if instance.external_id == "":       # CRM-own leads only (synced leads have their own flow)
+        sync_opportunity(instance)
     if instance.status == "converted":
         from .linking import ensure_customer_for_lead, ensure_postsale_for_lead
         customer = ensure_customer_for_lead(instance)

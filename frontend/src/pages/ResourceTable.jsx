@@ -455,7 +455,7 @@ export default function ResourceTable({ resource: propResource }) {
                               <Lock size={15} />
                             </span>
                           ) : (
-                            <Link to={`${cfg.detailPath}/${row.id}`} className="btn-ghost p-1.5 text-brand-600" title="Open 360 view">
+                            <Link to={`${cfg.detailPath}/${row[cfg.detailKey || "id"]}`} className="btn-ghost p-1.5 text-brand-600" title="Open 360 view">
                               <Eye size={15} />
                             </Link>
                           )

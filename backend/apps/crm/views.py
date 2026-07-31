@@ -145,11 +145,12 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset().pipeline()
-        # A converted lead is now a Customer — it drops off the leads list so the
-        # pipeline shows only open work. Detail/convert/update still reach it (only
-        # the list is filtered), and its history stays on the Customer 360 record.
+        # Once a lead is Qualified it becomes a deal (Opportunity) and once
+        # Converted a Customer — either way it drops off the leads list so the list
+        # shows only early-stage work. Detail/update still reach it (only the list
+        # is filtered); its history lives on the Opportunity / Customer 360.
         if self.action == "list":
-            qs = qs.exclude(status="converted")
+            qs = qs.exclude(status__in=["qualified", "meeting_booked", "meeting_done", "negotiation", "converted"])
         if not is_admin_view(self.request.user):
             # A manager (Sales Manager / Team Leader) sees their whole team's
             # leads, not just leads assigned to them personally.
@@ -594,6 +595,10 @@ class OpportunityViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        # A closed (won/lost) deal has moved on — a won one is now a Customer — so
+        # the Opportunities list shows only OPEN deals by default (filter to see closed).
+        if self.action == "list" and not self.request.query_params.get("status"):
+            qs = qs.exclude(status="closed")
         if not is_admin_view(self.request.user):
             from apps.accounts.access import subordinate_user_ids
             qs = qs.filter(assigned_to_id__in=subordinate_user_ids(self.request.user, include_self=True))
