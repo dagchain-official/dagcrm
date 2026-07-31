@@ -10,6 +10,8 @@ import api from "../api/client";
 import { Spinner, EmptyState } from "../components/ui";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const money = (v) => `$${Number(v || 0).toLocaleString()}`;
+const mins = (m) => { const h = Math.floor((m || 0) / 60), x = (m || 0) % 60; return h ? `${h}h ${x}m` : `${x}m`; };
 
 const cell = (c, r) => (c.fmt ? c.fmt(r[c.key], r) : (r[c.key] ?? ""));
 
@@ -50,8 +52,6 @@ function exportPdf(name, cols, rows) {
   });
   doc.save(`${name}.pdf`);
 }
-const money = (v) => `$${Number(v || 0).toLocaleString()}`;
-const mins = (m) => { const h = Math.floor((m || 0) / 60), x = (m || 0) % 60; return h ? `${h}h ${x}m` : `${x}m`; };
 const dt = (v) => (v ? new Date(v).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—");
 const day = (v) => (v ? new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—");
 
