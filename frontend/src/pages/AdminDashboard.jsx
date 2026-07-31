@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -19,13 +20,14 @@ const BAND = {
   Critical: { bar: "#ef4444", chip: "bg-rose-50 text-rose-600" },
 };
 
-function Tile({ icon: Icon, label, value, color }) {
+function Tile({ icon: Icon, label, value, color, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}><Icon size={20} /></div>
       <p className="text-3xl font-extrabold text-ink-900 mt-4 tabular-nums">{value}</p>
       <p className="text-sm text-ink-400 mt-0.5">{label}</p>
-    </div>
+    </Wrap>
   );
 }
 
@@ -52,14 +54,14 @@ export default function AdminDashboard() {
 
       {/* headline numbers */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Tile icon={Users} label="Active Leads" value={num(d.total_leads)} color="bg-orange-100 text-orange-600" />
-        <Tile icon={Trophy} label="Closed Won" value={num(d.closed_won)} color="bg-emerald-100 text-emerald-600" />
-        <Tile icon={DollarSign} label="Revenue" value={money(d.revenue)} color="bg-brand-100 text-brand-600" />
-        <Tile icon={TrendingUp} label="Gross Profit" value={money(d.gross_profit)} color="bg-teal-100 text-teal-600" />
-        <Tile icon={Layers} label="Weighted Pipeline" value={money(d.weighted_pipeline)} color="bg-violet-100 text-violet-600" />
-        <Tile icon={AlertTriangle} label="Overdue Actions" value={num(d.overdue_actions)} color="bg-rose-100 text-rose-500" />
-        <Tile icon={GraduationCap} label="Training Compliance" value={pct(d.training_compliance)} color="bg-indigo-100 text-indigo-600" />
-        <Tile icon={ClipboardCheck} label="Assessment Pass Rate" value={pct(d.assessment_pass_rate)} color="bg-sky-100 text-sky-600" />
+        <Tile icon={Users} label="Active Leads" value={num(d.total_leads)} color="bg-orange-100 text-orange-600" to="/m/leads" />
+        <Tile icon={Trophy} label="Closed Won" value={num(d.closed_won)} color="bg-emerald-100 text-emerald-600" to="/m/opportunities" />
+        <Tile icon={DollarSign} label="Revenue" value={money(d.revenue)} color="bg-brand-100 text-brand-600" to="/m/revenues" />
+        <Tile icon={TrendingUp} label="Gross Profit" value={money(d.gross_profit)} color="bg-teal-100 text-teal-600" to="/finance" />
+        <Tile icon={Layers} label="Weighted Pipeline" value={money(d.weighted_pipeline)} color="bg-violet-100 text-violet-600" to="/m/opportunities" />
+        <Tile icon={AlertTriangle} label="Overdue Actions" value={num(d.overdue_actions)} color="bg-rose-100 text-rose-500" to="/m/lead-activities" />
+        <Tile icon={GraduationCap} label="Training Compliance" value={pct(d.training_compliance)} color="bg-indigo-100 text-indigo-600" to="/hr/training" />
+        <Tile icon={ClipboardCheck} label="Assessment Pass Rate" value={pct(d.assessment_pass_rate)} color="bg-sky-100 text-sky-600" to="/hr/training" />
       </div>
 
       {/* company health — table + chart */}

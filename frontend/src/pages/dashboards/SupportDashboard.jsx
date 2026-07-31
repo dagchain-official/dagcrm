@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -14,9 +15,10 @@ import { STATUS_COLORS } from "../../config/resources";
 const PRIORITY_COLORS = { urgent: "#ef4444", high: "#f59e0b", medium: "#6366f1", low: "#94a3b8" };
 const FALLBACK = ["#6366f1", "#22c55e", "#f59e0b", "#fb7185", "#8b5cf6", "#06b6d4"];
 
-function Kpi({ icon: Icon, label, value, color }) {
+function Kpi({ icon: Icon, label, value, color, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className="flex items-start justify-between">
         <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}>
           <Icon size={20} />
@@ -25,7 +27,7 @@ function Kpi({ icon: Icon, label, value, color }) {
       </div>
       <p className="text-3xl font-extrabold text-ink-900 mt-4 tabular-nums">{value}</p>
       <p className="text-sm text-ink-400 mt-0.5">{label}</p>
-    </div>
+    </Wrap>
   );
 }
 
@@ -60,10 +62,10 @@ export default function SupportDashboard() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Kpi icon={LifeBuoy} label="Total Tickets" value={d.total_tickets} color="bg-brand-100 text-brand-600" />
-        <Kpi icon={Inbox} label="Open Tickets" value={d.open_tickets} color="bg-amber-100 text-amber-600" />
-        <Kpi icon={CheckCircle2} label="Resolved" value={d.resolved_tickets} color="bg-emerald-100 text-emerald-600" />
-        <Kpi icon={AlertTriangle} label="Urgent Open" value={d.urgent_tickets} color="bg-rose-100 text-rose-500" />
+        <Kpi icon={LifeBuoy} label="Total Tickets" value={d.total_tickets} color="bg-brand-100 text-brand-600" to="/m/tickets" />
+        <Kpi icon={Inbox} label="Open Tickets" value={d.open_tickets} color="bg-amber-100 text-amber-600" to="/m/tickets" />
+        <Kpi icon={CheckCircle2} label="Resolved" value={d.resolved_tickets} color="bg-emerald-100 text-emerald-600" to="/m/tickets" />
+        <Kpi icon={AlertTriangle} label="Urgent Open" value={d.urgent_tickets} color="bg-rose-100 text-rose-500" to="/m/tickets" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">

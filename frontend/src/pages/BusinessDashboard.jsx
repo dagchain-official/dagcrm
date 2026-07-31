@@ -7,6 +7,7 @@ import {
   ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/client";
 import usePolling from "../hooks/usePolling";
 import { Spinner, EmptyState } from "../components/ui";
@@ -22,9 +23,10 @@ const catTint = {
   other: "bg-violet-100 text-violet-600",
 };
 
-function Stat({ icon: Icon, label, value, sub, color, positive = true }) {
+function Stat({ icon: Icon, label, value, sub, color, positive = true, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className="flex items-start justify-between">
         <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}><Icon size={20} /></div>
         <MoreHorizontal size={18} className="text-ink-300" />
@@ -36,7 +38,7 @@ function Stat({ icon: Icon, label, value, sub, color, positive = true }) {
           {positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} {sub}
         </p>
       )}
-    </div>
+    </Wrap>
   );
 }
 
@@ -93,12 +95,12 @@ export default function BusinessDashboard({ businessId }) {
 
       {/* headline stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Stat icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} sub={`Gross ${money(d.gross_revenue)}`} color="bg-emerald-100 text-emerald-600" />
-        <Stat icon={TrendingUp} label="This Month" value={money(d.month_net_revenue)} sub="net revenue" color="bg-indigo-100 text-indigo-600" />
-        <Stat icon={Users} label="Customers" value={d.customers} sub="active accounts" color="bg-rose-100 text-rose-500" />
+        <Stat icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} sub={`Gross ${money(d.gross_revenue)}`} color="bg-emerald-100 text-emerald-600" to="/m/revenues" />
+        <Stat icon={TrendingUp} label="This Month" value={money(d.month_net_revenue)} sub="net revenue" color="bg-indigo-100 text-indigo-600" to="/m/revenues" />
+        <Stat icon={Users} label="Customers" value={d.customers} sub="active accounts" color="bg-rose-100 text-rose-500" to="/m/customers" />
         {aum
-          ? <Stat icon={Landmark} label="Net New AUM" value={money(aum.net_new)} sub={`Closing ${money(aum.closing)}`} color="bg-amber-100 text-amber-600" positive={(aum.net_new || 0) >= 0} />
-          : <Stat icon={Activity} label="Key Metrics" value={kpis.length} sub="tracked KPIs" color="bg-violet-100 text-violet-600" />}
+          ? <Stat icon={Landmark} label="Net New AUM" value={money(aum.net_new)} sub={`Closing ${money(aum.closing)}`} color="bg-amber-100 text-amber-600" positive={(aum.net_new || 0) >= 0} to="/aum" />
+          : <Stat icon={Activity} label="Key Metrics" value={kpis.length} sub="tracked KPIs" color="bg-violet-100 text-violet-600" to="/kpi" />}
       </div>
 
       {/* platform's own dashboard fields (FXArtha / DAGChain snapshot) */}

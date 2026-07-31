@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Users, UserPlus, Target, CalendarClock, MoreHorizontal, ArrowUpRight,
@@ -12,9 +13,10 @@ const DONUT = ["#6366f1", "#22c55e", "#f59e0b", "#fb7185", "#8b5cf6"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 const BAND = { Healthy: "bg-emerald-50 text-emerald-700", Watch: "bg-amber-50 text-amber-700", Critical: "bg-rose-50 text-rose-600" };
 
-function Kpi({ icon: Icon, label, value, trend, color }) {
+function Kpi({ icon: Icon, label, value, trend, color, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className="flex items-start justify-between">
         <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}>
           <Icon size={20} />
@@ -28,7 +30,7 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
           <ArrowUpRight size={14} /> {trend}
         </p>
       )}
-    </div>
+    </Wrap>
   );
 }
 
@@ -54,10 +56,10 @@ export default function TeamLeaderDashboard({ userId }) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Kpi icon={Users} label="Team Members" value={d.team_size} color="bg-brand-100 text-brand-600" />
-        <Kpi icon={UserPlus} label="Team Leads" value={d.team_leads} trend={`${d.team_converted} converted`} color="bg-orange-100 text-orange-600" />
-        <Kpi icon={Target} label="Open Deals" value={d.team_open_opportunities} trend={money(d.team_pipeline) + " pipeline"} color="bg-violet-100 text-violet-600" />
-        <Kpi icon={CalendarClock} label="Follow-ups" value={d.team_followups} color="bg-rose-100 text-rose-500" />
+        <Kpi icon={Users} label="Team Members" value={d.team_size} color="bg-brand-100 text-brand-600" to="/kpi" />
+        <Kpi icon={UserPlus} label="Team Leads" value={d.team_leads} trend={`${d.team_converted} converted`} color="bg-orange-100 text-orange-600" to="/m/leads" />
+        <Kpi icon={Target} label="Open Deals" value={d.team_open_opportunities} trend={money(d.team_pipeline) + " pipeline"} color="bg-violet-100 text-violet-600" to="/m/opportunities" />
+        <Kpi icon={CalendarClock} label="Follow-ups" value={d.team_followups} color="bg-rose-100 text-rose-500" to="/m/lead-activities" />
       </div>
 
       {/* team scorecard */}

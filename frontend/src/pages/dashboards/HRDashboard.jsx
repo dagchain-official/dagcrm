@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -15,19 +16,21 @@ const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 const num = (v) => Number(v || 0).toLocaleString();
 const pct = (v) => `${(Number(v || 0) * 100).toFixed(1)}%`;
 
-function Mini({ icon: Icon, label, value, color }) {
+function Mini({ icon: Icon, label, value, color, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}><Icon size={20} /></div>
       <p className="text-3xl font-extrabold text-ink-900 mt-4 tabular-nums">{value}</p>
       <p className="text-sm text-ink-400 mt-0.5">{label}</p>
-    </div>
+    </Wrap>
   );
 }
 
-function Kpi({ icon: Icon, label, value, trend, color }) {
+function Kpi({ icon: Icon, label, value, trend, color, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className="flex items-start justify-between">
         <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}>
           <Icon size={20} />
@@ -39,7 +42,7 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
       <p className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-3">
         <ArrowUpRight size={14} /> {trend}
       </p>
-    </div>
+    </Wrap>
   );
 }
 
@@ -77,22 +80,22 @@ export default function HRDashboard() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Kpi icon={Users} label="Total Employees" value={d.total_employees} trend={`${d.on_leave_today} on leave today`} color="bg-brand-100 text-brand-600" />
-        <Kpi icon={UserCheck} label="Present Today" value={d.present_today} trend={`${d.total_employees} total staff`} color="bg-emerald-100 text-emerald-600" />
-        <Kpi icon={CalendarOff} label="Pending Leaves" value={d.pending_leaves} trend={`${d.on_leave_today} on leave today`} color="bg-amber-100 text-amber-600" />
-        <Kpi icon={Wallet} label="Payroll This Month" value={money(d.payroll_this_month)} trend={`${money(d.incentives_this_month)} incentives`} color="bg-violet-100 text-violet-600" />
+        <Kpi icon={Users} label="Total Employees" value={d.total_employees} trend={`${d.on_leave_today} on leave today`} color="bg-brand-100 text-brand-600" to="/hr/people" />
+        <Kpi icon={UserCheck} label="Present Today" value={d.present_today} trend={`${d.total_employees} total staff`} color="bg-emerald-100 text-emerald-600" to="/hr/attendance" />
+        <Kpi icon={CalendarOff} label="Pending Leaves" value={d.pending_leaves} trend={`${d.on_leave_today} on leave today`} color="bg-amber-100 text-amber-600" to="/hr/attendance" />
+        <Kpi icon={Wallet} label="Payroll This Month" value={money(d.payroll_this_month)} trend={`${money(d.incentives_this_month)} incentives`} color="bg-violet-100 text-violet-600" to="/hr/payroll" />
       </div>
 
       {/* HR & Learning — employee health, learning compliance & assessment risk */}
       <div>
         <h3 className="font-bold text-ink-900 mb-3">HR &amp; Learning</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
-          <Mini icon={UserCheck} label="Active Employees" value={num(d.learning?.active_employees)} color="bg-brand-100 text-brand-600" />
-          <Mini icon={Gauge} label="Average KPI" value={pct(d.learning?.average_kpi)} color="bg-amber-100 text-amber-600" />
-          <Mini icon={GraduationCap} label="Training Compliance" value={pct(d.learning?.training_compliance)} color="bg-indigo-100 text-indigo-600" />
-          <Mini icon={ClipboardCheck} label="Assessment Pass Rate" value={pct(d.learning?.assessment_pass_rate)} color="bg-sky-100 text-sky-600" />
-          <Mini icon={Clock} label="Overdue Training" value={num(d.learning?.overdue_training)} color="bg-emerald-100 text-emerald-600" />
-          <Mini icon={AlertTriangle} label="Critical Employees" value={num(d.learning?.critical_employees)} color="bg-rose-100 text-rose-500" />
+          <Mini icon={UserCheck} label="Active Employees" value={num(d.learning?.active_employees)} color="bg-brand-100 text-brand-600" to="/hr/people" />
+          <Mini icon={Gauge} label="Average KPI" value={pct(d.learning?.average_kpi)} color="bg-amber-100 text-amber-600" to="/kpi" />
+          <Mini icon={GraduationCap} label="Training Compliance" value={pct(d.learning?.training_compliance)} color="bg-indigo-100 text-indigo-600" to="/hr/training" />
+          <Mini icon={ClipboardCheck} label="Assessment Pass Rate" value={pct(d.learning?.assessment_pass_rate)} color="bg-sky-100 text-sky-600" to="/hr/training" />
+          <Mini icon={Clock} label="Overdue Training" value={num(d.learning?.overdue_training)} color="bg-emerald-100 text-emerald-600" to="/hr/training" />
+          <Mini icon={AlertTriangle} label="Critical Employees" value={num(d.learning?.critical_employees)} color="bg-rose-100 text-rose-500" to="/kpi" />
         </div>
         <p className="text-xs text-ink-400 mt-2">
           Training Compliance, Assessment Pass Rate &amp; Overdue Training read 0 until a Training / Assessment module is added.

@@ -13,9 +13,10 @@ import KpiScorecard from "../components/KpiScorecard";
 const DONUT = ["#6366f1", "#22c55e", "#f59e0b", "#fb7185", "#8b5cf6", "#06b6d4"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 
-function Kpi({ icon: Icon, label, value, trend, color }) {
+function Kpi({ icon: Icon, label, value, trend, color, to }) {
+  const Wrap = to ? Link : "div";
   return (
-    <div className="card p-5">
+    <Wrap to={to} className={`card p-5 block ${to ? "hover:shadow-md hover:-translate-y-0.5 transition" : ""}`}>
       <div className="flex items-start justify-between">
         <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}>
           <Icon size={20} />
@@ -27,7 +28,7 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
       <p className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-3">
         <ArrowUpRight size={14} /> {trend}
       </p>
-    </div>
+    </Wrap>
   );
 }
 
@@ -73,10 +74,10 @@ export default function UserDashboard({ userId }) {
       )}
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Kpi icon={UserPlus} label="My Leads" value={d.my_leads} trend={`${d.my_new_leads} new`} color="bg-orange-100 text-orange-600" />
-        <Kpi icon={DollarSign} label="My Revenue" value={money(d.my_revenue)} trend={`${d.my_won} deals won`} color="bg-emerald-100 text-emerald-600" />
-        <Kpi icon={Target} label="My Open Deals" value={d.my_open_opportunities} trend={money(d.my_pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
-        <Kpi icon={CalendarClock} label="Follow-ups Due" value={d.my_followups_due} trend={`${d.my_activities_today} done today`} color="bg-rose-100 text-rose-500" />
+        <Kpi icon={UserPlus} label="My Leads" value={d.my_leads} trend={`${d.my_new_leads} new`} color="bg-orange-100 text-orange-600" to="/m/leads" />
+        <Kpi icon={DollarSign} label="My Revenue" value={money(d.my_revenue)} trend={`${d.my_won} deals won`} color="bg-emerald-100 text-emerald-600" to="/m/revenues" />
+        <Kpi icon={Target} label="My Open Deals" value={d.my_open_opportunities} trend={money(d.my_pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" to="/m/opportunities" />
+        <Kpi icon={CalendarClock} label="Follow-ups Due" value={d.my_followups_due} trend={`${d.my_activities_today} done today`} color="bg-rose-100 text-rose-500" to="/m/lead-activities" />
       </div>
 
       {/* my scorecard */}
