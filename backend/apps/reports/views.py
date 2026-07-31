@@ -1453,43 +1453,66 @@ def employee_report(request):
         rows.sort(key=lambda r: r["name"])
         return Response({"employees": rows})
 
-    # --- ALL employees, one row each (a table to view / export)
+    # --- ALL employees, one row each (a table to view / export) — every metric
+    # from the single-employee report, one column each.
     if request.query_params.get("all"):
+        from collections import defaultdict
         from django.db.models import Count, Q
+        from apps.crm.models import MetricDefinition
+        mdefs = list(MetricDefinition.objects.filter(status="active"))
+        leaf = _leaf_stats(mdefs, month, year)
+        by_user, _ = _revenue_by_user(month, year)
         emps = list(Employee.objects.select_related("user", "user__role").exclude(user__is_superuser=True))
         if not sees_all:
             emps = [e for e in emps if e.user_id in allowed]
         emp_ids = [e.id for e in emps]
         user_ids = [e.user_id for e in emps]
         perf = {r["id"]: r for r in compute_performance(month, year)["rows"]}
-        leadmap = {r["assigned_to"]: r for r in Lead.objects.pipeline().filter(assigned_to_id__in=user_ids)
-                   .values("assigned_to").annotate(owned=Count("id"), converted=Count("id", filter=Q(status="converted")))}
+        leads_qs = Lead.objects.pipeline().filter(assigned_to_id__in=user_ids)
+        lc = {r["assigned_to"]: r for r in leads_qs.values("assigned_to").annotate(
+            owned=Count("id"), converted=Count("id", filter=Q(status="converted")),
+            lost=Count("id", filter=Q(status="lost")),
+            open=Count("id", filter=~Q(status__in=["converted", "lost", "nurture"])),
+            converted_mo=Count("id", filter=Q(status="converted", converted_at__year=year, converted_at__month=month)))}
+        wpipe = defaultdict(float)
+        for l in leads_qs.exclude(status__in=["converted", "lost"]).values("assigned_to", "expected_value", "probability"):
+            wpipe[l["assigned_to"]] += float(l["expected_value"] or 0) * (l["probability"] or 0) / 100.0
         attmap = {r["employee"]: r for r in Attendance.objects.filter(employee_id__in=emp_ids, date__year=year, date__month=month)
-                  .values("employee").annotate(present=Count("id", filter=Q(status__in=["present", "half_day"])), hours=Sum("working_hours"))}
+                  .values("employee").annotate(present=Count("id", filter=Q(status__in=["present", "half_day"])),
+                                                absent=Count("id", filter=Q(status="absent")), hours=Sum("working_hours"))}
         actmap = {r["employee"]: r for r in EmployeeActivity.objects.filter(employee_id__in=emp_ids, date__year=year, date__month=month)
-                  .values("employee").annotate(calls=Sum("calls_completed"), notes=Sum("notes_added"))}
+                  .values("employee").annotate(calls=Sum("calls_completed"), notes=Sum("notes_added"),
+                                                tickets=Sum("tickets_updated"), active=Sum("active_duration"), idle=Sum("idle_duration"))}
         meetmap = {r["user"]: r["n"] for r in LeadActivity.objects.filter(user_id__in=user_ids, activity_type="meeting",
                    created_at__year=year, created_at__month=month).values("user").annotate(n=Count("id"))}
         rows = []
         for e in emps:
             p = perf.get(e.id, {})
-            lm = leadmap.get(e.user_id, {})
+            l = lc.get(e.user_id, {})
             at = attmap.get(e.id, {})
             ac = actmap.get(e.id, {})
-            owned, conv = lm.get("owned", 0), lm.get("converted", 0)
-            rows.append({
+            owned, conv = l.get("owned", 0), l.get("converted", 0)
+            row = {
                 "employee": e.user.name, "role": getattr(getattr(e.user, "role", None), "name", "") or "",
-                "revenue": round(p.get("revenue_generated", 0), 2),
-                "overall": p.get("overall", 0), "rank": p.get("rank"),
-                "target_pct": p.get("target_attainment", 0),
+                "revenue": round(by_user.get(e.user_id, 0.0), 2),
+                "overall": p.get("overall", 0), "rank": p.get("rank"), "target_pct": p.get("target_attainment", 0),
+                "revenue_score": p.get("revenue_score", 0), "growth_score": p.get("growth_score", 0),
+                "activity_score": p.get("activity_score", 0),
                 "conversion_pct": round(conv / owned * 100, 1) if owned else 0,
-                "leads_owned": owned, "leads_converted": conv,
+                "leads_owned": owned, "leads_open": l.get("open", 0), "leads_converted": conv,
+                "leads_lost": l.get("lost", 0), "converted_mo": l.get("converted_mo", 0),
+                "weighted_pipeline": round(wpipe.get(e.user_id, 0.0), 2),
                 "calls": int(ac.get("calls") or 0), "notes": int(ac.get("notes") or 0),
-                "meetings": meetmap.get(e.user_id, 0),
-                "present_days": at.get("present", 0), "hours": round(float(at.get("hours") or 0), 1),
-            })
+                "tickets": int(ac.get("tickets") or 0), "meetings": meetmap.get(e.user_id, 0),
+                "active_min": int(ac.get("active") or 0), "idle_min": int(ac.get("idle") or 0),
+                "present_days": at.get("present", 0), "absent_days": at.get("absent", 0),
+                "hours": round(float(at.get("hours") or 0), 1),
+            }
+            for m in mdefs:
+                row[m.name] = round(leaf.get((e.id, m.id), (0.0, 0))[0], 2)
+            rows.append(row)
         rows.sort(key=lambda r: r["overall"], reverse=True)
-        return Response({"rows": rows, "month": month, "year": year})
+        return Response({"rows": rows, "metric_cols": [m.name for m in mdefs], "month": month, "year": year})
 
     emp = (Employee.objects.select_related("user", "hierarchy_level", "manager")
            .filter(id=emp_id).exclude(user__is_superuser=True).first())

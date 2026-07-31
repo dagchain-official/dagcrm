@@ -11,19 +11,27 @@ import { Spinner, EmptyState } from "../components/ui";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// per-employee summary table columns (All-employees view + exports)
-const ALL_COLS = [
-  { key: "employee", label: "Employee" }, { key: "role", label: "Role" },
-  { key: "revenue", label: "Revenue ($)" }, { key: "overall", label: "Score" },
-  { key: "rank", label: "Rank" }, { key: "target_pct", label: "Target %" },
-  { key: "conversion_pct", label: "Conv %" }, { key: "leads_owned", label: "Leads" },
-  { key: "leads_converted", label: "Converted" }, { key: "calls", label: "Calls" },
-  { key: "meetings", label: "Meetings" }, { key: "present_days", label: "Present" },
-  { key: "hours", label: "Hours" },
+const cell = (c, r) => (c.fmt ? c.fmt(r[c.key], r) : (r[c.key] ?? ""));
+
+// Fixed per-employee columns (All-employees view + exports). Dynamic KPI-metric
+// columns (from the backend's metric_cols) are appended after these.
+const FIXED_COLS = [
+  { key: "employee", label: "Employee", left: true }, { key: "role", label: "Role", left: true },
+  { key: "revenue", label: "Revenue", fmt: money }, { key: "overall", label: "Score" },
+  { key: "rank", label: "Rank", fmt: (v) => `#${v}` }, { key: "target_pct", label: "Target %", fmt: (v) => `${v}%` },
+  { key: "revenue_score", label: "Rev score" }, { key: "growth_score", label: "Growth score" },
+  { key: "activity_score", label: "Activity score" }, { key: "conversion_pct", label: "Conv %", fmt: (v) => `${v}%` },
+  { key: "leads_owned", label: "Leads" }, { key: "leads_open", label: "Open" },
+  { key: "leads_converted", label: "Converted" }, { key: "leads_lost", label: "Lost" },
+  { key: "converted_mo", label: "Conv (mo)" }, { key: "weighted_pipeline", label: "Wtd pipeline", fmt: money },
+  { key: "calls", label: "Calls" }, { key: "notes", label: "Notes" }, { key: "tickets", label: "Tickets" },
+  { key: "meetings", label: "Meetings" }, { key: "active_min", label: "Active", fmt: mins },
+  { key: "idle_min", label: "Idle", fmt: mins }, { key: "present_days", label: "Present" },
+  { key: "absent_days", label: "Absent" }, { key: "hours", label: "Hours", fmt: (v) => `${v}h` },
 ];
 
 function exportCsv(name, cols, rows) {
-  const lines = rows.map((r) => cols.map((c) => `"${String(r[c.key] ?? "").replace(/"/g, '""')}"`).join(","));
+  const lines = rows.map((r) => cols.map((c) => `"${String(cell(c, r)).replace(/"/g, '""')}"`).join(","));
   const csv = [cols.map((c) => c.label).join(","), ...lines].join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
   const a = document.createElement("a"); a.href = url; a.download = `${name}.csv`; a.click();
@@ -36,8 +44,8 @@ function exportPdf(name, cols, rows) {
   doc.setFontSize(9); doc.setTextColor("#94a3b8"); doc.text(new Date().toLocaleString(), 14, 22);
   autoTable(doc, {
     startY: 26, head: [cols.map((c) => c.label)],
-    body: rows.map((r) => cols.map((c) => (r[c.key] == null ? "" : String(r[c.key])))),
-    styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [79, 70, 229] },
+    body: rows.map((r) => cols.map((c) => String(cell(c, r)))),
+    styles: { fontSize: 6, cellPadding: 1.5 }, headStyles: { fillColor: [79, 70, 229] },
     alternateRowStyles: { fillColor: [248, 250, 252] },
   });
   doc.save(`${name}.pdf`);
@@ -131,50 +139,48 @@ export default function EmployeeReport() {
       {sel && loading && <Spinner label="Building report…" />}
       {sel && sel !== "all" && !loading && rep?.found === false && <EmptyState title="No data" hint="This employee could not be loaded." />}
 
-      {/* ALL employees — one row each, with Excel / PDF export */}
-      {sel === "all" && !loading && rep?.rows && (
-        <div className="card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h3 className="font-bold text-ink-900">All employees · {MONTHS[month - 1]} {year} ({rep.rows.length})</h3>
-            <div className="flex gap-2">
-              <button onClick={() => exportCsv(`Employee Report ${MONTHS[month - 1]} ${year}`, ALL_COLS, rep.rows)}
-                className="chip !py-2 text-sm inline-flex items-center gap-1.5"><FileSpreadsheet size={15} /> Excel</button>
-              <button onClick={() => exportPdf(`Employee Report ${MONTHS[month - 1]} ${year}`, ALL_COLS, rep.rows)}
-                className="chip !py-2 text-sm inline-flex items-center gap-1.5"><FileDown size={15} /> PDF</button>
+      {/* ALL employees — one row each, every metric, with Excel / PDF export */}
+      {sel === "all" && !loading && rep?.rows && (() => {
+        const cols = [...FIXED_COLS, ...(rep.metric_cols || []).map((n) => ({ key: n, label: n }))];
+        const fname = `Employee Report ${MONTHS[month - 1]} ${year}`;
+        return (
+          <div className="card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 className="font-bold text-ink-900">All employees · {MONTHS[month - 1]} {year} ({rep.rows.length})</h3>
+              <div className="flex gap-2">
+                <button onClick={() => exportCsv(fname, cols, rep.rows)}
+                  className="chip !py-2 text-sm inline-flex items-center gap-1.5"><FileSpreadsheet size={15} /> Excel</button>
+                <button onClick={() => exportPdf(fname, cols, rep.rows)}
+                  className="chip !py-2 text-sm inline-flex items-center gap-1.5"><FileDown size={15} /> PDF</button>
+              </div>
             </div>
-          </div>
-          {rep.rows.length === 0 ? <EmptyState title="No employees" hint="Nothing in your scope." /> : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead>
-                  <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
-                    {ALL_COLS.map((c) => <th key={c.key} className={`py-2.5 px-3 font-semibold ${c.key === "employee" || c.key === "role" ? "" : "text-right"}`}>{c.label}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rep.rows.map((r, i) => (
-                    <tr key={i} className="border-t border-ink-100 hover:bg-ink-50/60">
-                      <td className="py-2.5 px-3 font-medium text-ink-900">{r.employee}</td>
-                      <td className="py-2.5 px-3 text-ink-500">{r.role}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums text-emerald-600 font-semibold">{money(r.revenue)}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.overall}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">#{r.rank}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.target_pct}%</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.conversion_pct}%</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.leads_owned}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums text-brand-600">{r.leads_converted}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.calls}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.meetings}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.present_days}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums">{r.hours}h</td>
+            {rep.rows.length === 0 ? <EmptyState title="No employees" hint="Nothing in your scope." /> : (
+              <div className="overflow-x-auto">
+                <table className="text-sm">
+                  <thead>
+                    <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
+                      {cols.map((c) => (
+                        <th key={c.key} className={`py-2.5 px-3 font-semibold whitespace-nowrap ${c.left ? "" : "text-right"}`}>{c.label}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {rep.rows.map((r, i) => (
+                      <tr key={i} className="border-t border-ink-100 hover:bg-ink-50/60">
+                        {cols.map((c) => (
+                          <td key={c.key} className={`py-2.5 px-3 whitespace-nowrap ${c.left ? "font-medium text-ink-900" : "text-right tabular-nums text-ink-600"}`}>
+                            {cell(c, r)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {sel && sel !== "all" && !loading && rep?.found && (
         <>
