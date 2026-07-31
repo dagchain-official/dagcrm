@@ -768,6 +768,25 @@ class CustomerViewSet(viewsets.ModelViewSet):
             onboarding.append({"platform": "DAGChain", "accounts": len(profiles) or (1 if dag_ids else 0),
                                "stage": _stage(dag_steps), "steps": dag_steps})
 
+        # FX Artha registered-but-no-account: the person exists on FX only as a lead
+        # (has_account=False) so no FX Customer/stats — still surface the journey so
+        # "registered / KYC pending, no trading account yet" is visible.
+        if not any(o["platform"] == "FX Artha" for o in onboarding) and customer.email:
+            fxlead = (Lead.objects.filter(email__iexact=customer.email)
+                      .exclude(external_id="").filter(source__name__icontains="fxartha")
+                      .order_by("created_at").first())
+            if fxlead:
+                kyc = fxlead.kyc_status or ""
+                fx_steps = [
+                    {"label": "Registered", "done": True, "at": fxlead.created_at, "detail": ""},
+                    {"label": "KYC", "done": kyc.lower() in ("approved", "verified", "completed"), "detail": kyc or "pending"},
+                    {"label": "Trading account", "done": False, "detail": "not opened yet"},
+                    {"label": "Funded", "done": False, "detail": "no deposit yet"},
+                    {"label": "Trading", "done": False, "detail": "no trades yet"},
+                ]
+                onboarding.insert(0, {"platform": "FX Artha", "accounts": 0,
+                                      "stage": _stage(fx_steps), "steps": fx_steps})
+
         # unified timeline (newest first)
         timeline = []
         for r in revenues:

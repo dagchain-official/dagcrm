@@ -220,9 +220,12 @@ export default function Customer360() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-extrabold text-ink-900">{c.name}</h1>
-              {(d.platforms?.length ? d.platforms.map((p) => p.platform) : (d.platform ? [d.platform] : [])).map((pl) => (
+              {(d.onboarding?.length
+                ? d.onboarding.map((o) => [o.platform, o.accounts > 0])
+                : (d.platforms?.length ? d.platforms.map((p) => [p.platform, true]) : (d.platform ? [[d.platform, true]] : []))
+              ).map(([pl, hasAcct]) => (
                 <span key={pl} className={`text-xs font-bold px-2.5 py-1 rounded-full ${PLATFORM_BADGE[pl] || "bg-ink-100 text-ink-600"}`}>
-                  {pl} account
+                  {pl} {hasAcct ? "account" : "· registered"}
                 </span>
               ))}
             </div>

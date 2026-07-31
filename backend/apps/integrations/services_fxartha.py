@@ -59,10 +59,12 @@ def _upsert_lead(conn, item, source, next_rm):
         "phone": item.get("phone") or "",
         "country": item.get("country") or "",
     }
+    kyc = item.get("kyc_status") or ""
     lead = Lead.objects.filter(external_id=uid).first()
     if lead:                                   # update contact only — don't clobber CRM-side status/RM
         for k, v in contact.items():
             setattr(lead, k, v)
+        lead.kyc_status = kyc
         lead.save()
         return lead, False
 
@@ -76,7 +78,7 @@ def _upsert_lead(conn, item, source, next_rm):
             lead = Lead.objects.create(
                 external_id=uid, lead_code=f"FXA{n:05d}", source=source,
                 status="converted" if item.get("has_account") else "new",
-                assigned_to=assigned, **contact)
+                kyc_status=kyc, assigned_to=assigned, **contact)
             break
         except IntegrityError:
             n += 1

@@ -90,6 +90,7 @@ class Lead(models.Model):
     score = models.PositiveIntegerField(default=0)  # AI lead score (0-100)
     converted_at = models.DateTimeField(null=True, blank=True)  # set when status -> converted
     assigned_at = models.DateTimeField(null=True, blank=True)   # set when the owner (re)assigns
+    kyc_status = models.CharField(max_length=30, blank=True)    # platform KYC (e.g. FX Artha registered-but-no-account)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
