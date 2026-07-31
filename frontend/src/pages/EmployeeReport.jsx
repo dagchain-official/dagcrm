@@ -82,7 +82,7 @@ function Section({ title, icon: Icon, children }) {
 export default function EmployeeReport() {
   const now = new Date();
   const [emps, setEmps] = useState([]);
-  const [sel, setSel] = useState("");
+  const [sel, setSel] = useState("all");   // default view: the all-employees table
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [rep, setRep] = useState(null);
