@@ -219,6 +219,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         open leads not followed up in 3+ days."""
         from datetime import timedelta
         from django.db.models import Max
+        from django.utils import timezone
         user = request.user
         now = timezone.now()
         today = timezone.localdate()
