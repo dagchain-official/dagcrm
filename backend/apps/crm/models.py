@@ -169,6 +169,7 @@ class LeadActivity(models.Model):
     visit_address = models.CharField(max_length=300, blank=True)
     followup_date = models.DateField(null=True, blank=True)
     next_action = models.CharField(max_length=255, blank=True)
+    remind_at = models.DateTimeField(null=True, blank=True)   # callback / follow-up reminder time
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

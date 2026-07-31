@@ -90,6 +90,7 @@ export default function LeadDetail() {
         meeting_status: opts.meeting_status || "",
         meeting_at: opts.meeting_at || null,
         location: opts.location || "",
+        remind_at: opts.remind_at || null,
       });
       await load();
       const t = data.telephony;
@@ -360,7 +361,10 @@ export default function LeadDetail() {
 
       {callModal && (
         <CallModal lead={l} busy={busy} onClose={() => setCallModal(false)}
-          onSubmit={(payload) => engage("call", payload).then(() => setCallModal(false))} />
+          onSubmit={(payload) => engage("call", payload).then(() => {
+            setCallModal(false);
+            if (payload.outcome === "meeting_booked") setMeetModal(true);
+          })} />
       )}
       {meetModal && (
         <MeetingModal busy={busy} onClose={() => setMeetModal(false)}
@@ -373,7 +377,7 @@ export default function LeadDetail() {
 const OUTCOMES = [
   ["connected", "Connected"], ["interested", "Interested"], ["callback", "Callback Requested"],
   ["meeting_booked", "Meeting Booked"], ["no_answer", "No Answer"], ["busy", "Busy"],
-  ["voicemail", "Voicemail"], ["wrong_number", "Wrong Number"], ["not_interested", "Not Interested"],
+  ["wrong_number", "Wrong Number"], ["not_interested", "Not Interested"],
   ["converted", "Converted"],
 ];
 const MEETING_STATUSES = [
@@ -387,6 +391,17 @@ function CallModal({ lead, busy, onClose, onSubmit }) {
   const [outcome, setOutcome] = useState("connected");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
+  const [callbackAt, setCallbackAt] = useState("");   // Callback Requested → exact time
+  const [followupHrs, setFollowupHrs] = useState(""); // No Answer / Busy → hours from now
+
+  const submit = () => {
+    let remind_at = null;
+    if (outcome === "callback" && callbackAt) remind_at = new Date(callbackAt).toISOString();
+    else if ((outcome === "no_answer" || outcome === "busy") && followupHrs)
+      remind_at = new Date(Date.now() + Number(followupHrs) * 3600 * 1000).toISOString();
+    onSubmit({ outcome, duration_min: duration || 0, remarks: notes, remind_at });
+  };
+
   return (
     <Modal open onClose={onClose} title={`Log call — ${lead.name}`}>
       <div className="space-y-3">
@@ -402,6 +417,34 @@ function CallModal({ lead, busy, onClose, onSubmit }) {
             {OUTCOMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
+
+        {/* Callback Requested → when to call back (reminder pops up 2 min before) */}
+        {outcome === "callback" && (
+          <div>
+            <label className="label">Call back at</label>
+            <input className="input" type="datetime-local" value={callbackAt}
+              onChange={(e) => setCallbackAt(e.target.value)} />
+            <p className="text-[11px] text-ink-400 mt-1">A reminder pops up 2 minutes before this time.</p>
+          </div>
+        )}
+
+        {/* No Answer / Busy → follow-up reminder in N hours */}
+        {(outcome === "no_answer" || outcome === "busy") && (
+          <div>
+            <label className="label">Follow up in (hours)</label>
+            <input className="input" type="number" step="0.5" min="0" value={followupHrs}
+              onChange={(e) => setFollowupHrs(e.target.value)} placeholder="e.g. 2" />
+            <p className="text-[11px] text-ink-400 mt-1">A reminder pops up 2 minutes before it's due. Leave blank for no reminder.</p>
+          </div>
+        )}
+
+        {/* Meeting Booked → the meeting scheduler opens after you save */}
+        {outcome === "meeting_booked" && (
+          <p className="text-xs text-brand-600 bg-brand-50 rounded-lg px-3 py-2">
+            After you save, the meeting scheduler opens to book the meeting.
+          </p>
+        )}
+
         <div>
           <label className="label">Duration (minutes)</label>
           <input className="input" type="number" step="0.5" min="0" value={duration}
@@ -419,8 +462,7 @@ function CallModal({ lead, busy, onClose, onSubmit }) {
             title={lead.phone ? "Open your phone's dialer" : "No phone number"}>
             <Phone size={14} /> Dial
           </a>
-          <button className="btn-primary" disabled={busy}
-            onClick={() => onSubmit({ outcome, duration_min: duration || 0, remarks: notes })}>
+          <button className="btn-primary" disabled={busy} onClick={submit}>
             {busy ? "Saving…" : "Save log"}
           </button>
         </div>

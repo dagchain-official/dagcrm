@@ -240,7 +240,17 @@ class LeadViewSet(viewsets.ModelViewSet):
                 overdue.append({"lead": l.name, "lead_id": l.id,
                                 "days": (today - ref.date()).days})
         overdue.sort(key=lambda x: -x["days"])
-        return Response({"meetings": meet, "overdue_followups": overdue[:20]})
+
+        # callback / follow-up reminders (a specific time was set on a call log) —
+        # near-future + recently-passed so a missed one still surfaces on next open.
+        cb_qs = (LeadActivity.objects.filter(
+            lead__assigned_to=user, remind_at__isnull=False,
+            remind_at__gte=now - timedelta(days=1), remind_at__lte=now + timedelta(hours=48))
+            .select_related("lead").order_by("remind_at")[:30])
+        callbacks = [{"lead": a.lead.name, "lead_id": a.lead_id, "at": a.remind_at,
+                      "kind": "callback" if a.outcome == "callback" else "followup"} for a in cb_qs]
+
+        return Response({"meetings": meet, "overdue_followups": overdue[:20], "callbacks": callbacks})
 
     def perform_update(self, serializer):
         prev = self.get_object().assigned_to_id
@@ -295,6 +305,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             meeting_status=request.data.get("meeting_status") or "",
             meeting_at=request.data.get("meeting_at") or None,
             location=request.data.get("location") or "",
+            remind_at=request.data.get("remind_at") or None,
         )
         lead.refresh_from_db()               # status may have auto-advanced via signal
         from .scoring import rescore
