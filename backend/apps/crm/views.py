@@ -734,6 +734,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 {"label": "Trading", "done": fx_lots > 0, "detail": f"{fx_lots:g} lots traded" if fx_lots else "no trades yet"},
             ]
             onboarding.append({"platform": "FX Artha", "accounts": n_acct,
+                               "name": (primary.name if primary else ""),
                                "stage": _stage(fx_steps), "steps": fx_steps})
         if dag_ids:
             nodes = DagChainNode.objects.filter(customer_id__in=dag_ids)
@@ -765,7 +766,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 {"label": "Nodes", "done": dnodes > 0,
                  "detail": (f"{vnodes} validator · {snodes} storage") if dnodes else "no nodes yet"},
             ]
+            dagname = Customer.objects.filter(id__in=dag_ids).values_list("name", flat=True).first() or ""
             onboarding.append({"platform": "DAGChain", "accounts": len(profiles) or (1 if dag_ids else 0),
+                               "name": dagname,
                                "stage": _stage(dag_steps), "steps": dag_steps})
 
         # FX Artha registered-but-no-account: the person exists on FX only as a lead
@@ -785,6 +788,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                     {"label": "Trading", "done": False, "detail": "no trades yet"},
                 ]
                 onboarding.insert(0, {"platform": "FX Artha", "accounts": 0,
+                                      "name": fxlead.name or "",
                                       "stage": _stage(fx_steps), "steps": fx_steps})
 
         # unified timeline (newest first)

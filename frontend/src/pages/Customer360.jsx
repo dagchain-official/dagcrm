@@ -219,7 +219,15 @@ export default function Customer360() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-extrabold text-ink-900">{c.name}</h1>
+              <h1 className="text-2xl font-extrabold text-ink-900">
+                {(() => {
+                  const names = [];
+                  [c.name, ...(d.onboarding || []).map((o) => o.name)].forEach((n) => {
+                    if (n && !names.some((x) => x.toLowerCase() === n.toLowerCase())) names.push(n);
+                  });
+                  return names.join(" / ");
+                })()}
+              </h1>
               {(d.onboarding?.length
                 ? d.onboarding.map((o) => [o.platform, o.accounts > 0])
                 : (d.platforms?.length ? d.platforms.map((p) => [p.platform, true]) : (d.platform ? [[d.platform, true]] : []))
@@ -557,6 +565,7 @@ export default function Customer360() {
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <GitBranch size={18} className="text-brand-600" />
                 <span className="font-bold text-ink-900">{o.platform}</span>
+                {o.name && <span className="text-sm text-ink-500">· {o.name}</span>}
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${PLATFORM_BADGE[o.platform] || "bg-ink-100 text-ink-600"}`}>
                   {o.accounts} account{o.accounts === 1 ? "" : "s"}
                 </span>
