@@ -3,6 +3,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
+import { Link } from "react-router-dom";
 import {
   Users, Target, Trophy, DollarSign, MoreHorizontal, ArrowUpRight,
 } from "lucide-react";
@@ -14,9 +15,9 @@ import KpiScorecard from "../../components/KpiScorecard";
 const DONUT = ["#f97316", "#fb7185", "#8b5cf6", "#6366f1", "#22c55e", "#06b6d4"];
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 
-function Kpi({ icon: Icon, label, value, trend, color }) {
+function Kpi({ icon: Icon, label, value, trend, color, to }) {
   return (
-    <div className="card p-5">
+    <Link to={to} className="card p-5 hover:shadow-md hover:-translate-y-0.5 transition block">
       <div className="flex items-start justify-between">
         <div className={`grid place-items-center w-11 h-11 rounded-2xl ${color}`}>
           <Icon size={20} />
@@ -28,7 +29,7 @@ function Kpi({ icon: Icon, label, value, trend, color }) {
       <p className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-3">
         <ArrowUpRight size={14} /> {trend}
       </p>
-    </div>
+    </Link>
   );
 }
 
@@ -66,10 +67,10 @@ export default function SalesManagerDashboard() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Kpi icon={Users} label="Total Leads" value={d.total_leads} trend={`${d.converted_leads} converted`} color="bg-orange-100 text-orange-600" />
-        <Kpi icon={Target} label="Open Deals" value={d.open_opportunities} trend={money(d.pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" />
-        <Kpi icon={Trophy} label="Deals Won" value={d.won_deals} trend={`${d.converted_leads} converted`} color="bg-emerald-100 text-emerald-600" />
-        <Kpi icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} trend={money(d.pipeline_value) + " pipeline"} color="bg-brand-100 text-brand-600" />
+        <Kpi icon={Users} label="Total Leads" value={d.total_leads} trend={`${d.converted_leads} converted`} color="bg-orange-100 text-orange-600" to="/m/leads" />
+        <Kpi icon={Target} label="Open Deals" value={d.open_opportunities} trend={money(d.pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" to="/m/opportunities" />
+        <Kpi icon={Trophy} label="Deals Won" value={d.won_deals} trend={`${d.converted_leads} converted`} color="bg-emerald-100 text-emerald-600" to="/m/opportunities" />
+        <Kpi icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} trend={money(d.pipeline_value) + " pipeline"} color="bg-brand-100 text-brand-600" to="/m/revenues" />
       </div>
 
       {/* team scorecard */}
