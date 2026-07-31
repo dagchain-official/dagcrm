@@ -2,12 +2,46 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText, DollarSign, Trophy, Target, Clock, Calendar, MapPin,
-  Phone, StickyNote, TrendingUp, UserCheck,
+  Phone, StickyNote, TrendingUp, UserCheck, FileSpreadsheet, FileDown,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import api from "../api/client";
 import { Spinner, EmptyState } from "../components/ui";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// per-employee summary table columns (All-employees view + exports)
+const ALL_COLS = [
+  { key: "employee", label: "Employee" }, { key: "role", label: "Role" },
+  { key: "revenue", label: "Revenue ($)" }, { key: "overall", label: "Score" },
+  { key: "rank", label: "Rank" }, { key: "target_pct", label: "Target %" },
+  { key: "conversion_pct", label: "Conv %" }, { key: "leads_owned", label: "Leads" },
+  { key: "leads_converted", label: "Converted" }, { key: "calls", label: "Calls" },
+  { key: "meetings", label: "Meetings" }, { key: "present_days", label: "Present" },
+  { key: "hours", label: "Hours" },
+];
+
+function exportCsv(name, cols, rows) {
+  const lines = rows.map((r) => cols.map((c) => `"${String(r[c.key] ?? "").replace(/"/g, '""')}"`).join(","));
+  const csv = [cols.map((c) => c.label).join(","), ...lines].join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+  const a = document.createElement("a"); a.href = url; a.download = `${name}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportPdf(name, cols, rows) {
+  const doc = new jsPDF({ orientation: "landscape" });
+  doc.setFontSize(16); doc.setTextColor("#4f46e5"); doc.text(`DAGOS — ${name}`, 14, 16);
+  doc.setFontSize(9); doc.setTextColor("#94a3b8"); doc.text(new Date().toLocaleString(), 14, 22);
+  autoTable(doc, {
+    startY: 26, head: [cols.map((c) => c.label)],
+    body: rows.map((r) => cols.map((c) => (r[c.key] == null ? "" : String(r[c.key])))),
+    styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [79, 70, 229] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+  });
+  doc.save(`${name}.pdf`);
+}
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 const mins = (m) => { const h = Math.floor((m || 0) / 60), x = (m || 0) % 60; return h ? `${h}h ${x}m` : `${x}m`; };
 const dt = (v) => (v ? new Date(v).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—");
@@ -53,7 +87,8 @@ export default function EmployeeReport() {
   useEffect(() => {
     if (!sel) { setRep(null); return; }
     setLoading(true);
-    api.get("/reports/employee-report/", { params: { employee: sel, month, year } })
+    const params = sel === "all" ? { all: 1, month, year } : { employee: sel, month, year };
+    api.get("/reports/employee-report/", { params })
       .then((r) => setRep(r.data)).catch(() => setRep(null)).finally(() => setLoading(false));
   }, [sel, month, year]);
 
@@ -74,6 +109,7 @@ export default function EmployeeReport() {
           <label className="label">Employee</label>
           <select className="input" value={sel} onChange={(e) => setSel(e.target.value)}>
             <option value="">Select an employee…</option>
+            <option value="all">All employees (table)</option>
             {emps.map((e) => <option key={e.id} value={e.id}>{e.name}{e.role ? ` — ${e.role}` : ""}</option>)}
           </select>
         </div>
@@ -93,9 +129,54 @@ export default function EmployeeReport() {
 
       {!sel && <EmptyState title="No employee selected" hint="Choose someone from the dropdown above." />}
       {sel && loading && <Spinner label="Building report…" />}
-      {sel && !loading && rep?.found === false && <EmptyState title="No data" hint="This employee could not be loaded." />}
+      {sel && sel !== "all" && !loading && rep?.found === false && <EmptyState title="No data" hint="This employee could not be loaded." />}
 
-      {sel && !loading && rep?.found && (
+      {/* ALL employees — one row each, with Excel / PDF export */}
+      {sel === "all" && !loading && rep?.rows && (
+        <div className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 className="font-bold text-ink-900">All employees · {MONTHS[month - 1]} {year} ({rep.rows.length})</h3>
+            <div className="flex gap-2">
+              <button onClick={() => exportCsv(`Employee Report ${MONTHS[month - 1]} ${year}`, ALL_COLS, rep.rows)}
+                className="chip !py-2 text-sm inline-flex items-center gap-1.5"><FileSpreadsheet size={15} /> Excel</button>
+              <button onClick={() => exportPdf(`Employee Report ${MONTHS[month - 1]} ${year}`, ALL_COLS, rep.rows)}
+                className="chip !py-2 text-sm inline-flex items-center gap-1.5"><FileDown size={15} /> PDF</button>
+            </div>
+          </div>
+          {rep.rows.length === 0 ? <EmptyState title="No employees" hint="Nothing in your scope." /> : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[900px]">
+                <thead>
+                  <tr className="text-left text-ink-400 text-[11px] uppercase tracking-wide bg-ink-50">
+                    {ALL_COLS.map((c) => <th key={c.key} className={`py-2.5 px-3 font-semibold ${c.key === "employee" || c.key === "role" ? "" : "text-right"}`}>{c.label}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rep.rows.map((r, i) => (
+                    <tr key={i} className="border-t border-ink-100 hover:bg-ink-50/60">
+                      <td className="py-2.5 px-3 font-medium text-ink-900">{r.employee}</td>
+                      <td className="py-2.5 px-3 text-ink-500">{r.role}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-emerald-600 font-semibold">{money(r.revenue)}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.overall}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">#{r.rank}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.target_pct}%</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.conversion_pct}%</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.leads_owned}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-brand-600">{r.leads_converted}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.calls}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.meetings}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.present_days}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{r.hours}h</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {sel && sel !== "all" && !loading && rep?.found && (
         <>
           {/* profile */}
           <div className="card p-5 bg-gradient-to-br from-brand-600 to-brand-500 text-white border-0">

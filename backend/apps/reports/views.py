@@ -1445,13 +1445,51 @@ def employee_report(request):
 
     # --- picker list (no employee selected yet)
     emp_id = request.query_params.get("employee")
-    if not emp_id:
+    if not emp_id and not request.query_params.get("all"):
         emps = Employee.objects.select_related("user").exclude(user__is_superuser=True)
         rows = [{"id": e.id, "name": e.user.name,
                  "role": getattr(getattr(e.user, "role", None), "name", "")}
                 for e in emps if e.user and (sees_all or e.user_id in allowed)]
         rows.sort(key=lambda r: r["name"])
         return Response({"employees": rows})
+
+    # --- ALL employees, one row each (a table to view / export)
+    if request.query_params.get("all"):
+        from django.db.models import Count, Q
+        emps = list(Employee.objects.select_related("user", "user__role").exclude(user__is_superuser=True))
+        if not sees_all:
+            emps = [e for e in emps if e.user_id in allowed]
+        emp_ids = [e.id for e in emps]
+        user_ids = [e.user_id for e in emps]
+        perf = {r["id"]: r for r in compute_performance(month, year)["rows"]}
+        leadmap = {r["assigned_to"]: r for r in Lead.objects.pipeline().filter(assigned_to_id__in=user_ids)
+                   .values("assigned_to").annotate(owned=Count("id"), converted=Count("id", filter=Q(status="converted")))}
+        attmap = {r["employee"]: r for r in Attendance.objects.filter(employee_id__in=emp_ids, date__year=year, date__month=month)
+                  .values("employee").annotate(present=Count("id", filter=Q(status__in=["present", "half_day"])), hours=Sum("working_hours"))}
+        actmap = {r["employee"]: r for r in EmployeeActivity.objects.filter(employee_id__in=emp_ids, date__year=year, date__month=month)
+                  .values("employee").annotate(calls=Sum("calls_completed"), notes=Sum("notes_added"))}
+        meetmap = {r["user"]: r["n"] for r in LeadActivity.objects.filter(user_id__in=user_ids, activity_type="meeting",
+                   created_at__year=year, created_at__month=month).values("user").annotate(n=Count("id"))}
+        rows = []
+        for e in emps:
+            p = perf.get(e.id, {})
+            lm = leadmap.get(e.user_id, {})
+            at = attmap.get(e.id, {})
+            ac = actmap.get(e.id, {})
+            owned, conv = lm.get("owned", 0), lm.get("converted", 0)
+            rows.append({
+                "employee": e.user.name, "role": getattr(getattr(e.user, "role", None), "name", "") or "",
+                "revenue": round(p.get("revenue_generated", 0), 2),
+                "overall": p.get("overall", 0), "rank": p.get("rank"),
+                "target_pct": p.get("target_attainment", 0),
+                "conversion_pct": round(conv / owned * 100, 1) if owned else 0,
+                "leads_owned": owned, "leads_converted": conv,
+                "calls": int(ac.get("calls") or 0), "notes": int(ac.get("notes") or 0),
+                "meetings": meetmap.get(e.user_id, 0),
+                "present_days": at.get("present", 0), "hours": round(float(at.get("hours") or 0), 1),
+            })
+        rows.sort(key=lambda r: r["overall"], reverse=True)
+        return Response({"rows": rows, "month": month, "year": year})
 
     emp = (Employee.objects.select_related("user", "hierarchy_level", "manager")
            .filter(id=emp_id).exclude(user__is_superuser=True).first())
