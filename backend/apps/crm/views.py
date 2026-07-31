@@ -214,6 +214,26 @@ class LeadViewSet(viewsets.ModelViewSet):
                 pass
             Communication.objects.create(lead=lead, channel="email", direction="outbound", message=msg)
 
+    def _auto_template_on_outcome(self, lead, user, outcome):
+        """A missed call (No Answer / Busy) fires a matching WhatsApp template —
+        the agent's own if they have one for this trigger, else a shared one. Sends
+        live when WhatsApp is configured; always logs it on the lead either way."""
+        trig = {"no_answer": "call_no_answer", "busy": "call_busy"}.get(outcome)
+        if not trig or not lead.phone:
+            return
+        from .models import MessageTemplate, render_message
+        tpl = (MessageTemplate.objects.filter(trigger=trig, channel="whatsapp", active=True, owner=user).first()
+               or MessageTemplate.objects.filter(trigger=trig, channel="whatsapp", active=True, scope="shared").first())
+        if not tpl:
+            return
+        body = render_message(tpl.body, user=user, lead=lead)
+        try:
+            from .telephony import send_whatsapp
+            send_whatsapp(lead.phone, body)
+        except Exception:  # noqa: BLE001
+            pass
+        Communication.objects.create(lead=lead, channel="whatsapp", direction="outbound", message=body)
+
     @action(detail=False, methods=["get"])
     def reminders(self, request):
         """Pop-up feed for the logged-in agent: upcoming meetings (next 48h) and
@@ -312,6 +332,10 @@ class LeadViewSet(viewsets.ModelViewSet):
         lead.refresh_from_db()               # status may have auto-advanced via signal
         from .scoring import rescore
         rescore(lead)
+
+        # Auto WhatsApp on a missed call — fire a matching template (no answer / busy).
+        if kind == "call":
+            self._auto_template_on_outcome(lead, user, request.data.get("outcome") or "")
 
         telephony = None
         if kind in ("whatsapp", "email", "proposal"):
@@ -941,6 +965,46 @@ class CommunicationViewSet(viewsets.ModelViewSet):
     queryset = Communication.objects.all()
     serializer_class = CommunicationSerializer
     filterset_fields = ["lead", "customer", "channel", "direction"]
+
+    def get_queryset(self):
+        """An employee sees only the chats/messages of THEIR OWN clients — a
+        manager also their team's, admins / Finance / HR everyone's. Attribution
+        follows the lead/customer's owner (incl. the originating lead's RM)."""
+        from django.db.models import Q
+        from apps.accounts.access import is_admin_view, subordinate_user_ids
+        qs = super().get_queryset()
+        user = self.request.user
+        role = getattr(getattr(user, "role", None), "name", "")
+        if is_admin_view(user) or role in ("Finance", "HR"):
+            return qs
+        ids = subordinate_user_ids(user, include_self=True)
+        return qs.filter(
+            Q(lead__assigned_to_id__in=ids)
+            | Q(customer__assigned_to_id__in=ids)
+            | Q(customer__lead__assigned_to_id__in=ids))
+
+
+class MessageTemplateViewSet(viewsets.ModelViewSet):
+    """WhatsApp/Email message templates. Everyone sees SHARED templates + their
+    OWN personal ones. Saving a personal template stamps the owner; only an admin
+    view can save a shared one (else it's forced personal to the saver)."""
+    from apps.crm.models import MessageTemplate as _MT
+    from apps.crm.serializers import MessageTemplateSerializer as _MTS
+    queryset = _MT.objects.select_related("owner", "business").all()
+    serializer_class = _MTS
+    filterset_fields = ["channel", "scope", "trigger", "active"]
+
+    def get_queryset(self):
+        from django.db.models import Q
+        qs = super().get_queryset()
+        return qs.filter(Q(scope="shared") | Q(owner=self.request.user))
+
+    def perform_create(self, serializer):
+        scope = serializer.validated_data.get("scope", "personal")
+        if scope == "shared" and is_admin_view(self.request.user):
+            serializer.save(owner=None)
+        else:
+            serializer.save(scope="personal", owner=self.request.user)
 
 
 class TargetViewSet(BusinessScopedMixin, viewsets.ModelViewSet):

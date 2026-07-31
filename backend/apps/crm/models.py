@@ -310,6 +310,48 @@ class Communication(models.Model):
         ordering = ["-created_at"]
 
 
+class MessageTemplate(models.Model):
+    """A reusable WhatsApp/Email message with {placeholders}. Shared (everyone) or
+    personal (one owner). A trigger auto-sends it on a call outcome."""
+    CHANNELS = [("whatsapp", "WhatsApp"), ("email", "Email")]
+    SCOPES = [("shared", "Shared (everyone)"), ("personal", "Personal (only me)")]
+    TRIGGERS = [
+        ("", "Manual — pick when sending"),
+        ("call_no_answer", "Auto — call outcome: No Answer"),
+        ("call_busy", "Auto — call outcome: Busy"),
+    ]
+    name = models.CharField(max_length=120)
+    channel = models.CharField(max_length=20, choices=CHANNELS, default="whatsapp")
+    subject = models.CharField(max_length=200, blank=True)   # email only
+    body = models.TextField()                                # supports {client_name} {employee_name} {business_name}
+    scope = models.CharField(max_length=10, choices=SCOPES, default="personal")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                              null=True, blank=True, related_name="message_templates")
+    trigger = models.CharField(max_length=30, choices=TRIGGERS, blank=True)
+    business = models.ForeignKey(Business, on_delete=models.SET_NULL, null=True, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.name
+
+
+def render_message(text, *, user=None, lead=None, business=None):
+    """Fill a template's {placeholders} from the sender + the lead."""
+    biz = business or (getattr(lead, "business", None))
+    repl = {
+        "{client_name}": (getattr(lead, "name", "") or "there"),
+        "{employee_name}": (getattr(user, "name", "") or ""),
+        "{business_name}": (getattr(biz, "name", "") or "our team"),
+    }
+    for k, v in repl.items():
+        text = (text or "").replace(k, v)
+    return text
+
+
 # ------------------------------------------------------------------ Targets
 class Target(models.Model):
     TYPES = [("revenue", "Revenue"), ("leads", "Leads"), ("conversions", "Conversions")]

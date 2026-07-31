@@ -41,6 +41,7 @@ export const moduleOf = (to) => {
   if (to === "/aum") return "aum-entries";
   if (to === "/contribution") return "contribution-entries";
   if (to === "/config") return "businesses";
+  if (to === "/m/message-templates") return "communications";   // same access as chats
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
 };
@@ -64,6 +65,7 @@ export const NAV = [
       { to: "/m/opportunities", label: "Opportunities", icon: Target },
       { to: "/m/customers", label: "Customers", icon: UserCheck },
       { to: "/m/communications", label: "Communications", icon: MessageSquare },
+      { to: "/m/message-templates", label: "Message Templates", icon: MessageSquare },
       { to: "/targets", label: "Targets", icon: Crosshair },
       { to: "/team-requests", label: "Team Requests", icon: UserPlus },
       { to: "/kpi", label: "KPI & Performance", icon: BarChart4 },

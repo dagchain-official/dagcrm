@@ -9,6 +9,7 @@ import usePolling from "../hooks/usePolling";
 import { Badge, Spinner, EmptyState, Modal, ScorePill } from "../components/ui";
 import { STATUS_COLORS } from "../config/resources";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 const dt = (v) => (v ? new Date(v).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
@@ -28,6 +29,7 @@ const FUNNEL = ["new", "assigned", "attempted", "contacted", "qualified",
 export default function LeadDetail() {
   const { id } = useParams();
   const toast = useToast();
+  const { user } = useAuth();
   const [d, setD] = useState(null);
   const [err, setErr] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,7 @@ export default function LeadDetail() {
   const [emailFrom, setEmailFrom] = useState("");
   const [history, setHistory] = useState([]);   // past messages/emails in the thread
   const [histLoading, setHistLoading] = useState(false);
+  const [templates, setTemplates] = useState([]);   // message templates for the open channel
 
   const load = () => api.get(`/leads/${id}/overview/`).then((r) => setD(r.data)).catch(() => { if (!d) setErr(true); });
   usePolling(load, 2000, [id]);   // live refresh; re-fetches immediately when id changes
@@ -54,6 +57,24 @@ export default function LeadDetail() {
       setEmailFrom(def ? String(def.id) : "");
     }).catch(() => setEmailAccounts([]));
   }, [msgModal]);
+
+  // load templates for the open channel (WhatsApp / Email)
+  useEffect(() => {
+    if (!msgModal) { setTemplates([]); return; }
+    api.get("/message-templates/", { params: { channel: msgModal.type, active: true } })
+      .then((r) => setTemplates(r.data.results || r.data || [])).catch(() => setTemplates([]));
+  }, [msgModal]);
+
+  // fill the message box from a template, substituting the placeholders
+  const applyTemplate = (tpl) => {
+    if (!tpl) return;
+    const fill = (t) => (t || "")
+      .replaceAll("{client_name}", l?.name || "there")
+      .replaceAll("{employee_name}", user?.name || "")
+      .replaceAll("{business_name}", tpl.business_name || l?.business_name || "our team");
+    setMsg(fill(tpl.body));
+    if (msgModal?.type === "email" && tpl.subject) setSubject(fill(tpl.subject));
+  };
 
   // load the past conversation (WhatsApp / Email) for the thread view.
   // oldest first so it reads top -> bottom like a chat.
@@ -301,6 +322,19 @@ export default function LeadDetail() {
         {msgModal && (
           <div className="space-y-3">
             <p className="text-sm text-ink-500">To: <b>{l.name}</b>{(msgModal.type === "whatsapp" ? l.phone : l.email) ? ` (${msgModal.type === "whatsapp" ? l.phone : l.email})` : ""}</p>
+
+            {templates.length > 0 && (
+              <div>
+                <label className="label">Use a template</label>
+                <select className="input" defaultValue=""
+                  onChange={(e) => applyTemplate(templates.find((t) => String(t.id) === e.target.value))}>
+                  <option value="">— Pick a template —</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}{t.scope === "shared" ? " · shared" : ""}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {msgModal.type === "email" && (
               <>

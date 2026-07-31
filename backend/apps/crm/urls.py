@@ -4,8 +4,8 @@ from .views import (
     AttachmentViewSet, AumEntryViewSet, BusinessViewSet, CommunicationViewSet,
     ContributionEntryViewSet, ContributionWeightViewSet, CustomerProductViewSet, PostSaleViewSet,
     CustomerViewSet, LeadActivityViewSet, LeadInterestViewSet, LeadSourceViewSet,
-    LeadViewSet, MetricDefinitionViewSet, MetricEntryViewSet, OpportunityViewSet,
-    ProductViewSet, ProposalViewSet, TargetAssignmentViewSet, TargetViewSet,
+    LeadViewSet, MessageTemplateViewSet, MetricDefinitionViewSet, MetricEntryViewSet,
+    OpportunityViewSet, ProductViewSet, ProposalViewSet, TargetAssignmentViewSet, TargetViewSet,
 )
 
 router = DefaultRouter()
@@ -20,6 +20,7 @@ router.register("customers", CustomerViewSet)
 router.register("customer-products", CustomerProductViewSet)
 router.register("post-sales", PostSaleViewSet)
 router.register("communications", CommunicationViewSet)
+router.register("message-templates", MessageTemplateViewSet)
 router.register("targets", TargetViewSet)
 router.register("target-assignments", TargetAssignmentViewSet)
 router.register("metric-definitions", MetricDefinitionViewSet)

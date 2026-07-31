@@ -339,6 +339,18 @@ class CommunicationSerializer(serializers.ModelSerializer):
         return "—"
 
 
+class MessageTemplateSerializer(serializers.ModelSerializer):
+    owner_name = serializers.CharField(source="owner.name", read_only=True)
+    business_name = serializers.CharField(source="business.name", read_only=True)
+
+    class Meta:
+        from apps.crm.models import MessageTemplate
+        model = MessageTemplate
+        fields = ["id", "name", "channel", "subject", "body", "scope", "owner",
+                  "owner_name", "trigger", "business", "business_name", "active", "created_at"]
+        read_only_fields = ["created_at", "owner"]
+
+
 class TargetAssignmentSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.name", read_only=True)
 

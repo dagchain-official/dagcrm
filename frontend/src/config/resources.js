@@ -313,6 +313,29 @@ export const RESOURCES = {
       { key: "status", label: "Status", type: "select", options: sel("open", "closed") },
     ],
   },
+  "message-templates": {
+    title: "Message Templates", endpoint: "message-templates", search: true,
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "channel", label: "Channel", badge: true },
+      { key: "scope", label: "Scope", badge: true },
+      { key: "trigger", label: "Auto trigger" },
+      { key: "owner_name", label: "Owner" },
+    ],
+    fields: [
+      { key: "name", label: "Template name", required: true },
+      { key: "channel", label: "Channel", type: "select", options: sel("whatsapp", "email") },
+      { key: "scope", label: "Who can use it", type: "select", options: [
+        { value: "personal", label: "Personal (only me)" }, { value: "shared", label: "Shared (everyone)" }] },
+      { key: "trigger", label: "Auto-send on", type: "select", options: [
+        { value: "", label: "Manual — I pick it when sending" },
+        { value: "call_no_answer", label: "Call outcome: No Answer" },
+        { value: "call_busy", label: "Call outcome: Busy" }] },
+      { key: "subject", label: "Subject (email only)" },
+      { key: "body", label: "Message — use {client_name}, {employee_name}, {business_name}", type: "textarea", required: true },
+      { key: "business", label: "Business (fills {business_name})", type: "ref", ref: "businesses", labelKey: "name" },
+    ],
+  },
   customers: {
     title: "Customers", endpoint: "customers", search: true, detailPath: "/customers",
     columns: [
