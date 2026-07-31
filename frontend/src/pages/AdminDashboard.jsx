@@ -52,7 +52,7 @@ export default function AdminDashboard() {
 
       {/* headline numbers */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Tile icon={Users} label="Total Leads" value={num(d.total_leads)} color="bg-orange-100 text-orange-600" />
+        <Tile icon={Users} label="Active Leads" value={num(d.total_leads)} color="bg-orange-100 text-orange-600" />
         <Tile icon={Trophy} label="Closed Won" value={num(d.closed_won)} color="bg-emerald-100 text-emerald-600" />
         <Tile icon={DollarSign} label="Revenue" value={money(d.revenue)} color="bg-brand-100 text-brand-600" />
         <Tile icon={TrendingUp} label="Gross Profit" value={money(d.gross_profit)} color="bg-teal-100 text-teal-600" />
