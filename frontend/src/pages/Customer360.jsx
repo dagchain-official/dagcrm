@@ -653,8 +653,12 @@ function Chip({ on, label }) {
 function PlatformActivity({ platforms }) {
   const [i, setI] = useState(0);
   const [showLots, setShowLots] = useState(false);
+  const [acctIdx, setAcctIdx] = useState(-1);   // -1 = all FX accounts (aggregate)
   const p = platforms[i] || platforms[0];
-  const s = p.stats || {};
+  const agg = p.stats || {};
+  const accounts = p.platform !== "DAGChain" ? (agg.accounts || []) : [];
+  // effective stats: a single chosen FX account, else the aggregate
+  const s = (acctIdx >= 0 && accounts[acctIdx]) ? accounts[acctIdx] : agg;
   const money = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const num = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
   const hasSymbols = p.platform !== "DAGChain" && s.symbol_lots?.length > 0;
@@ -686,17 +690,28 @@ function PlatformActivity({ platforms }) {
         {platforms.length > 1 ? (
           <div className="flex gap-1 p-1 bg-ink-100 rounded-xl">
             {platforms.map((pp, idx) => (
-              <button key={pp.platform} onClick={() => setI(idx)}
+              <button key={pp.platform} onClick={() => { setI(idx); setAcctIdx(-1); }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${i === idx ? "bg-ink-0 text-brand-700 shadow-sm" : "text-ink-500 hover:text-ink-700"}`}>
                 {pp.platform}
               </button>
             ))}
           </div>
         ) : <span className="text-xs font-normal text-ink-400">({p.platform})</span>}
+        {accounts.length > 1 && (
+          <select className="input !w-auto !py-1.5 text-xs ml-auto" value={acctIdx}
+            onChange={(e) => { setAcctIdx(Number(e.target.value)); setShowLots(false); }}>
+            <option value={-1}>All accounts ({accounts.length})</option>
+            {accounts.map((a, idx) => (
+              <option key={a.account_number || idx} value={idx}>
+                {a.account_type || "Account"} · #{a.account_number}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <p className="text-sm text-ink-500 mb-4">
-        <b className="text-ink-700">Account:</b> {s.account_type || "—"}
-        {s.account_number ? ` · #${s.account_number}` : ""}
+        <b className="text-ink-700">Account:</b> {acctIdx < 0 && accounts.length > 1 ? `All (${accounts.length})` : (s.account_type || "—")}
+        {s.account_number && !(acctIdx < 0 && accounts.length > 1) ? ` · #${s.account_number}` : ""}
         {" · "}<b className="text-ink-700">Balance:</b> {p.platform === "DAGChain" ? `${num(s.balance)} DGC` : money(s.balance)}
       </p>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

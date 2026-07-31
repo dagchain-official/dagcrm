@@ -691,31 +691,44 @@ class CustomerViewSet(viewsets.ModelViewSet):
         def _stage(steps):
             return next((s["label"] for s in reversed(steps) if s["done"]), "—")
 
-        if fx_ids:
-            rev = Revenue.objects.filter(customer_id__in=fx_ids)
-            a = AumEntry.objects.filter(customer_id__in=fx_ids)
+        from apps.integrations.models import FxSymbolLots
+
+        def _fx_stats(ids):
+            rev = Revenue.objects.filter(customer_id__in=ids)
+            a = AumEntry.objects.filter(customer_id__in=ids)
             dep = a.filter(entry_type="deposit").aggregate(s=Sum("amount"))["s"] or 0
             wd = a.filter(entry_type="withdrawal").aggregate(s=Sum("amount"))["s"] or 0
-            c2 = ContributionEntry.objects.filter(customer_id__in=fx_ids).aggregate(
+            c2 = ContributionEntry.objects.filter(customer_id__in=ids).aggregate(
                 i=Sum("insurance"), s=Sum("staking"), tl=Sum("trading_loss"))
-            fxcusts = list(Customer.objects.filter(id__in=fx_ids))
-            fxs = {
-                "account_type": next((c.account_type for c in fxcusts if c.account_type), ""),
-                "account_number": next((c.account_number for c in fxcusts if c.account_number), ""),
-                "balance": sum(float(c.balance or 0) for c in fxcusts),
-                "lots_traded": MetricEntry.objects.filter(customer_id__in=fx_ids, metric__name__icontains="lot").aggregate(s=Sum("value"))["s"] or 0,
+            custs = list(Customer.objects.filter(id__in=ids))
+            return {
+                "account_type": next((c.account_type for c in custs if c.account_type), ""),
+                "account_number": next((c.account_number for c in custs if c.account_number), ""),
+                "balance": sum(float(c.balance or 0) for c in custs),
+                "lots_traded": MetricEntry.objects.filter(customer_id__in=ids, metric__name__icontains="lot").aggregate(s=Sum("value"))["s"] or 0,
                 "gross_brokerage": rev.aggregate(s=Sum("gross_revenue"))["s"] or 0,
                 "ib_commission": rev.aggregate(s=Sum("commission"))["s"] or 0,
                 "deposits": dep, "withdrawals": wd, "net_aum": dep - wd,
                 "insurance": c2["i"] or 0, "staking": c2["s"] or 0, "trading_loss": c2["tl"] or 0,
+                "symbol_lots": [
+                    {"symbol": s["symbol"], "lots": round(s["lots"], 2), "brokerage": round(s["brokerage"], 2)}
+                    for s in FxSymbolLots.objects.filter(customer_id__in=ids)
+                    .values("symbol").annotate(lots=Sum("lots"), brokerage=Sum("brokerage")).order_by("-lots")
+                ],
             }
-            from apps.integrations.models import FxSymbolLots
-            fxs["symbol_lots"] = [
-                {"symbol": s["symbol"], "lots": round(s["lots"], 2), "brokerage": round(s["brokerage"], 2)}
-                for s in FxSymbolLots.objects.filter(customer_id__in=fx_ids)
-                .values("symbol").annotate(lots=Sum("lots"), brokerage=Sum("brokerage")).order_by("-lots")
-            ]
-            if customer.external_id == "" or platform == "FX Artha" or any(fxs.values()):
+
+        if fx_ids:
+            fxcusts = list(Customer.objects.filter(id__in=fx_ids))
+            fxs = _fx_stats(fx_ids)
+            dep = fxs["deposits"]
+            # per-account breakdown — dropdown when the person holds >1 FX account
+            acct_custs = [c for c in fxcusts if c.account_number]
+            if len(acct_custs) > 1:
+                fxs["accounts"] = [
+                    {**_fx_stats([c.id]), "account_type": c.account_type, "account_number": c.account_number}
+                    for c in acct_custs
+                ]
+            if customer.external_id == "" or platform == "FX Artha" or any(v for k, v in fxs.items() if k != "accounts"):
                 platforms.append({"platform": "FX Artha", "stats": fxs})
             # onboarding journey
             opened_at = next((c.account_opened_at for c in fxcusts if c.account_opened_at), None)
