@@ -60,6 +60,12 @@ class LeadQuerySet(models.QuerySet):
         """
         return self.filter(external_id="")
 
+    def active(self):
+        """Leads still worked as leads — early-stage only. Once Qualified a lead
+        becomes an Opportunity (deal) and once Converted a Customer, so those
+        statuses leave the leads view. This is what "Active Leads" counts."""
+        return self.exclude(status__in=["qualified", "meeting_booked", "meeting_done", "negotiation", "converted"])
+
 
 class Lead(models.Model):
     STATUS = [

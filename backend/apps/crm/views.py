@@ -150,7 +150,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         # shows only early-stage work. Detail/update still reach it (only the list
         # is filtered); its history lives on the Opportunity / Customer 360.
         if self.action == "list":
-            qs = qs.exclude(status__in=["qualified", "meeting_booked", "meeting_done", "negotiation", "converted"])
+            qs = qs.active()
         if not is_admin_view(self.request.user):
             # A manager (Sales Manager / Team Leader) sees their whole team's
             # leads, not just leads assigned to them personally.

@@ -227,7 +227,7 @@ def my_dashboard(request):
     )
     my_revenue = Revenue.objects.filter(customer__lead__assigned_to=user)
     return Response({
-        "my_leads": my_leads.exclude(status="converted").count(),   # active only
+        "my_leads": my_leads.active().count(),   # active only
         "my_new_leads": my_leads.filter(status="new").count(),
         "my_converted": my_leads.filter(status="converted").count(),
         "my_open_opportunities": my_opps.filter(status="open").count(),
@@ -264,7 +264,7 @@ def dashboard_summary(request):
         reps.append({
             "name": u.name,
             "role": getattr(u.role, "name", ""),
-            "leads": u_leads.exclude(status="converted").count(),   # active only
+            "leads": u_leads.active().count(),   # active only
             "won": Opportunity.objects.filter(assigned_to=u, stage="won").count(),
             "revenue": float(_money(Revenue.objects.filter(customer__lead__assigned_to=u), "net_revenue")),
         })
@@ -272,7 +272,7 @@ def dashboard_summary(request):
     return Response({
         "top_reps": reps[:6],
         "kpis": kpi_scorecard(User.objects.values_list("id", flat=True)),
-        "total_leads": Lead.objects.pipeline().exclude(status="converted").count(),   # active only
+        "total_leads": Lead.objects.pipeline().active().count(),   # active only
         "new_leads": Lead.objects.pipeline().filter(status="new").count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "total_customers": Customer.objects.pipeline().count(),
@@ -447,7 +447,7 @@ def team_dashboard(request):
         members.append({
             "id": u.id, "name": u.name, "role": getattr(u.role, "name", ""),
             "employee_id": u.employee_id,
-            "leads": Lead.objects.pipeline().filter(assigned_to=u).exclude(status="converted").count(),
+            "leads": Lead.objects.pipeline().filter(assigned_to=u).active().count(),
             "won": Opportunity.objects.filter(assigned_to=u, stage="won").count(),
             "kpi": kpi,
             "revenue": round(float(by_user.get(u.id, 0.0)), 2),
@@ -457,7 +457,7 @@ def team_dashboard(request):
         })
     return Response({
         "team_size": team.count(),
-        "team_leads": leads.exclude(status="converted").count(),   # active only
+        "team_leads": leads.active().count(),   # active only
         "team_converted": leads.filter(status="converted").count(),
         "team_open_opportunities": opps.filter(status="open").count(),
         "team_pipeline": _money(opps.filter(status="open"), "expected_revenue"),
@@ -613,7 +613,7 @@ def sales_dashboard(request):
         "targets": targets,
         "kpis": kpi_scorecard(User.objects.values_list("id", flat=True)),
         # active leads only — a converted lead is done (it became a customer)
-        "total_leads": Lead.objects.pipeline().exclude(status="converted").count(),
+        "total_leads": Lead.objects.pipeline().active().count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),
         "pipeline_value": _money(Opportunity.objects.filter(status="open"), "expected_revenue"),
@@ -625,7 +625,7 @@ def sales_dashboard(request):
             for d in Lead.objects.pipeline().values("source__name").annotate(count=Count("id")).order_by("-count")
         ],
         "top_reps": [
-            {"name": u.name, "leads": Lead.objects.pipeline().filter(assigned_to=u).exclude(status="converted").count(),
+            {"name": u.name, "leads": Lead.objects.pipeline().filter(assigned_to=u).active().count(),
              "won": Opportunity.objects.filter(assigned_to=u, stage="won").count()}
             for u in User.objects.all()[:8]
         ],
