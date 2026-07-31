@@ -720,12 +720,12 @@ def hierarchy(request):
     Scoped: Super Admin / Finance / HR see the whole company; everyone else (incl.
     a Business Head) sees only their own subtree — themselves + who reports to them."""
     from apps.hr.models import Employee
-    from apps.accounts.access import subordinate_user_ids
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
     emps = [e for e in Employee.objects.select_related(
         "user", "user__role", "hierarchy_level", "manager").all()
         if e.user and not e.user.is_superuser]
     role = getattr(getattr(request.user, "role", None), "name", "")
-    if not (request.user.is_superuser or role in ("Finance", "HR")):
+    if not (is_admin_view(request.user) or role in ("Finance", "HR")):
         allowed = subordinate_user_ids(request.user, include_self=True)
         emps = [e for e in emps if e.user_id in allowed]
     by_user = {e.user_id: e for e in emps}

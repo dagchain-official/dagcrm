@@ -11,8 +11,9 @@ ROLES = [
     "Sales Executive", "Support", "HR", "Finance",
 ]
 
-# Roles that see ALL data (company-wide), bypass business scoping.
-MANAGER_ROLES = {"Super Admin", "Business Head"}
+# Roles that see ALL data (company-wide), bypass business scoping. A Business Head
+# is NOT here: each BH sees only their own subtree (their team), like any manager.
+MANAGER_ROLES = {"Super Admin"}
 
 # Who may assign targets is a PERMISSION ("assign-targets" in the matrix), not a
 # fixed list of roles — grant it to a Sales Manager or Team Leader and they can
