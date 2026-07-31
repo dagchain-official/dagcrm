@@ -612,7 +612,8 @@ def sales_dashboard(request):
     return Response({
         "targets": targets,
         "kpis": kpi_scorecard(User.objects.values_list("id", flat=True)),
-        "total_leads": Lead.objects.pipeline().count(),
+        # active leads only — a converted lead is done (it became a customer)
+        "total_leads": Lead.objects.pipeline().exclude(status="converted").count(),
         "converted_leads": Lead.objects.pipeline().filter(status="converted").count(),
         "open_opportunities": Opportunity.objects.filter(status="open").count(),
         "pipeline_value": _money(Opportunity.objects.filter(status="open"), "expected_revenue"),

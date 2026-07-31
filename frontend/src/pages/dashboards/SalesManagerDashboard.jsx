@@ -67,7 +67,7 @@ export default function SalesManagerDashboard() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Kpi icon={Users} label="Total Leads" value={d.total_leads} trend={`${d.converted_leads} converted`} color="bg-orange-100 text-orange-600" to="/m/leads" />
+        <Kpi icon={Users} label="Active Leads" value={d.total_leads} trend={`${d.converted_leads} converted`} color="bg-orange-100 text-orange-600" to="/m/leads" />
         <Kpi icon={Target} label="Open Deals" value={d.open_opportunities} trend={money(d.pipeline_value) + " pipeline"} color="bg-violet-100 text-violet-600" to="/m/opportunities" />
         <Kpi icon={Trophy} label="Deals Won" value={d.won_deals} trend={`${d.converted_leads} converted`} color="bg-emerald-100 text-emerald-600" to="/m/opportunities" />
         <Kpi icon={DollarSign} label="Net Revenue" value={money(d.net_revenue)} trend={money(d.pipeline_value) + " pipeline"} color="bg-brand-100 text-brand-600" to="/m/revenues" />
