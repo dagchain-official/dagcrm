@@ -716,11 +716,18 @@ def target_board(request):
 @api_view(["GET"])
 def hierarchy(request):
     """The org tree, built from each Employee's manager chain (+ hierarchy level).
-    The super admin is never a node — the tree starts at the top real manager."""
+    The super admin is never a node — the tree starts at the top real manager.
+    Scoped: Super Admin / Finance / HR see the whole company; everyone else (incl.
+    a Business Head) sees only their own subtree — themselves + who reports to them."""
     from apps.hr.models import Employee
+    from apps.accounts.access import subordinate_user_ids
     emps = [e for e in Employee.objects.select_related(
         "user", "user__role", "hierarchy_level", "manager").all()
         if e.user and not e.user.is_superuser]
+    role = getattr(getattr(request.user, "role", None), "name", "")
+    if not (request.user.is_superuser or role in ("Finance", "HR")):
+        allowed = subordinate_user_ids(request.user, include_self=True)
+        emps = [e for e in emps if e.user_id in allowed]
     by_user = {e.user_id: e for e in emps}
     kids = {}
     roots = []
