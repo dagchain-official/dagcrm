@@ -371,28 +371,41 @@ def company_health(request):
     """
     today = timezone.localdate()
     m, y = today.month, today.year
-    leads = Lead.objects.pipeline()
+    # Super Admin sees the whole company; a Business Head (or any manager) sees
+    # only their own subtree — same scoping rule as everywhere else, so a BH's
+    # deals/leads/revenue are their team's, not another team's.
+    from django.db.models import Q
+    from apps.accounts.access import subordinate_user_ids
+    full = request.user.is_superuser or getattr(getattr(request.user, "role", None), "name", "") == "Super Admin"
+    sub = None if full else subordinate_user_ids(request.user, include_self=True)
+
+    leads = Lead.objects.pipeline() if full else Lead.objects.pipeline().filter(assigned_to_id__in=sub)
+    opps = Opportunity.objects.all() if full else Opportunity.objects.filter(assigned_to_id__in=sub)
+    fu = LeadActivity.objects.all() if full else LeadActivity.objects.filter(lead__assigned_to_id__in=sub)
+
     total_leads = leads.count()
     won = leads.filter(status="converted").count()
     lost = leads.filter(status="lost").count()
-    closed_won = Opportunity.objects.filter(stage="won").count() or won
+    closed_won = opps.filter(stage="won").count() or won
 
-    fx_revenue = float(_fxartha_dashboard().get("total_revenue") or 0)
-    other = Revenue.objects.exclude(external_id__startswith="fxa")
-    revenue = float(_money(other, "net_revenue")) + fx_revenue
+    if full:
+        fx_revenue = float(_fxartha_dashboard().get("total_revenue") or 0)
+        revenue = float(_money(Revenue.objects.exclude(external_id__startswith="fxa"), "net_revenue")) + fx_revenue
+    else:
+        revenue = float(_money(_scoped_revenue(request.user), "net_revenue"))
     gross_profit = round(revenue, 2)                       # net = after commission
     expenses = float(_money(Expense.objects.all(), "amount"))
-    weighted_pipeline = float(_money(Opportunity.objects.filter(status="open"), "expected_revenue"))
-    overdue_actions = LeadActivity.objects.filter(followup_date__lt=today).count()
+    weighted_pipeline = float(_money(opps.filter(status="open"), "expected_revenue"))
+    overdue_actions = fu.filter(followup_date__lt=today).count()
 
     # ---- five health dimensions (0..1) ----
     tgt = compute_targets(m, y).get("company", {})
-    if tgt.get("target"):
+    if full and tgt.get("target"):
         sales = min(1.0, tgt.get("achieved", 0) / tgt["target"])
     else:
         sales = (won / total_leads) if total_leads else 0.0
 
-    total_fu = LeadActivity.objects.filter(followup_date__isnull=False).count()
+    total_fu = fu.filter(followup_date__isnull=False).count()
     execution = (1 - overdue_actions / total_fu) if total_fu else 1.0
 
     tstats = _training_stats()
@@ -401,8 +414,10 @@ def company_health(request):
     learning = training_compliance
 
     # Customer health proxy: share of customers that actually generate revenue
-    total_custs = Customer.objects.exclude(external_id="").count() or Customer.objects.count()
-    active_custs = (Customer.objects.filter(revenues__isnull=False).distinct().count())
+    cust_qs = (Customer.objects.all() if full
+               else Customer.objects.filter(Q(assigned_to_id__in=sub) | Q(lead__assigned_to_id__in=sub)))
+    total_custs = cust_qs.exclude(external_id="").count() or cust_qs.count()
+    active_custs = cust_qs.filter(revenues__isnull=False).distinct().count()
     customer = (active_custs / total_custs) if total_custs else 0.0
 
     finance = max(0.0, min(1.0, (revenue - expenses) / revenue)) if revenue else 0.0
