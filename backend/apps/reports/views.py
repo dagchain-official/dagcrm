@@ -410,7 +410,8 @@ def company_health(request):
         sales = (won / total_leads) if total_leads else 0.0
 
     total_fu = fu.filter(followup_date__isnull=False).count()
-    execution = (1 - overdue_actions / total_fu) if total_fu else 1.0
+    # no follow-ups logged yet = no execution data → 0 (not a misleading 100%)
+    execution = (1 - overdue_actions / total_fu) if total_fu else 0.0
 
     tstats = _training_stats()
     training_compliance = tstats["compliance"]
