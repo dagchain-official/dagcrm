@@ -188,7 +188,23 @@ class UserViewSet(viewsets.ModelViewSet):
         # The founder / super admin is never listed or offered in dropdowns
         # (manager, assignee, team member, etc.). They act through the system but
         # aren't a selectable user anywhere.
-        return super().get_queryset().filter(is_superuser=False)
+        qs = super().get_queryset().filter(is_superuser=False)
+        # A Business Head (or any manager) only ever sees people inside their own
+        # subtree — never another team's users. Super Admin / HR / Finance see all.
+        from .access import is_admin_view, subordinate_user_ids
+        role = getattr(getattr(self.request.user, "role", None), "name", "")
+        if not (is_admin_view(self.request.user) or role in ("Finance", "HR")):
+            qs = qs.filter(id__in=subordinate_user_ids(self.request.user, include_self=True))
+        return qs
+
+    def _scope_users(self, request, users):
+        """Limit a user list to the caller's subtree — a Business Head/manager sees
+        only their own people. Super Admin / HR / Finance see everyone."""
+        from .access import is_admin_view, subordinate_user_ids
+        role = getattr(getattr(request.user, "role", None), "name", "")
+        if is_admin_view(request.user) or role in ("Finance", "HR"):
+            return users
+        return users.filter(id__in=subordinate_user_ids(request.user, include_self=True))
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def assignable(self, request):
@@ -204,6 +220,7 @@ class UserViewSet(viewsets.ModelViewSet):
         active = active_agent_ids()
         users = (User.objects.filter(role__name__in=ASSIGNABLE_LEAD_ROLES, is_active=True)
                  .select_related("role").order_by("name"))
+        users = self._scope_users(request, users)   # only the caller's own team
         out = []
         for u in users:
             # skip a front-line RM who isn't clocked in right now
@@ -222,6 +239,7 @@ class UserViewSet(viewsets.ModelViewSet):
         from apps.accounts.access import ROLE_TO_LEVEL
         users = (User.objects.filter(is_active=True, is_superuser=False)
                  .exclude(role__name="Super Admin").select_related("role").order_by("name"))
+        users = self._scope_users(request, users)   # a manager's people report within their own tree
         rows = [{"id": u.id, "name": u.name, "role_name": getattr(u.role, "name", ""),
                  # role in the label so two people with similar names are tellable apart
                  "label": f"{u.name} — {getattr(u.role, 'name', '') or 'No role'}"}

@@ -231,6 +231,16 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     filterset_fields = ["department", "manager", "hierarchy_level"]
     search_fields = ["user__name", "designation"]
 
+    def get_queryset(self):
+        # A Business Head / manager sees only their own subtree's employees;
+        # Super Admin / HR / Finance see everyone.
+        qs = super().get_queryset()
+        from apps.accounts.access import is_admin_view, subordinate_user_ids
+        role = getattr(getattr(self.request.user, "role", None), "name", "")
+        if not (is_admin_view(self.request.user) or role in ("Finance", "HR")):
+            qs = qs.filter(user_id__in=subordinate_user_ids(self.request.user, include_self=True))
+        return qs
+
     @action(detail=True, methods=["get"])
     def ctc(self, request, pk=None):
         """Cost-To-Company breakdown for a month: salary + each cost category."""
