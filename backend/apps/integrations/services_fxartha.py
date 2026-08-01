@@ -340,12 +340,12 @@ def sync_fxartha(conn):
         lots_metric, _ = MetricDefinition.objects.get_or_create(
             name="Lots Traded",
             defaults={"unit": "lots", "aggregation": "sum",
-                      "category": "activity", "source": "manual"})
+                      "category": "activity", "source": "manual", "business": business})
         # "Trades Taken" KPI — per-trader count of trades placed.
         trades_metric, _ = MetricDefinition.objects.get_or_create(
             name="Trades Taken",
             defaults={"unit": "count", "aggregation": "sum",
-                      "category": "activity", "source": "manual"})
+                      "category": "activity", "source": "manual", "business": business})
 
         # Deposits/withdrawals live in /transactions and per-trade lots in /trades
         # (the /customers rows report 0 deposits). Roll both up per user_id.
