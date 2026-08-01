@@ -392,7 +392,11 @@ def company_health(request):
         fx_revenue = float(_fxartha_dashboard().get("total_revenue") or 0)
         revenue = float(_money(Revenue.objects.exclude(external_id__startswith="fxa"), "net_revenue")) + fx_revenue
     else:
-        revenue = float(_money(_scoped_revenue(request.user), "net_revenue"))
+        # revenue attributed to the subtree's own customers (customer owner, else
+        # the originating lead's RM) — includes their FX/DAGChain rows.
+        revenue = float(_money(
+            Revenue.objects.filter(Q(customer__assigned_to_id__in=sub) | Q(customer__lead__assigned_to_id__in=sub)),
+            "net_revenue"))
     gross_profit = round(revenue, 2)                       # net = after commission
     expenses = float(_money(Expense.objects.all(), "amount"))
     weighted_pipeline = float(_money(opps.filter(status="open"), "expected_revenue"))
