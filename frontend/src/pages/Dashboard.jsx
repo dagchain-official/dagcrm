@@ -66,9 +66,9 @@ export default function Dashboard() {
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2 flex-wrap">
         {showBiz && (
-          <div className="flex items-center gap-1.5">
-            <Building2 size={14} className="text-ink-400" />
-            <select className="input !w-auto min-w-[180px]" value={biz}
+          <div className="flex items-center gap-1.5 flex-1 lg:flex-none min-w-0">
+            <Building2 size={14} className="text-ink-400 shrink-0" />
+            <select className="input !w-full lg:!w-auto min-w-0 lg:min-w-[180px]" value={biz}
               onChange={(e) => { setBiz(e.target.value); setEmp(""); }}>
               <option value="">All Businesses (overview)</option>
               {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -76,9 +76,9 @@ export default function Dashboard() {
           </div>
         )}
         {showEmp && (
-          <div className="flex items-center gap-1.5">
-            <UserRound size={14} className="text-ink-400" />
-            <select className="input !w-auto min-w-[210px]" value={emp}
+          <div className="flex items-center gap-1.5 flex-1 lg:flex-none min-w-0">
+            <UserRound size={14} className="text-ink-400 shrink-0" />
+            <select className="input !w-full lg:!w-auto min-w-0 lg:min-w-[210px]" value={emp}
               onChange={(e) => { setEmp(e.target.value); setBiz(""); }}>
               <option value="">— Select an employee —</option>
               {people.map((u) => (

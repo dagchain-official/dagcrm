@@ -99,7 +99,7 @@ export default function AdminDashboard() {
         <div className="card p-5 lg:col-span-2">
           <h3 className="font-bold text-ink-900 mb-4">Company Health</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} barSize={44}>
+            <BarChart data={chartData} maxBarSize={44}>
               <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
               <YAxis domain={[0, 1]} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
