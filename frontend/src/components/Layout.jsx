@@ -19,7 +19,7 @@ const today = new Date().toLocaleDateString("en-GB", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
 });
 
-function Sidebar({ open }) {
+function Sidebar({ open, onNavigate }) {
   const { user, can } = useAuth();
   const isAdmin = user?.dashboard === "admin";
   const isSuper = !!user?.is_superuser;
@@ -62,6 +62,7 @@ function Sidebar({ open }) {
                   to={it.to}
                   data-tour={it.to}
                   end={it.exact}
+                  onClick={onNavigate}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition
                      ${isActive
@@ -107,7 +108,7 @@ export default function Layout() {
     <div className="flex h-screen overflow-hidden">
       <ErrorBoundary silent><Tour /></ErrorBoundary>
       <ErrorBoundary silent><ReminderPopup /></ErrorBoundary>
-      <Sidebar open={open} />
+      <Sidebar open={open} onNavigate={() => setOpen(false)} />
       {open && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex-1 flex flex-col min-w-0">

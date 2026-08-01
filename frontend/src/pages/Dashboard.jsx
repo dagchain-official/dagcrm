@@ -70,7 +70,7 @@ export default function Dashboard() {
             <Building2 size={14} className="text-ink-400 shrink-0" />
             <select className="input !w-full lg:!w-auto min-w-0 lg:min-w-[180px]" value={biz}
               onChange={(e) => { setBiz(e.target.value); setEmp(""); }}>
-              <option value="">All Businesses (overview)</option>
+              <option value="">All Businesses</option>
               {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
@@ -80,7 +80,7 @@ export default function Dashboard() {
             <UserRound size={14} className="text-ink-400 shrink-0" />
             <select className="input !w-full lg:!w-auto min-w-0 lg:min-w-[210px]" value={emp}
               onChange={(e) => { setEmp(e.target.value); setBiz(""); }}>
-              <option value="">— Select an employee —</option>
+              <option value="">Employee</option>
               {people.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.employee_id ? `${u.employee_id} · ` : ""}{u.name}
