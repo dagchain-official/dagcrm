@@ -333,14 +333,14 @@ export default function ResourceTable({ resource: propResource }) {
           <h1 className="text-2xl font-extrabold text-ink-900">{cfg.title}</h1>
           <p className="text-sm text-ink-400">{count} record{count !== 1 ? "s" : ""}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-2 gap-2 w-full lg:flex lg:w-auto lg:items-center lg:flex-wrap">
           {(cfg.filters || []).map((f) => (
             f.ref ? (
-              <div key={f.key} className="w-44">
+              <div key={f.key} className="w-full lg:w-44">
                 <RefSelect field={f} placeholder={`All ${f.label}s`} value={filters[f.key] ?? ""} onChange={(v) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: v })); }} />
               </div>
             ) : f.dateRange ? (
-              <div key={f.key} className="flex items-center gap-1">
+              <div key={f.key} className="flex items-center gap-1 col-span-2 lg:col-auto">
                 <label className="chip !py-2 text-xs flex items-center gap-1">From
                   <input type="date" className="bg-transparent outline-none text-xs" value={filters[`${f.key}_from`] ?? ""}
                     onChange={(e) => { setPage(1); setFilters((s) => ({ ...s, [`${f.key}_from`]: e.target.value })); }} />
@@ -357,7 +357,7 @@ export default function ResourceTable({ resource: propResource }) {
                 )}
               </div>
             ) : (
-              <select key={f.key} className="input !py-2 w-auto" value={filters[f.key] ?? ""}
+              <select key={f.key} className="input !py-2 w-full lg:w-auto" value={filters[f.key] ?? ""}
                 onChange={(e) => { setPage(1); setFilters((s) => ({ ...s, [f.key]: e.target.value })); }}>
                 <option value="">All {f.label}</option>
                 {(f.options || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -365,15 +365,15 @@ export default function ResourceTable({ resource: propResource }) {
             )
           ))}
           {cfg.search && (
-            <div className="chip !py-2" data-tour="rt-search">
-              <Search size={16} className="text-ink-400" />
-              <input className="text-sm outline-none bg-transparent w-36 text-ink-700"
+            <div className="chip !py-2 col-span-2 lg:col-auto lg:w-auto" data-tour="rt-search">
+              <Search size={16} className="text-ink-400 shrink-0" />
+              <input className="text-sm outline-none bg-transparent flex-1 lg:w-36 lg:flex-none text-ink-700"
                 placeholder="Search…" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
             </div>
           )}
           {rows.length > 0 && (
-            <div className="relative" data-tour="rt-export">
-              <button className="chip !py-2" onClick={() => setExportOpen((o) => !o)} onBlur={() => setTimeout(() => setExportOpen(false), 150)} title="Export">
+            <div className="relative w-full lg:w-auto" data-tour="rt-export">
+              <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={() => setExportOpen((o) => !o)} onBlur={() => setTimeout(() => setExportOpen(false), 150)} title="Export">
                 <Download size={15} /> Export
               </button>
               {exportOpen && (
@@ -387,22 +387,22 @@ export default function ResourceTable({ resource: propResource }) {
             </div>
           )}
           {cfg.distribute && canEdit && user?.can_assign_leads && (
-            <button className="chip !py-2" onClick={openDistribute} title="Auto-assign leads to RMs">
+            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={openDistribute} title="Auto-assign leads to RMs">
               <Shuffle size={15} /> Distribute
             </button>
           )}
           {cfg.importable && canCreate && (
-            <button className="chip !py-2" onClick={() => { setImportResult(null); setImportOpen(true); }} title="Import from CSV">
+            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={() => { setImportResult(null); setImportOpen(true); }} title="Import from CSV">
               <Upload size={15} /> Import
             </button>
           )}
           {cfg.recalc && canCreate && (
-            <button className="chip !py-2" onClick={() => { setRecalcResult(null); setRecalcOpen(true); }} title="Auto-calculate from revenue">
+            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={() => { setRecalcResult(null); setRecalcOpen(true); }} title="Auto-calculate from revenue">
               <Calculator size={15} /> Auto-Calculate
             </button>
           )}
           {canCreate && (
-            <button className="btn-primary" data-tour="rt-new" onClick={() => setModal({ mode: "create", row: blank })}>
+            <button className="btn-primary w-full lg:w-auto justify-center lg:justify-start" data-tour="rt-new" onClick={() => setModal({ mode: "create", row: blank })}>
               <Plus size={16} /> New
             </button>
           )}

@@ -153,7 +153,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main key={loc.pathname} className="flex-1 overflow-y-auto p-4 lg:p-6 bg-ink-50">
+        <main key={loc.pathname} className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 bg-ink-50">
           <ErrorBoundary routeKey={loc.pathname}>
             <Outlet />
           </ErrorBoundary>
