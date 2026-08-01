@@ -315,6 +315,7 @@ export const RESOURCES = {
   },
   "message-templates": {
     title: "Message Templates", endpoint: "message-templates", search: true,
+    permModule: "communications",   // anyone who can use Communications can make their own templates
     columns: [
       { key: "name", label: "Name" },
       { key: "channel", label: "Channel", badge: true },

@@ -1006,6 +1006,24 @@ class MessageTemplateViewSet(viewsets.ModelViewSet):
         else:
             serializer.save(scope="personal", owner=self.request.user)
 
+    def _guard_shared(self, obj):
+        from rest_framework.exceptions import PermissionDenied
+        # a shared template belongs to everyone — only an admin may change/remove it
+        if obj.scope == "shared" and not is_admin_view(self.request.user):
+            raise PermissionDenied("Only an administrator can change a shared template.")
+
+    def perform_update(self, serializer):
+        self._guard_shared(self.get_object())
+        scope = serializer.validated_data.get("scope", serializer.instance.scope)
+        if scope == "shared" and is_admin_view(self.request.user):
+            serializer.save(owner=None)
+        else:
+            serializer.save(scope="personal", owner=self.request.user)
+
+    def perform_destroy(self, instance):
+        self._guard_shared(instance)
+        instance.delete()
+
 
 class TargetViewSet(BusinessScopedMixin, viewsets.ModelViewSet):
     queryset = (Target.objects.select_related("business")

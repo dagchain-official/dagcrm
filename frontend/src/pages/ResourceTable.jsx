@@ -82,9 +82,12 @@ export default function ResourceTable({ resource: propResource }) {
   const cfg = RESOURCES[resource];
   const { can, user } = useAuth();
   const toast = useToast();
-  const canCreate = can(resource, "create");
-  const canEdit = can(resource, "edit");
-  const canDelete = can(resource, "delete");
+  // some resources borrow another module's permissions (e.g. message templates
+  // use "communications" — whoever can chat can make their own templates).
+  const permMod = cfg.permModule || resource;
+  const canCreate = can(permMod, "create");
+  const canEdit = can(permMod, "edit");
+  const canDelete = can(permMod, "delete");
   // `adminOnly` columns (e.g. Lead phone) are visible ONLY to the Super Admin
   const columns = cfg.columns.filter((c) => !c.adminOnly || user?.is_superuser);
 
