@@ -90,3 +90,15 @@
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { @apply bg-ink-300 rounded-full; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- Responsive safety net: tablets & phones only (desktop lg ≥1024px is
+        completely untouched — no logic, layout or desktop styles change). ---- */
+@media (max-width: 1023px) {
+  /* never let a page scroll sideways as a whole */
+  html, body { overflow-x: hidden; }
+  /* wide tables scroll inside their own box instead of stretching the page */
+  table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* media & code never overflow their container */
+  img, video { max-width: 100%; height: auto; }
+  pre { max-width: 100%; overflow-x: auto; }
+}
