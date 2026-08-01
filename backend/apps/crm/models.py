@@ -61,6 +61,15 @@ class LeadQuerySet(models.QuerySet):
         return self.filter(external_id="")
 
     def active(self):
+        """Leads still sitting in the Leads section — the ones an RM is actively
+        working. Once a lead is Qualified it becomes an Opportunity, and once
+        Converted a Customer, so those (qualified → converted) drop out here. This
+        is the single source of truth for the 'active leads' count on every
+        dashboard so it always matches the Leads list."""
+        return self.exclude(status__in=[
+            "qualified", "meeting_booked", "meeting_done", "negotiation", "converted"])
+
+    def active(self):
         """Leads still worked as leads — early-stage only. Once Qualified a lead
         becomes an Opportunity (deal) and once Converted a Customer, so those
         statuses leave the leads view. This is what "Active Leads" counts."""

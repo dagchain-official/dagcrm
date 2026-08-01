@@ -418,7 +418,7 @@ def company_health(request):
                    "status": _health_status(overall)})
 
     return Response({
-        "total_leads": total_leads,
+        "total_leads": leads.active().count(),   # 'Active Leads' tile — only leads still in the Leads section
         "closed_won": closed_won,
         "revenue": round(revenue, 2),
         "gross_profit": gross_profit,
