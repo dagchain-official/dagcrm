@@ -1,7 +1,11 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Phone, PhoneCall, Clock, Timer, Target, Repeat, Users, CalendarClock,
   CalendarCheck2, CheckCircle2, Gauge, Coins, Wallet, GraduationCap,
   ShieldCheck, CalendarCheck, UserCheck } from "lucide-react";
+import api from "../api/client";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // The sales scorecard, styled like the dashboard's top KPI cards. Leads and
 // Revenue are intentionally NOT here — they already appear in the cards above,
@@ -33,11 +37,33 @@ const CARDS = [
   { key: "training", label: "Training", icon: GraduationCap, color: "bg-orange-100 text-orange-600", fmt: pct, to: "/kpi" },
 ];
 
-export default function KpiScorecard({ data, title = "KPIs · This Month" }) {
-  const k = data || {};
+export default function KpiScorecard({ data, title = "KPIs", scope = "self", userId }) {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [kpis, setKpis] = useState(data || {});
+
+  useEffect(() => {
+    const params = { scope, month, year };
+    if (userId) params.user = userId;
+    api.get("/reports/kpi-scorecard/", { params })
+      .then((r) => setKpis(r.data.kpis || {})).catch(() => {});
+  }, [scope, userId, month, year]);
+
+  const k = kpis || {};
   return (
     <div className="space-y-3">
-      <h3 className="font-bold text-ink-900">{title}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-bold text-ink-900">{title} · {MONTHS[month - 1]} {year}</h3>
+        <div className="flex items-center gap-2">
+          <select className="input !w-auto !py-1.5 text-sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+            {MONTHS.map((mn, i) => <option key={mn} value={i + 1}>{mn}</option>)}
+          </select>
+          <select className="input !w-auto !py-1.5 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            {[year + 1, year, year - 1, year - 2].filter((v, i, a) => a.indexOf(v) === i).map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {CARDS.map(({ key, label, icon: Icon, color, fmt, to }) => (
           <Link key={key} to={to} className="card p-5 hover:shadow-md hover:-translate-y-0.5 transition block">

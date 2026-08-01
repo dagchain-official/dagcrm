@@ -63,7 +63,7 @@ export default function TeamLeaderDashboard({ userId }) {
       </div>
 
       {/* team scorecard */}
-      <KpiScorecard data={d.kpis} title="Team KPIs · This Month" />
+      <KpiScorecard data={d.kpis} scope="team" title="Team KPIs" />
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* team leads donut */}

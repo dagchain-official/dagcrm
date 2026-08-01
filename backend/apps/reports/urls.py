@@ -41,6 +41,7 @@ urlpatterns = [
     path("reports/ctc-preview/", views.ctc_preview),
     path("reports/assign-target/", views.assign_target),
     path("reports/kpi-performance/", views.kpi_performance),
+    path("reports/kpi-scorecard/", views.kpi_scorecard_month),
     path("reports/employee-report/", views.employee_report),
     path("reports/customer-fx/", views.customer_fx),
     path("ai/ask/", views.ai_ask),

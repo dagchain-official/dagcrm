@@ -68,10 +68,11 @@ def _scoped_revenue(user):
     return qs.filter(business_id__in=ids) if ids is not None else qs
 
 
-def kpi_scorecard(user_ids):
-    """The sales-department scorecard (this month) for a set of users — the same
-    10 fields on every role's dashboard, only the scope changes: one RM for the
-    exec dashboard, a team for the leader/manager, everyone for admin.
+def kpi_scorecard(user_ids, month=None, year=None):
+    """The sales-department scorecard for a set of users — the same 10 fields on
+    every role's dashboard, only the scope changes: one RM for the exec dashboard,
+    a team for the leader/manager, everyone for admin. Defaults to the current
+    month; pass month/year to view any month.
 
     All real data. Talk Time / Training aren't CRM metrics yet, so they read a
     same-named manual metric if one exists (0 otherwise) — add the metric and the
@@ -83,7 +84,7 @@ def kpi_scorecard(user_ids):
     from .pnl import _revenue_by_user
 
     today = timezone.localdate()
-    m, y = today.month, today.year
+    m, y = int(month or today.month), int(year or today.year)
     uids = set(u for u in user_ids if u)
     leads = Lead.objects.pipeline().filter(assigned_to_id__in=uids,
                                            created_at__year=y, created_at__month=m)
@@ -181,6 +182,32 @@ def kpi_scorecard(user_ids):
         "meetings_booked": n_booked,
         "meetings_done": n_done,
     }
+
+
+@api_view(["GET"])
+def kpi_scorecard_month(request):
+    """The dashboard KPI scorecard for a chosen month — scope 'self' (the caller),
+    'team' (their subtree), or 'company' (everyone). Powers the month picker on the
+    'My KPIs' card so any month can be viewed, not just the current one."""
+    from apps.accounts.access import is_admin_view, subordinate_user_ids
+    today = timezone.localdate()
+    month = int(request.query_params.get("month") or today.month)
+    year = int(request.query_params.get("year") or today.year)
+    scope = request.query_params.get("scope", "self")
+    user = request.user
+    role = getattr(getattr(user, "role", None), "name", "")
+    sees_all = is_admin_view(user) or role in ("Finance", "HR")
+    target = request.query_params.get("user")
+    if target and target.isdigit():
+        tid = int(target)
+        uids = [tid] if (sees_all or tid in subordinate_user_ids(user, include_self=True)) else [user.id]
+    elif scope == "company" and sees_all:
+        uids = list(User.objects.values_list("id", flat=True))
+    elif scope == "team":
+        uids = list(subordinate_user_ids(user, include_self=True))
+    else:
+        uids = [user.id]
+    return Response({"kpis": kpi_scorecard(uids, month, year), "month": month, "year": year})
 
 
 def _fxartha_dashboard():

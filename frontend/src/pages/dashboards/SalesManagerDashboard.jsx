@@ -74,7 +74,7 @@ export default function SalesManagerDashboard() {
       </div>
 
       {/* team scorecard */}
-      <KpiScorecard data={d.kpis} title="Team KPIs · This Month" />
+      <KpiScorecard data={d.kpis} scope="company" title="Team KPIs" />
 
       {/* charts row */}
       <div className="grid lg:grid-cols-3 gap-5">

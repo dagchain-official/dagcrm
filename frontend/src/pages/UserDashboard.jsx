@@ -81,7 +81,7 @@ export default function UserDashboard({ userId }) {
       </div>
 
       {/* my scorecard */}
-      <KpiScorecard data={d.kpis} title="My KPIs · This Month" />
+      <KpiScorecard data={d.kpis} scope="self" userId={userId} title="My KPIs" />
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* my leads donut */}
