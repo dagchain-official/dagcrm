@@ -75,8 +75,8 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
   const inputCls = (f) => `input ${errors[f.key] ? "!border-rose-400 !ring-2 !ring-rose-100" : ""}`;
 
   return (
-    <form id="data-form" onSubmit={submit} className="space-y-4" noValidate>
-      <div className="grid sm:grid-cols-2 gap-4">
+    <form id="data-form" onSubmit={submit} className="space-y-3" noValidate>
+      <div className="grid sm:grid-cols-2 gap-x-4 gap-y-3">
         {fields.map((f) => (
           <div key={f.key} className={f.type === "textarea" ? "sm:col-span-2" : ""}>
             <label className="label">
