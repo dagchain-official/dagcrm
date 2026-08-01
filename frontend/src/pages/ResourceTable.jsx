@@ -365,14 +365,14 @@ export default function ResourceTable({ resource: propResource }) {
             )
           ))}
           {cfg.search && (
-            <div className="chip !py-2 col-span-2 lg:col-auto lg:w-auto" data-tour="rt-search">
+            <div className="chip !py-2 col-span-2 lg:col-auto lg:w-auto order-1 lg:order-none" data-tour="rt-search">
               <Search size={16} className="text-ink-400 shrink-0" />
               <input className="text-sm outline-none bg-transparent flex-1 lg:w-36 lg:flex-none text-ink-700"
                 placeholder="Search…" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
             </div>
           )}
           {rows.length > 0 && (
-            <div className="relative w-full lg:w-auto" data-tour="rt-export">
+            <div className="relative w-full lg:w-auto order-1 lg:order-none" data-tour="rt-export">
               <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={() => setExportOpen((o) => !o)} onBlur={() => setTimeout(() => setExportOpen(false), 150)} title="Export">
                 <Download size={15} /> Export
               </button>
@@ -387,7 +387,7 @@ export default function ResourceTable({ resource: propResource }) {
             </div>
           )}
           {cfg.distribute && canEdit && user?.can_assign_leads && (
-            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={openDistribute} title="Auto-assign leads to RMs">
+            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start order-1 lg:order-none" onClick={openDistribute} title="Auto-assign leads to RMs">
               <Shuffle size={15} /> Distribute
             </button>
           )}
@@ -397,12 +397,12 @@ export default function ResourceTable({ resource: propResource }) {
             </button>
           )}
           {cfg.recalc && canCreate && (
-            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start" onClick={() => { setRecalcResult(null); setRecalcOpen(true); }} title="Auto-calculate from revenue">
+            <button className="chip !py-2 w-full lg:w-auto justify-center lg:justify-start order-1 lg:order-none" onClick={() => { setRecalcResult(null); setRecalcOpen(true); }} title="Auto-calculate from revenue">
               <Calculator size={15} /> Auto-Calculate
             </button>
           )}
           {canCreate && (
-            <button className="btn-primary w-full lg:w-auto justify-center lg:justify-start" data-tour="rt-new" onClick={() => setModal({ mode: "create", row: blank })}>
+            <button className="btn-primary w-full lg:w-auto justify-center lg:justify-start order-1 lg:order-none" data-tour="rt-new" onClick={() => setModal({ mode: "create", row: blank })}>
               <Plus size={16} /> New
             </button>
           )}
