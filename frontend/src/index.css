@@ -102,3 +102,10 @@
   img, video { max-width: 100%; height: auto; }
   pre { max-width: 100%; overflow-x: auto; }
 }
+
+/* phones: big KPI numbers (e.g. $52,339.61) shrink to fit the narrow card
+   instead of spilling out — desktop (lg) keeps the full text-3xl size. */
+@media (max-width: 640px) {
+  .card .text-3xl { font-size: clamp(1.05rem, 4.6vw, 1.875rem); line-height: 1.3; }
+  .card .text-2xl { font-size: clamp(1rem, 4.2vw, 1.5rem); line-height: 1.3; }
+}
