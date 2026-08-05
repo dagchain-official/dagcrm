@@ -13,6 +13,7 @@ import TeamRequests from "./pages/TeamRequests";
 import TargetsHub from "./pages/TargetsHub";
 import KpiHub from "./pages/KpiHub";
 import { PeopleHub, AttendanceHub, CostHub, PayrollHub, RulesHub } from "./pages/HrHubs";
+import EmployeeProfile from "./pages/EmployeeProfile";
 import HierarchyTree from "./pages/HierarchyTree";
 import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
 import ConfigHub from "./pages/ConfigHub";
@@ -89,6 +90,7 @@ export default function App() {
         <Route path="targets" element={<TargetsHub />} />
         <Route path="kpi" element={<KpiHub />} />
         <Route path="hr/people" element={<PeopleHub />} />
+        <Route path="hr/employee/:id" element={<EmployeeProfile />} />
         <Route path="hr/training" element={<TrainingHub />} />
         <Route path="hr/training/module/:id" element={<TrainingModuleDetail />} />
         <Route path="hr/hierarchy" element={<HierarchyTree />} />

@@ -448,7 +448,7 @@ export const RESOURCES = {
     fields: [{ key: "department_name", label: "Department name", required: true }],
   },
   employees: {
-    title: "Employees", endpoint: "employees", search: true,
+    title: "Employees", endpoint: "employees", search: true, detailPath: "/hr/employee",
     columns: [
       { key: "employee_id", label: "Emp ID" },
       { key: "user_name", label: "Name" },
