@@ -198,10 +198,23 @@ export default function ResourceTable({ resource: propResource }) {
   const save = async (form) => {
     setSaving(true);
     const payload = { ...form };
-    Object.keys(payload).forEach((k) => payload[k] === "" && delete payload[k]);
+    Object.keys(payload).forEach((k) => {
+      const v = payload[k];
+      // drop blanks, and unchanged existing file URLs (a FileField rejects a string)
+      if (v === "" || v == null || (typeof v === "string" && v.includes("/media/"))) delete payload[k];
+    });
+    // if the form carries a freshly picked file, send multipart instead of JSON
+    const hasFile = Object.values(payload).some((v) => v instanceof File);
+    let body = payload, headers;
+    if (hasFile) {
+      const fd = new FormData();
+      Object.entries(payload).forEach(([k, v]) => v != null && fd.append(k, v));
+      body = fd;
+      headers = { "Content-Type": "multipart/form-data" };
+    }
     try {
-      if (modal.mode === "edit") await api.patch(`/${cfg.endpoint}/${modal.row.id}/`, payload);
-      else await api.post(`/${cfg.endpoint}/`, payload);
+      if (modal.mode === "edit") await api.patch(`/${cfg.endpoint}/${modal.row.id}/`, body, headers && { headers });
+      else await api.post(`/${cfg.endpoint}/`, body, headers && { headers });
       setModal(null);
       load();
       toast.success(`${cfg.title} ${modal.mode === "edit" ? "updated" : "created"}`);

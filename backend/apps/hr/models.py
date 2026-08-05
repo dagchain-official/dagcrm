@@ -50,6 +50,8 @@ class Employee(models.Model):
     salary = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # monthly basic — single source (also drives payroll)
     joining_date = models.DateField(null=True, blank=True)
     manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_employees")
+    photo = models.FileField(upload_to="employee_photos/", null=True, blank=True)     # profile photo
+    document = models.FileField(upload_to="employee_docs/", null=True, blank=True)    # PDF / any doc
 
     def monthly_ctc(self, month, year):
         """Total Cost To Company = monthly salary + extra costs for that period.

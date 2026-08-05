@@ -100,6 +100,8 @@ const PERSON_FIELDS = [
   { key: "joining_date", label: "Joining date", type: "date" },
   { key: "status", label: "Status", type: "select", options: sel("active", "inactive", "suspended") },
   { key: "password", label: "Password (set/reset)", type: "text" },
+  { key: "photo", label: "Photo", type: "file", accept: "image/*" },
+  { key: "document", label: "Document (PDF)", type: "file", accept: "application/pdf,.pdf" },
 ];
 
 export const RESOURCES = {

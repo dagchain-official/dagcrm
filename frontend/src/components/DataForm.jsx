@@ -100,6 +100,16 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
               </select>
             ) : f.type === "textarea" ? (
               <textarea className={`${inputCls(f)} min-h-[90px]`} value={form[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)} />
+            ) : f.type === "file" ? (
+              <div>
+                <input className={inputCls(f)} type="file" accept={f.accept}
+                  onChange={(e) => set(f.key, e.target.files?.[0] || null)} />
+                {typeof form[f.key] === "string" && form[f.key] && (
+                  <a href={form[f.key]} target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline mt-1 inline-block">
+                    Current file — view
+                  </a>
+                )}
+              </div>
             ) : (
               <input
                 className={inputCls(f)}

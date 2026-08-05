@@ -65,7 +65,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "user_name", "name", "email", "role", "role_name",
                   "phone", "employee_id", "password", "status",
                   "department", "department_name", "hierarchy_level", "hierarchy_level_name",
-                  "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name"]
+                  "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name",
+                  "photo", "document"]
         # hierarchy_level is derived from the role, never posted from the form
         extra_kwargs = {"user": {"required": False}, "hierarchy_level": {"read_only": True}}
 
