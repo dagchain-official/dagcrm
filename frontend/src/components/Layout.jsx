@@ -82,9 +82,13 @@ function Sidebar({ open, onNavigate }) {
       {/* footer card */}
       <div className="p-4 shrink-0 space-y-3">
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-brand-600 text-white">
-          <div className="grid place-items-center w-9 h-9 rounded-xl bg-white/20 font-bold text-sm shrink-0">
-            {user?.role_name?.[0] || "D"}
-          </div>
+          {user?.photo ? (
+            <img src={user.photo} alt={user?.name} className="w-9 h-9 rounded-xl object-cover shrink-0" />
+          ) : (
+            <div className="grid place-items-center w-9 h-9 rounded-xl bg-white/20 font-bold text-sm shrink-0">
+              {user?.role_name?.[0] || "D"}
+            </div>
+          )}
           <div className="min-w-0">
             <p className="text-sm font-semibold leading-tight truncate">{user?.role_name || "DAGOS"}</p>
             <p className="text-[11px] text-white/60">Workspace</p>
@@ -136,9 +140,13 @@ export default function Layout() {
 
           <div className="flex items-center gap-2 pl-3 border-l border-ink-200">
             <Link to="/profile" className="flex items-center gap-3 group">
-              <div className="grid place-items-center w-9 h-9 rounded-full bg-brand-100 text-brand-700 font-bold">
-                {user?.name?.[0]?.toUpperCase() || "U"}
-              </div>
+              {user?.photo ? (
+                <img src={user.photo} alt={user?.name} className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="grid place-items-center w-9 h-9 rounded-full bg-brand-100 text-brand-700 font-bold">
+                  {user?.name?.[0]?.toUpperCase() || "U"}
+                </div>
+              )}
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-semibold text-ink-800 leading-tight group-hover:text-brand-700">{user?.name}</p>
                 <p className="text-xs text-ink-400">{user?.role_name || "User"}</p>

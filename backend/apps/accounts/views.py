@@ -50,6 +50,8 @@ def me_payload(user):
     data["businesses"] = [{"id": b.id, "name": b.name} for b in businesses]
     data["onboarded"] = user.onboarded
     data["onboarding_modules"] = user.onboarding_modules or []
+    emp = user.employee.first()          # profile photo (Employee.photo), if uploaded
+    data["photo"] = emp.photo.url if (emp and emp.photo) else None
     return data
 
 
