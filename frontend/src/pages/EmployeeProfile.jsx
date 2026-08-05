@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  ArrowLeft, Mail, Phone, IdCard, Briefcase, Building2, UserCog,
+  ArrowLeft, Mail, Phone, CreditCard, Briefcase, Building2, UserCog,
   Calendar, DollarSign, Wallet, FileText, BarChart3,
 } from "lucide-react";
 import api from "../api/client";
@@ -74,7 +74,7 @@ export default function EmployeeProfile() {
           <h3 className="font-bold text-ink-900 mb-2">Contact</h3>
           <Row icon={Mail} label="Email" value={e.email || "—"} />
           <Row icon={Phone} label="Phone" value={e.phone || "—"} />
-          <Row icon={IdCard} label="Employee ID" value={e.employee_id || "—"} />
+          <Row icon={CreditCard} label="Employee ID" value={e.employee_id || "—"} />
         </div>
         <div className="card p-5">
           <h3 className="font-bold text-ink-900 mb-2">Role & Org</h3>
