@@ -53,7 +53,7 @@ export default function EmployeeProfile() {
   if (!e) return <Spinner label="Loading profile…" />;
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5">
       <Link to="/hr/people" className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-ink-800">
         <ArrowLeft size={16} /> Back to People
       </Link>
@@ -84,7 +84,7 @@ export default function EmployeeProfile() {
       </div>
 
       {/* details */}
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
         <div className="card p-5">
           <h3 className="font-bold text-ink-900 mb-2">Contact</h3>
           <Row icon={Mail} label="Email" value={e.email || "—"} />
