@@ -1,28 +1,78 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/client";
 
-// friendly AI mascot — inline SVG so it renders crisp in any theme
+// friendly 3D-style AI robot — inline SVG (radial-gradient shading, gloss
+// highlights, drop shadows + a floating chat bubble) so it renders crisp anywhere
 function Mascot() {
   return (
-    <div className="relative mx-auto w-24 h-24">
-      <div className="absolute inset-0 rounded-[1.75rem] bg-gradient-to-br from-brand-400 to-brand-600 shadow-lg shadow-brand-600/40" />
-      <svg viewBox="0 0 64 64" className="absolute inset-0 w-full h-full p-3.5 text-white" fill="none">
-        <line x1="32" y1="7" x2="32" y2="15" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-        <circle cx="32" cy="6" r="3" fill="currentColor" />
-        <rect x="12" y="15" width="40" height="30" rx="11" fill="white" />
-        <circle cx="25" cy="30" r="4.5" fill="#4f46e5" />
-        <circle cx="39" cy="30" r="4.5" fill="#4f46e5" />
-        <circle cx="26.4" cy="28.6" r="1.4" fill="white" />
-        <circle cx="40.4" cy="28.6" r="1.4" fill="white" />
-        <path d="M27 37 q5 4 10 0" stroke="#4f46e5" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-        <rect x="22" y="46" width="20" height="10" rx="5" fill="white" opacity="0.9" />
+    <div className="mx-auto w-44 h-40 -mt-2">
+      <svg viewBox="0 0 200 190" className="w-full h-full">
+        <defs>
+          <radialGradient id="m-head" cx="38%" cy="28%" r="85%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="55%" stopColor="#eef1f7" />
+            <stop offset="100%" stopColor="#bcc3d4" />
+          </radialGradient>
+          <radialGradient id="m-body" cx="40%" cy="22%" r="95%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#b9c0d1" />
+          </radialGradient>
+          <linearGradient id="m-face" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#20326b" />
+            <stop offset="100%" stopColor="#0b1330" />
+          </linearGradient>
+          <radialGradient id="m-eye" cx="50%" cy="38%" r="65%">
+            <stop offset="0%" stopColor="#a9f4ff" />
+            <stop offset="100%" stopColor="#22a7ff" />
+          </radialGradient>
+          <linearGradient id="m-bub" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8ff2e2" />
+            <stop offset="100%" stopColor="#37c8bf" />
+          </linearGradient>
+          <filter id="m-soft" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="7" stdDeviation="7" floodColor="#0a0f2e" floodOpacity="0.35" />
+          </filter>
+        </defs>
+
+        <ellipse cx="104" cy="176" rx="46" ry="8" fill="#05081f" opacity="0.25" />
+
+        {/* chat bubble */}
+        <g filter="url(#m-soft)">
+          <path d="M20 30 h44 a14 14 0 0 1 14 14 v10 a14 14 0 0 1 -14 14 H40 l-11 12 l2 -12 h-11 a14 14 0 0 1 -14 -14 v-10 a14 14 0 0 1 14 -14 z" fill="url(#m-bub)" />
+          <circle cx="30" cy="49" r="3.4" fill="#ffffff" opacity="0.9" />
+          <circle cx="42" cy="49" r="3.4" fill="#ffffff" opacity="0.9" />
+          <circle cx="54" cy="49" r="3.4" fill="#ffffff" opacity="0.9" />
+        </g>
+
+        {/* antenna */}
+        <line x1="112" y1="44" x2="112" y2="28" stroke="#c9cfdd" strokeWidth="4.5" strokeLinecap="round" />
+        <circle cx="112" cy="23" r="10" fill="#22a7ff" opacity="0.25" />
+        <circle cx="112" cy="23" r="6" fill="url(#m-eye)" />
+
+        {/* body + arms */}
+        <rect x="80" y="126" width="70" height="48" rx="22" fill="url(#m-body)" filter="url(#m-soft)" />
+        <circle cx="74" cy="144" r="11" fill="url(#m-body)" />
+        <circle cx="156" cy="144" r="11" fill="url(#m-body)" />
+        <rect x="98" y="138" width="34" height="16" rx="8" fill="#d9deea" />
+
+        {/* head */}
+        <rect x="66" y="48" width="92" height="80" rx="32" fill="url(#m-head)" filter="url(#m-soft)" />
+        <rect x="58" y="76" width="10" height="26" rx="5" fill="#c9cfdd" />
+        <rect x="156" y="76" width="10" height="26" rx="5" fill="#c9cfdd" />
+
+        {/* face + eyes + smile */}
+        <rect x="78" y="62" width="68" height="52" rx="24" fill="url(#m-face)" />
+        <rect x="82" y="66" width="60" height="18" rx="12" fill="#ffffff" opacity="0.07" />
+        <ellipse cx="100" cy="86" rx="8" ry="9" fill="url(#m-eye)" />
+        <ellipse cx="124" cy="86" rx="8" ry="9" fill="url(#m-eye)" />
+        <circle cx="102.5" cy="82.5" r="2.5" fill="#fff" />
+        <circle cx="126.5" cy="82.5" r="2.5" fill="#fff" />
+        <path d="M101 99 q11 8 22 0" stroke="#a9f4ff" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <ellipse cx="94" cy="62" rx="20" ry="10" fill="#ffffff" opacity="0.55" />
       </svg>
-      <div className="absolute -right-1 -top-1 grid place-items-center w-7 h-7 rounded-xl bg-white text-brand-600 shadow">
-        <Sparkles size={15} />
-      </div>
     </div>
   );
 }
