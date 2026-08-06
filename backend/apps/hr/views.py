@@ -326,6 +326,20 @@ class PayrollViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollSerializer
     filterset_fields = ["employee", "month", "year"]
 
+    @action(detail=False, methods=["post"])
+    def generate(self, request):
+        """Generate payslips for ALL active employees for a month (defaults to the
+        just-ended month). Auto-runs on the 1st of each month; this lets HR trigger
+        it on demand too. Idempotent — never overwrites an existing payslip."""
+        from .services import generate_payroll
+        today = timezone.localdate()
+        pm = today.month - 1 or 12
+        py = today.year if today.month > 1 else today.year - 1
+        month = int(request.data.get("month") or pm)
+        year = int(request.data.get("year") or py)
+        created = generate_payroll(month, year)
+        return Response({"month": month, "year": year, "created": created})
+
     @action(detail=False, methods=["get"])
     def suggest(self, request):
         """Auto-calculate a payroll draft for an employee/month/year.

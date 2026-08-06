@@ -23,6 +23,7 @@ class IntegrationsConfig(AppConfig):
         IntegrationsConfig._autosync_started = True
         threading.Thread(target=_autosync_loop, daemon=True).start()
         threading.Thread(target=_reassign_loop, daemon=True).start()
+        threading.Thread(target=_payroll_loop, daemon=True).start()
 
 
 def _autosync_loop():
@@ -48,6 +49,40 @@ def _reassign_loop():
     while True:
         try:
             _run_reassign_once()
+        except Exception:  # noqa: BLE001 — never let the loop die
+            pass
+        time.sleep(interval)
+
+
+_PAYROLL_LOCK_KEY = 918273647         # payroll generation lock
+
+
+def _payroll_loop():
+    """On the 1st of each month, auto-generate the just-ended month's payroll
+    (a payslip for every active employee) so HR never has to create them by hand.
+    Checks a few times a day; generation is idempotent so re-checks are harmless."""
+    interval = int(os.environ.get("PAYROLL_CHECK_INTERVAL", "21600"))  # 6h
+    time.sleep(60)
+    while True:
+        try:
+            from django.db import close_old_connections, connection
+            from django.utils import timezone
+            today = timezone.localdate()
+            if today.day == 1:               # month just rolled over
+                close_old_connections()
+                with connection.cursor() as cur:
+                    cur.execute("SELECT pg_try_advisory_lock(%s)", [_PAYROLL_LOCK_KEY])
+                    got = cur.fetchone()[0]
+                if got:
+                    try:
+                        from apps.hr.services import generate_payroll
+                        pm = today.month - 1 or 12                       # the completed month
+                        py = today.year if today.month > 1 else today.year - 1
+                        generate_payroll(pm, py)
+                    finally:
+                        with connection.cursor() as cur:
+                            cur.execute("SELECT pg_advisory_unlock(%s)", [_PAYROLL_LOCK_KEY])
+                        close_old_connections()
         except Exception:  # noqa: BLE001 — never let the loop die
             pass
         time.sleep(interval)
