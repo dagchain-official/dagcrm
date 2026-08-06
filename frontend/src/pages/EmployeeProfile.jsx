@@ -11,6 +11,21 @@ import { STATUS_COLORS } from "../config/resources";
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 const date = (v) => (v ? new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
+// an expiry row that warns when the date is near/past
+function Expiry({ label, d }) {
+  if (!d) return <Row icon={Calendar} label={label} value="—" />;
+  const days = Math.ceil((new Date(d) - new Date()) / 86400000);
+  const tint = days < 0 ? "text-rose-600" : days <= 60 ? "text-amber-600" : "text-ink-800";
+  const note = days < 0 ? " (expired)" : days <= 60 ? ` (in ${days}d)` : "";
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-0">
+      <Calendar size={16} className="text-ink-400 shrink-0" />
+      <span className="text-sm text-ink-400 w-36 shrink-0">{label}</span>
+      <span className={`text-sm font-medium ${tint}`}>{date(d)}{note}</span>
+    </div>
+  );
+}
+
 function Row({ icon: Icon, label, value, href }) {
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-0">
@@ -87,6 +102,19 @@ export default function EmployeeProfile() {
           <Row icon={Calendar} label="Joining date" value={date(e.joining_date)} />
           <Row icon={DollarSign} label="Salary (monthly)" value={money(e.salary)} />
           <Row icon={Wallet} label="CTC (this month)" value={money(e.monthly_ctc)} />
+        </div>
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900 mb-2">Personal</h3>
+          <Row icon={Calendar} label="Date of birth" value={date(e.dob)} />
+          <Row icon={Building2} label="Nationality" value={e.nationality || "—"} />
+          <Row icon={Building2} label="Address" value={e.address || "—"} />
+          <Row icon={Phone} label="Emergency" value={[e.emergency_contact, e.emergency_phone].filter(Boolean).join(" · ") || "—"} />
+        </div>
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900 mb-2">Compliance</h3>
+          <Row icon={CreditCard} label="Passport no." value={e.passport_no || "—"} />
+          <Expiry label="Passport expiry" d={e.passport_expiry} />
+          <Expiry label="Visa expiry" d={e.visa_expiry} />
         </div>
         <div className="card p-5">
           <h3 className="font-bold text-ink-900 mb-2">Documents</h3>

@@ -66,7 +66,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
                   "phone", "employee_id", "password", "status",
                   "department", "department_name", "hierarchy_level", "hierarchy_level_name",
                   "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name",
-                  "photo", "document"]
+                  "photo", "document", "dob", "nationality", "address",
+                  "emergency_contact", "emergency_phone",
+                  "passport_no", "passport_expiry", "visa_expiry"]
         # hierarchy_level is derived from the role, never posted from the form
         extra_kwargs = {"user": {"required": False}, "hierarchy_level": {"read_only": True}}
 

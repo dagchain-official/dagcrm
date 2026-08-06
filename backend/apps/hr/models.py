@@ -52,6 +52,16 @@ class Employee(models.Model):
     manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_employees")
     photo = models.FileField(upload_to="employee_photos/", null=True, blank=True)     # profile photo
     document = models.FileField(upload_to="employee_docs/", null=True, blank=True)    # PDF / any doc
+    # Personal details
+    dob = models.DateField(null=True, blank=True)
+    nationality = models.CharField(max_length=60, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    emergency_contact = models.CharField(max_length=120, blank=True)   # name
+    emergency_phone = models.CharField(max_length=30, blank=True)
+    # Compliance documents — expiry drives HR reminders/alerts
+    passport_no = models.CharField(max_length=40, blank=True)
+    passport_expiry = models.DateField(null=True, blank=True)
+    visa_expiry = models.DateField(null=True, blank=True)
 
     def monthly_ctc(self, month, year):
         """Total Cost To Company = monthly salary + extra costs for that period.

@@ -84,7 +84,27 @@ export default function HRDashboard() {
         <Kpi icon={UserCheck} label="Present Today" value={d.present_today} trend={`${d.total_employees} total staff`} color="bg-emerald-100 text-emerald-600" to="/hr/attendance" />
         <Kpi icon={CalendarOff} label="Pending Leaves" value={d.pending_leaves} trend={`${d.on_leave_today} on leave today`} color="bg-amber-100 text-amber-600" to="/hr/attendance" />
         <Kpi icon={Wallet} label="Payroll This Month" value={money(d.payroll_this_month)} trend={`${money(d.incentives_this_month)} incentives`} color="bg-violet-100 text-violet-600" to="/hr/payroll" />
+        <Kpi icon={UserCheck} label="Attrition" value={num(d.attrition_count)} trend={`${pct(d.attrition_rate)} of staff left`} color="bg-rose-100 text-rose-500" to="/hr/people" />
+        <Kpi icon={AlertTriangle} label="Docs Expiring" value={num(d.expiring_docs_count)} trend="passport / visa · 60 days" color="bg-amber-100 text-amber-600" to="/hr/people" />
       </div>
+
+      {/* documents expiring soon (passport / visa) */}
+      {(d.expiring_docs || []).length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-bold text-ink-900 mb-3 flex items-center gap-2"><AlertTriangle size={17} className="text-amber-500" /> Documents expiring soon</h3>
+          <div className="space-y-1.5">
+            {d.expiring_docs.map((x, i) => (
+              <a key={i} href={`/hr/employee/${x.employee_id}`}
+                className={`flex items-center justify-between gap-3 p-2.5 rounded-xl ${x.days < 0 ? "bg-rose-500/10" : "bg-amber-500/10"} hover:opacity-80`}>
+                <span className="text-sm text-ink-700"><b className="text-ink-900">{x.employee}</b> · {x.doc}</span>
+                <span className={`text-xs font-semibold ${x.days < 0 ? "text-rose-600" : "text-amber-600"}`}>
+                  {x.days < 0 ? `expired ${-x.days}d ago` : `in ${x.days}d`} · {x.expires}
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* HR & Learning — employee health, learning compliance & assessment risk */}
       <div>

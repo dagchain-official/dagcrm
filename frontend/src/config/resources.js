@@ -102,6 +102,14 @@ const PERSON_FIELDS = [
   { key: "password", label: "Password (set/reset)", type: "text" },
   { key: "photo", label: "Photo", type: "file", accept: "image/*" },
   { key: "document", label: "Document (PDF)", type: "file", accept: "application/pdf,.pdf" },
+  { key: "dob", label: "Date of birth", type: "date" },
+  { key: "nationality", label: "Nationality" },
+  { key: "address", label: "Address" },
+  { key: "emergency_contact", label: "Emergency contact (name)" },
+  { key: "emergency_phone", label: "Emergency phone" },
+  { key: "passport_no", label: "Passport no." },
+  { key: "passport_expiry", label: "Passport expiry", type: "date" },
+  { key: "visa_expiry", label: "Visa expiry", type: "date" },
 ];
 
 export const RESOURCES = {

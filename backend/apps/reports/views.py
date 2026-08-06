@@ -532,11 +532,35 @@ def hr_dashboard(request):
     critical = sum(1 for a in attain if a < 0.6)
     _tstats = _training_stats()
 
+    # Attrition — people who have left / are inactive
+    from datetime import timedelta
+    total_emp = Employee.objects.count()
+    left = Employee.objects.exclude(user__status="active").count()
+    attrition_rate = round(left / total_emp, 4) if total_emp else 0.0
+
+    # Document expiry — passports / visas expiring within 60 days (or already expired)
+    soon = today + timedelta(days=60)
+    from django.db.models import Q
+    expiring = (Employee.objects.select_related("user").filter(
+        Q(passport_expiry__lte=soon, passport_expiry__isnull=False)
+        | Q(visa_expiry__lte=soon, visa_expiry__isnull=False)))
+    expiring_docs = []
+    for e in expiring:
+        for label, d in (("Passport", e.passport_expiry), ("Visa", e.visa_expiry)):
+            if d and d <= soon:
+                expiring_docs.append({"employee": e.user.name if e.user else "—", "employee_id": e.id,
+                                      "doc": label, "expires": d, "days": (d - today).days})
+    expiring_docs.sort(key=lambda x: x["days"])
+
     return Response({
         "total_employees": Employee.objects.count(),
         "present_today": Attendance.objects.filter(date=today, status="present").count(),
         "on_leave_today": Attendance.objects.filter(date=today, status="leave").count(),
         "pending_leaves": Leave.objects.filter(status="pending").count(),
+        "attrition_count": left,
+        "attrition_rate": attrition_rate,
+        "expiring_docs_count": len(expiring_docs),
+        "expiring_docs": expiring_docs[:30],
         "payroll_this_month": _money(Payroll.objects.filter(month=month, year=year), "final_salary"),
         "incentives_this_month": _money(Incentive.objects.filter(month=month, year=year), "amount"),
         "leaves_by_status": list(Leave.objects.values("status").annotate(count=Count("id"))),
