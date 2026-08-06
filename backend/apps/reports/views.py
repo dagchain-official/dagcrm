@@ -1568,6 +1568,7 @@ def employee_report(request):
                 "employee": e.user.name, "role": getattr(getattr(e.user, "role", None), "name", "") or "",
                 "revenue": round(by_user.get(e.user_id, 0.0), 2),
                 "overall": p.get("overall", 0), "rank": p.get("rank"), "target_pct": p.get("target_attainment", 0),
+                "suggestion": p.get("suggestion", ""),
                 "revenue_score": p.get("revenue_score", 0), "growth_score": p.get("growth_score", 0),
                 "activity_score": p.get("activity_score", 0),
                 "conversion_pct": round(conv / owned * 100, 1) if owned else 0,

@@ -72,6 +72,23 @@ def compute_performance(month, year):
     activity_peaks = [max((raw[e.id]["activity"][i] for e in emps), default=0.0)
                       for i in range(len(activity_defs))]
 
+    # attendance % (this month) per employee — factored into the suggestion
+    from django.db.models import Count, Q
+    from apps.hr.models import Attendance
+    att_map = {a["employee"]: a for a in Attendance.objects.filter(date__year=year, date__month=month)
+               .values("employee").annotate(days=Count("id"),
+                                             present=Count("id", filter=Q(status__in=["present", "half_day"])))}
+
+    def _suggest(overall, att_pct):
+        """Objective promotion / PIP recommendation from the score + attendance."""
+        if overall >= 80 and att_pct >= 0.85:
+            return "Promotion candidate"
+        if overall >= 55:
+            return "On track"
+        if overall >= 35:
+            return "Needs improvement"
+        return "PIP recommended"
+
     rows = []
     for e in emps:
         r = raw[e.id]
@@ -93,6 +110,8 @@ def compute_performance(month, year):
             "activity_score": activity_score,
             "overall": overall,
             "weights": {"revenue": round(wr * 100), "growth": round(wg * 100), "activity": round(wa * 100)},
+            "attendance_pct": (lambda a: round(a["present"] / a["days"] * 100) if a and a["days"] else 0)(att_map.get(e.id)),
+            "suggestion": _suggest(overall, (lambda a: a["present"] / a["days"] if a and a["days"] else 0)(att_map.get(e.id))),
         })
 
     rows.sort(key=lambda x: x["overall"], reverse=True)

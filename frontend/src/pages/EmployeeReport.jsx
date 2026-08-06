@@ -20,7 +20,8 @@ const cell = (c, r) => (c.fmt ? c.fmt(r[c.key], r) : (r[c.key] ?? ""));
 const FIXED_COLS = [
   { key: "employee", label: "Employee", left: true }, { key: "role", label: "Role", left: true },
   { key: "revenue", label: "Revenue", fmt: money }, { key: "overall", label: "Score" },
-  { key: "rank", label: "Rank", fmt: (v) => `#${v}` }, { key: "target_pct", label: "Target %", fmt: (v) => `${v}%` },
+  { key: "rank", label: "Rank", fmt: (v) => `#${v}` }, { key: "suggestion", label: "Suggestion", left: true },
+  { key: "target_pct", label: "Target %", fmt: (v) => `${v}%` },
   { key: "revenue_score", label: "Rev score" }, { key: "growth_score", label: "Growth score" },
   { key: "activity_score", label: "Activity score" }, { key: "conversion_pct", label: "Conv %", fmt: (v) => `${v}%` },
   { key: "leads_owned", label: "Leads" }, { key: "leads_open", label: "Open" },
@@ -204,6 +205,19 @@ export default function EmployeeReport() {
           {/* performance breakdown */}
           {p && (
             <Section title="Performance scorecard" icon={Trophy}>
+              {p.suggestion && (
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-sm text-ink-500">AI recommendation:</span>
+                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                    p.suggestion.startsWith("Promotion") ? "bg-emerald-50 text-emerald-700"
+                      : p.suggestion === "On track" ? "bg-brand-50 text-brand-700"
+                        : p.suggestion === "Needs improvement" ? "bg-amber-50 text-amber-700"
+                          : "bg-rose-50 text-rose-600"}`}>
+                    {p.suggestion}
+                  </span>
+                  {p.attendance_pct != null && <span className="text-xs text-ink-400">· attendance {p.attendance_pct}%</span>}
+                </div>
+              )}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <Tile icon={DollarSign} label={`Revenue score (${p.weights.revenue}%)`} value={p.revenue_score} tint="bg-emerald-100 text-emerald-600" />
                 <Tile icon={TrendingUp} label={`Growth score (${p.weights.growth}%)`} value={p.growth_score} tint="bg-violet-100 text-violet-600" />
