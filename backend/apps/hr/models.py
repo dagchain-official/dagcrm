@@ -158,6 +158,8 @@ class HRRequest(models.Model):
     status = models.CharField(max_length=12, choices=STATUS, default="pending")
     chain = models.JSONField(default=list)                 # ["manager","hr","head"]
     stage_index = models.PositiveIntegerField(default=0)   # which stage is pending
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="hr_requests_owned")  # assigned HR owner
+    due_date = models.DateField(null=True, blank=True)     # SLA / target date
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -691,6 +693,9 @@ class Appraisal(models.Model):
     increment_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     promotion_to = models.CharField(max_length=120, blank=True)
     status = models.CharField(max_length=15, choices=STATUS, default="self")
+    source = models.CharField(max_length=12, default="manual")   # "monthly" = auto-generated review
+    employee_ack = models.BooleanField(default=False)            # employee acknowledged the review
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -725,6 +730,7 @@ class Policy(models.Model):
     body = models.TextField(blank=True)
     file = models.FileField(upload_to="policies/", null=True, blank=True)
     requires_ack = models.BooleanField(default=True)
+    requires_countersign = models.BooleanField(default=False)   # offer/NDA — HR must counter-sign
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -734,11 +740,16 @@ class Policy(models.Model):
 
 
 class PolicyAcknowledgement(models.Model):
-    """E-signature: a user's typed-name acceptance of a policy version."""
+    """E-signature: a user's typed-name acceptance of a policy version. For
+    offer/NDA-type documents HR then counter-signs and it auto-archives."""
     policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name="acks")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="policy_acks")
     version = models.CharField(max_length=20, blank=True)
     signature = models.CharField(max_length=120)           # typed full name
+    counter_signed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="policy_countersigns")
+    counter_signature = models.CharField(max_length=120, blank=True)
+    counter_signed_at = models.DateTimeField(null=True, blank=True)
+    archived = models.BooleanField(default=False)
     signed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -778,6 +789,26 @@ class ProfileChangeRequest(models.Model):
     review_comment = models.CharField(max_length=255, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="profile_changes_reviewed")
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class VisaCase(models.Model):
+    """Visa milestone tracker — one per visa application. Moving the `stage`
+    forward notifies the employee + HR at every status change (Step 5)."""
+    STAGE = [("applied", "Applied"), ("documents", "Documents"), ("medical", "Medical"),
+             ("biometrics", "Biometrics"), ("submitted", "Submitted"), ("approved", "Approved"),
+             ("stamped", "Stamped"), ("rejected", "Rejected")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="visa_cases")
+    visa_type = models.CharField(max_length=60, blank=True)   # Employment / Family / Visit…
+    reference = models.CharField(max_length=80, blank=True)
+    stage = models.CharField(max_length=20, choices=STAGE, default="applied")
+    applied_date = models.DateField(null=True, blank=True)
+    expected_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

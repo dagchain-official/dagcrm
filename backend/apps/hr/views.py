@@ -895,6 +895,24 @@ class HRRequestViewSet(viewsets.ModelViewSet):
     def reject(self, request, pk=None):
         return self._decide(request, pk, "reject")
 
+    @action(detail=True, methods=["post"])
+    def assign(self, request, pk=None):
+        """HR assigns an owner + due date to a request (Step 2 'HR task')."""
+        from apps.accounts.access import is_admin_view
+        if not (is_admin_view(request.user) or getattr(getattr(request.user, "role", None), "name", "") == "HR"):
+            return Response({"detail": "Only HR can assign requests."}, status=403)
+        req = self.get_object()
+        owner_id = request.data.get("owner")
+        req.owner_id = owner_id or None
+        req.due_date = request.data.get("due_date") or None
+        req.save(update_fields=["owner", "due_date"])
+        if req.owner_id:
+            notify(req.owner, title="HR request assigned to you",
+                   body=f"{req.get_request_type_display()}: '{req.title}'"
+                        + (f" — due {req.due_date}" if req.due_date else ""),
+                   kind="info", link="/hr-requests")
+        return Response(self.get_serializer(req).data)
+
 
 # ==================================================================== HR SUITE
 from .models import (
@@ -921,7 +939,38 @@ def _scope_by_employee(qs, user, field="employee__user_id"):
     return qs.filter(**{f"{field}__in": subordinate_user_ids(user, include_self=True)})
 
 
-class EmployeeDocumentViewSet(viewsets.ModelViewSet):
+def _can_manage_people(user):
+    """HR / admin, or anyone the role matrix grants People (employees) write."""
+    from apps.accounts.access import is_admin_view, role_permissions
+    if is_admin_view(user):
+        return True
+    if getattr(getattr(user, "role", None), "name", "") == "HR":
+        return True
+    r = role_permissions(user).get("employees", {})
+    return bool(r.get("edit") or r.get("create"))
+
+
+class HRWriteGuard:
+    """Reads stay open+scoped (so employees see their OWN HR records), but only
+    People-managers (HR / admin / granted managers) may create/edit/delete —
+    an employee can never self-rate an appraisal or self-verify a document."""
+
+    def _guard(self, request):
+        if not _can_manage_people(request.user):
+            return Response({"detail": "Only HR can change this."}, status=403)
+        return None
+
+    def create(self, request, *args, **kwargs):
+        return self._guard(request) or super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        return self._guard(request) or super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        return self._guard(request) or super().destroy(request, *args, **kwargs)
+
+
+class EmployeeDocumentViewSet(HRWriteGuard, viewsets.ModelViewSet):
     queryset = EmployeeDocument.objects.select_related("employee__user").all()
     serializer_class = EmployeeDocumentSerializer
     filterset_fields = ["employee", "doc_type", "verified"]
@@ -931,7 +980,7 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
         return _scope_by_employee(super().get_queryset(), self.request.user)
 
 
-class EmployeeEventViewSet(viewsets.ModelViewSet):
+class EmployeeEventViewSet(HRWriteGuard, viewsets.ModelViewSet):
     queryset = EmployeeEvent.objects.select_related("employee__user").all()
     serializer_class = EmployeeEventSerializer
     filterset_fields = ["employee", "kind"]
@@ -944,7 +993,7 @@ class EmployeeEventViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
 
-class PerformanceJournalViewSet(viewsets.ModelViewSet):
+class PerformanceJournalViewSet(HRWriteGuard, viewsets.ModelViewSet):
     queryset = PerformanceJournal.objects.select_related("employee__user", "author").all()
     serializer_class = PerformanceJournalSerializer
     filterset_fields = ["employee", "kind"]
@@ -956,16 +1005,27 @@ class PerformanceJournalViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-class AppraisalViewSet(viewsets.ModelViewSet):
+class AppraisalViewSet(HRWriteGuard, viewsets.ModelViewSet):
     queryset = Appraisal.objects.select_related("employee__user").all()
     serializer_class = AppraisalSerializer
-    filterset_fields = ["employee", "status", "period"]
+    filterset_fields = ["employee", "status", "period", "source"]
 
     def get_queryset(self):
         return _scope_by_employee(super().get_queryset(), self.request.user)
 
+    @action(detail=True, methods=["post"])
+    def acknowledge(self, request, pk=None):
+        """The employee acknowledges their (monthly) review — Step 8."""
+        appr = self.get_object()
+        if not (appr.employee.user_id == request.user.id or _is_hr(request.user)):
+            return Response({"detail": "Only the employee can acknowledge their review."}, status=403)
+        appr.employee_ack = True
+        appr.acknowledged_at = timezone.now()
+        appr.save(update_fields=["employee_ack", "acknowledged_at"])
+        return Response(self.get_serializer(appr).data)
 
-class PIPViewSet(viewsets.ModelViewSet):
+
+class PIPViewSet(HRWriteGuard, viewsets.ModelViewSet):
     queryset = PIP.objects.select_related("employee__user", "owner").all()
     serializer_class = PIPSerializer
     filterset_fields = ["employee", "status"]
@@ -977,7 +1037,7 @@ class PIPViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user)
 
 
-class EmployeeExitViewSet(viewsets.ModelViewSet):
+class EmployeeExitViewSet(HRWriteGuard, viewsets.ModelViewSet):
     queryset = EmployeeExit.objects.select_related("employee__user").all()
     serializer_class = EmployeeExitSerializer
     filterset_fields = ["employee", "status"]
@@ -1180,3 +1240,81 @@ class ProfileChangeRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
         return self._decide(request, pk, False)
+
+
+# ================================================== Employee-journey gaps (S2/4/5/8)
+from .models import PolicyAcknowledgement, VisaCase
+from .serializers import PolicySignatureSerializer, VisaCaseSerializer
+
+
+class VisaCaseViewSet(HRWriteGuard, viewsets.ModelViewSet):
+    """Visa milestone tracker. Every stage change notifies the employee + HR and
+    drops a timeline event (Step 5)."""
+    queryset = VisaCase.objects.select_related("employee__user").all()
+    serializer_class = VisaCaseSerializer
+    filterset_fields = ["employee", "stage"]
+    search_fields = ["employee__user__name", "reference", "visa_type"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+    def _notify_stage(self, case, verb):
+        from .models import EmployeeEvent
+        name = case.employee.user.name if case.employee.user_id else "An employee"
+        label = case.get_stage_display()
+        # employee + all HR
+        recips = list(User.objects.filter(role__name="HR", status="active"))
+        if case.employee.user_id:
+            recips.append(case.employee.user)
+        for u in recips:
+            notify(u, title=f"Visa {verb}: {label}",
+                   body=f"{name}'s visa case is now '{label}'.",
+                   kind="success" if case.stage in ("approved", "stamped") else "info",
+                   link=f"/hr/employee/{case.employee_id}")
+        EmployeeEvent.objects.get_or_create(
+            employee=case.employee, kind="note",
+            title=f"Visa {label} ({case.visa_type or 'visa'})",
+            defaults={"date": timezone.localdate()})
+
+    def perform_create(self, serializer):
+        case = serializer.save()
+        self._notify_stage(case, "opened")
+
+    def perform_update(self, serializer):
+        old_stage = serializer.instance.stage
+        case = serializer.save()
+        if case.stage != old_stage:
+            self._notify_stage(case, "moved to")
+
+
+class PolicySignatureViewSet(viewsets.ModelViewSet):
+    """Signed acknowledgements. For offer/NDA (requires_countersign) HR
+    counter-signs here and the record auto-archives (Step 4)."""
+    queryset = PolicyAcknowledgement.objects.select_related("policy", "user", "counter_signed_by").all()
+    serializer_class = PolicySignatureSerializer
+    filterset_fields = ["policy", "archived"]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if _is_hr(self.request.user):
+            return qs
+        return qs.filter(user=self.request.user)
+
+    @action(detail=True, methods=["post"])
+    def countersign(self, request, pk=None):
+        if not _is_hr(request.user):
+            return Response({"detail": "Only HR can counter-sign."}, status=403)
+        ack = self.get_object()
+        if not ack.policy.requires_countersign:
+            return Response({"detail": "This document doesn't need a counter-signature."}, status=400)
+        if ack.counter_signed_at:
+            return Response({"detail": "Already counter-signed."}, status=400)
+        ack.counter_signed_by = request.user
+        ack.counter_signature = (request.data.get("signature") or request.user.name or "").strip()
+        ack.counter_signed_at = timezone.now()
+        ack.archived = True     # fully executed -> archive
+        ack.save(update_fields=["counter_signed_by", "counter_signature", "counter_signed_at", "archived"])
+        notify(ack.user, title="Document counter-signed & archived",
+               body=f"'{ack.policy.title}' is now fully executed.", kind="success", link="/m/policies")
+        return Response(self.get_serializer(ack).data)

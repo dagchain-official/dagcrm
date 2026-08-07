@@ -2,11 +2,14 @@
 Employee Timeline (EmployeeEvent) so the history builds itself. All writes are
 get_or_create on a deterministic (employee, kind, title) key, so repeated saves
 never duplicate an event."""
+from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .models import Appraisal, Employee, EmployeeEvent, EmployeeExit, PIP, Recognition
+from apps.notifications.models import notify
+from .models import (Appraisal, Assessment, Employee, EmployeeEvent, EmployeeExit,
+                     PIP, Recognition)
 
 
 def _add(employee, kind, title, details="", when=None):
@@ -57,3 +60,25 @@ def _on_exit(sender, instance, created, **kwargs):
     if created:
         _add(instance.employee, "exit", "Exit initiated",
              details=instance.reason or "", when=instance.resignation_date)
+
+
+@receiver(post_save, sender=Assessment)
+def _on_assessment(sender, instance, created, **kwargs):
+    """Step 1 — a passed training activates the employee's login 'workspace'
+    and pings HR with an onboarding notification."""
+    if instance.result != "pass":
+        return
+    emp = instance.employee
+    module = instance.module.title if instance.module_id else "training"
+    _add(emp, "training", f"Passed: {module}")
+    if not created:
+        return
+    if emp and emp.user_id and emp.user.status != "active":
+        emp.user.status = "active"                 # provision the workspace
+        emp.user.save(update_fields=["status"])
+    U = get_user_model()
+    who = emp.user.name if (emp and emp.user_id) else "An employee"
+    for hr in U.objects.filter(role__name="HR", status="active"):
+        notify(hr, title="Onboarding training passed",
+               body=f"{who} passed {module} — account activated.",
+               kind="success", link=f"/hr/employee/{emp.id}")

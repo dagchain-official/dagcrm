@@ -39,9 +39,11 @@ def run_hr_reminders(today=None):
     today = today or timezone.localdate()
     now = timezone.now()
     hr = _hr_users()
-    counts = {"expiry": 0, "anniversary": 0, "pip": 0, "sla": 0, "training": 0}
+    counts = {"expiry": 0, "anniversary": 0, "pip": 0, "sla": 0, "training": 0,
+              "missing_docs": 0, "monthly_reviews": 0}
 
-    from .models import Employee, EmployeeDocument, PIP, TrainingAssignment
+    import calendar
+    from .models import Appraisal, Employee, EmployeeDocument, PIP, TrainingAssignment
     try:
         from .models import HRTicket
     except Exception:  # noqa: BLE001
@@ -150,5 +152,38 @@ def run_hr_reminders(today=None):
         if emp.user_id:
             notify_once(emp.user, title=head, body=body, kind=kind, link="/m/training-assignments", today=today)
         counts["training"] += 1
+
+    # 6) Missing required documents — weekly nudge (Mondays) for each employee
+    if today.weekday() == 0:
+        REQUIRED = [("passport", "Passport"), ("visa", "Visa"), ("emirates_id", "Emirates / National ID")]
+        have = set(EmployeeDocument.objects.values_list("employee_id", "doc_type"))
+        for emp in Employee.objects.select_related("user", "manager").exclude(user__is_superuser=True):
+            missing = [lbl for key, lbl in REQUIRED if (emp.id, key) not in have]
+            if not missing:
+                continue
+            name = emp.user.name if emp.user_id else "An employee"
+            body = "Missing: " + ", ".join(missing)
+            for u in recipients(emp):
+                notify_once(u, title=f"Documents incomplete: {name}", body=body,
+                            kind="warning", link=f"/hr/employee/{emp.id}", today=today)
+            counts["missing_docs"] += 1
+
+    # 7) Monthly review — auto-create one appraisal record per employee per month
+    period = f"{calendar.month_abbr[today.month]} {today.year}"
+    for emp in Employee.objects.select_related("user", "manager").exclude(user__is_superuser=True):
+        appr, made = Appraisal.objects.get_or_create(
+            employee=emp, period=period, source="monthly",
+            defaults={"status": "self"})
+        if not made:
+            continue
+        name = emp.user.name if emp.user_id else "An employee"
+        targets = list(hr) + ([emp.manager] if emp.manager_id else [])
+        if emp.user_id:
+            targets.append(emp.user)
+        for u in targets:
+            notify_once(u, title=f"Monthly review — {period}",
+                        body=f"{name}'s monthly review record is ready for self-review, leader & HR.",
+                        kind="info", link="/m/appraisals", today=today)
+        counts["monthly_reviews"] += 1
 
     return counts

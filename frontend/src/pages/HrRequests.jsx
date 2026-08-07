@@ -34,8 +34,10 @@ function Chain({ r }) {
   );
 }
 
-function RequestCard({ r, onDecide }) {
+function RequestCard({ r, onDecide, onAssign, people }) {
   const type = TYPES.find(([v]) => v === r.request_type)?.[1] || r.request_type;
+  const [owner, setOwner] = useState(r.owner || "");
+  const [due, setDue] = useState(r.due_date || "");
   return (
     <div className="card p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -47,7 +49,23 @@ function RequestCard({ r, onDecide }) {
         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_TINT[r.status]}`}>{r.status}</span>
       </div>
       {r.details && <p className="text-sm text-ink-500 mt-1.5">{r.details}</p>}
+      {(r.owner_name || r.due_date) && (
+        <p className="text-[11px] text-brand-600 mt-1.5 font-semibold">
+          {r.owner_name ? `Owner: ${r.owner_name}` : ""}{r.owner_name && r.due_date ? " · " : ""}{r.due_date ? `Due ${dt(r.due_date)}` : ""}
+        </p>
+      )}
       <Chain r={r} />
+      {onAssign && r.can_approve && (
+        <div className="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-ink-100">
+          <span className="text-[11px] font-semibold text-ink-400">Assign HR task:</span>
+          <select className="input !py-1 !text-xs !w-auto" value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <option value="">Owner…</option>
+            {(people || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <input type="date" className="input !py-1 !text-xs !w-auto" value={due} onChange={(e) => setDue(e.target.value)} />
+          <button onClick={() => onAssign(r.id, owner, due)} className="btn text-xs px-2.5 py-1 bg-brand-50 text-brand-700 hover:bg-brand-100">Assign</button>
+        </div>
+      )}
       {onDecide && r.can_approve && (
         <div className="flex gap-2 mt-3">
           <button onClick={() => onDecide(r.id, "approve")} className="btn text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"><Check size={14} /> Approve</button>
@@ -70,11 +88,23 @@ function RequestCard({ r, onDecide }) {
 export default function HrRequests() {
   const toast = useToast();
   const [rows, setRows] = useState(null);
+  const [people, setPeople] = useState([]);
   const [form, setForm] = useState({ request_type: "reimbursement", title: "", details: "", amount: "", start_date: "", end_date: "" });
   const [busy, setBusy] = useState(false);
 
   const load = () => api.get("/hr-requests/").then((r) => setRows(r.data.results || r.data || [])).catch(() => setRows([]));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get("/users/assignable/").then(({ data }) => setPeople(data.results || data || [])).catch(() => {});
+  }, []);
+
+  const assign = async (id, owner, due_date) => {
+    try {
+      await api.post(`/hr-requests/${id}/assign/`, { owner: owner || null, due_date: due_date || null });
+      toast.success("Assigned");
+      load();
+    } catch (err) { toast.error(err.response?.data?.detail || "Could not assign"); }
+  };
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const submit = async (e) => {
@@ -152,7 +182,7 @@ export default function HrRequests() {
         <div>
           <h3 className="font-bold text-ink-900 mb-2 flex items-center gap-2"><Inbox size={17} className="text-amber-500" /> Pending my approval ({inbox.length})</h3>
           <div className="grid lg:grid-cols-2 gap-3">
-            {inbox.map((r) => <RequestCard key={r.id} r={r} onDecide={decide} />)}
+            {inbox.map((r) => <RequestCard key={r.id} r={r} onDecide={decide} onAssign={assign} people={people} />)}
           </div>
         </div>
       )}

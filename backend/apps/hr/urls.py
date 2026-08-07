@@ -12,6 +12,7 @@ from .views import (
     EmployeeDocumentViewSet, EmployeeEventViewSet, PerformanceJournalViewSet,
     AppraisalViewSet, PIPViewSet, EmployeeExitViewSet, HRTicketViewSet,
     PolicyViewSet, RecognitionViewSet, ProfileChangeRequestViewSet,
+    VisaCaseViewSet, PolicySignatureViewSet,
 )
 
 router = DefaultRouter()
@@ -48,6 +49,8 @@ router.register("hr-tickets", HRTicketViewSet)
 router.register("policies", PolicyViewSet)
 router.register("recognitions", RecognitionViewSet)
 router.register("profile-change-requests", ProfileChangeRequestViewSet)
+router.register("visa-cases", VisaCaseViewSet)
+router.register("policy-signatures", PolicySignatureViewSet)
 
 # Explicit self-service paths MUST come before router (so "check-in" isn't
 # parsed as an attendance pk by the detail route).

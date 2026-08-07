@@ -999,18 +999,24 @@ export const RESOURCES = {
   },
   appraisals: {                     // Appraisal Engine
     title: "Appraisals", endpoint: "appraisals", search: true, permModule: "employees",
+    rowActions: [
+      { label: "Acknowledge", icon: "check", variant: "success", when: { employee_ack: false }, post: (id) => `appraisals/${id}/acknowledge/` },
+    ],
     filters: [
       { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
       { key: "status", label: "Status", options: sel("self", "manager", "approved", "closed") },
+      { key: "source", label: "Source", options: sel("manual", "monthly") },
     ],
     columns: [
       { key: "employee_name", label: "Employee" },
       { key: "period", label: "Period" },
+      { key: "source", label: "Source", badge: true },
       { key: "self_rating", label: "Self" },
       { key: "manager_rating", label: "Manager" },
       { key: "increment_pct", label: "Increment %" },
       { key: "promotion_to", label: "Promotion to" },
       { key: "status_display", label: "Status", badge: true },
+      { key: "employee_ack", label: "Acknowledged", bool: true },
     ],
     fields: [
       { key: "employee", label: "Employee", type: "ref", ref: "employees", labelKey: "user_name", required: true },
@@ -1128,6 +1134,7 @@ export const RESOURCES = {
       { key: "body", label: "Policy text", type: "textarea" },
       { key: "file", label: "Attach PDF", type: "file", accept: ".pdf,image/*" },
       { key: "requires_ack", label: "Requires acknowledgement", type: "select", options: sel("true", "false") },
+      { key: "requires_countersign", label: "Needs HR counter-sign (offer/NDA)", type: "select", options: sel("true", "false") },
       { key: "active", label: "Active", type: "select", options: sel("true", "false") },
     ],
   },
@@ -1155,6 +1162,51 @@ export const RESOURCES = {
       { key: "reason", label: "Why do they deserve it?", type: "textarea", required: true },
       { key: "points", label: "Points (optional)", type: "number" },
     ],
+  },
+  "visa-cases": {                   // Visa milestone tracker (Step 5)
+    title: "Visa Cases", endpoint: "visa-cases", search: true, permModule: "employees",
+    filters: [
+      { key: "employee", label: "Employee", ref: "employees", labelKey: "user_name" },
+      { key: "stage", label: "Stage", options: sel("applied", "documents", "medical", "biometrics", "submitted", "approved", "stamped", "rejected") },
+    ],
+    columns: [
+      { key: "employee_name", label: "Employee" },
+      { key: "visa_type", label: "Type" },
+      { key: "reference", label: "Reference" },
+      { key: "stage_display", label: "Stage", badge: true },
+      { key: "applied_date", label: "Applied" },
+      { key: "expected_date", label: "Expected" },
+      { key: "expiry_date", label: "Expiry" },
+    ],
+    fields: [
+      { key: "employee", label: "Employee", type: "ref", ref: "employees", labelKey: "user_name", required: true },
+      { key: "visa_type", label: "Visa type (Employment / Family…)" },
+      { key: "reference", label: "Reference / application no" },
+      { key: "stage", label: "Stage", type: "select", options: sel("applied", "documents", "medical", "biometrics", "submitted", "approved", "stamped", "rejected"), required: true },
+      { key: "applied_date", label: "Applied date", type: "date" },
+      { key: "expected_date", label: "Expected date", type: "date" },
+      { key: "expiry_date", label: "Expiry date", type: "date" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  },
+  "policy-signatures": {            // Offer/NDA counter-sign queue (Step 4)
+    title: "Document Signatures", endpoint: "policy-signatures",
+    permModule: "employees", noCreate: true, readOnly: true,
+    rowActions: [
+      { label: "Counter-sign", icon: "check", variant: "success", when: { awaiting_countersign: true }, post: (id) => `policy-signatures/${id}/countersign/` },
+    ],
+    filters: [
+      { key: "archived", label: "Archived", options: sel("true", "false") },
+    ],
+    columns: [
+      { key: "employee_name", label: "Employee" },
+      { key: "policy_title", label: "Document" },
+      { key: "signature", label: "Signed by" },
+      { key: "signed_at", label: "Signed", datetime: true },
+      { key: "counter_signed_by_name", label: "Counter-signed by" },
+      { key: "archived", label: "Archived", bool: true },
+    ],
+    fields: [],
   },
   "profile-change-requests": {      // HR review queue for employee self-edits (#1)
     title: "Profile Change Approvals", endpoint: "profile-change-requests",

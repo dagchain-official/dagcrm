@@ -545,6 +545,7 @@ class HRRequestApprovalSerializer(serializers.ModelSerializer):
 
 class HRRequestSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    owner_name = serializers.CharField(source="owner.name", read_only=True)
     current_stage = serializers.CharField(read_only=True)
     approvals = HRRequestApprovalSerializer(many=True, read_only=True)
     can_approve = serializers.SerializerMethodField()
@@ -555,7 +556,7 @@ class HRRequestSerializer(serializers.ModelSerializer):
         model = HRRequest
         fields = ["id", "employee", "employee_name", "request_type", "title", "details", "amount",
                   "start_date", "end_date", "status", "chain", "stage_index", "current_stage",
-                  "can_approve", "is_mine", "approvals", "created_at"]
+                  "owner", "owner_name", "due_date", "can_approve", "is_mine", "approvals", "created_at"]
         read_only_fields = ["employee", "status", "chain", "stage_index", "created_at"]
 
     def get_can_approve(self, obj):
@@ -658,8 +659,8 @@ class AppraisalSerializer(serializers.ModelSerializer):
         model = Appraisal
         fields = ["id", "employee", "employee_name", "period", "self_review", "self_rating",
                   "manager_review", "manager_rating", "increment_pct", "promotion_to",
-                  "status", "status_display", "created_at"]
-        read_only_fields = ["created_at"]
+                  "status", "status_display", "source", "employee_ack", "acknowledged_at", "created_at"]
+        read_only_fields = ["created_at", "source", "employee_ack", "acknowledged_at"]
 
 
 class PIPSerializer(serializers.ModelSerializer):
@@ -681,7 +682,7 @@ class PolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = Policy
         fields = ["id", "title", "category", "category_display", "version", "body", "file",
-                  "requires_ack", "active", "ack_count", "my_ack", "created_at"]
+                  "requires_ack", "requires_countersign", "active", "ack_count", "my_ack", "created_at"]
         read_only_fields = ["created_at"]
 
     def get_my_ack(self, obj):
@@ -740,3 +741,37 @@ class ProfileChangeRequestSerializer(serializers.ModelSerializer):
             return False
         from apps.accounts.access import is_admin_view
         return is_admin_view(req.user) or getattr(getattr(req.user, "role", None), "name", "") == "HR"
+
+
+# ------------------------------------------------- Journey gaps (S4/S5 extras)
+from .models import PolicyAcknowledgement, VisaCase
+
+
+class VisaCaseSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    stage_display = serializers.CharField(source="get_stage_display", read_only=True)
+
+    class Meta:
+        model = VisaCase
+        fields = ["id", "employee", "employee_name", "visa_type", "reference", "stage",
+                  "stage_display", "applied_date", "expected_date", "expiry_date", "notes", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+class PolicySignatureSerializer(serializers.ModelSerializer):
+    """A signed policy acknowledgement — used by HR to counter-sign offer/NDA docs."""
+    employee_name = serializers.CharField(source="user.name", read_only=True)
+    policy_title = serializers.CharField(source="policy.title", read_only=True)
+    requires_countersign = serializers.BooleanField(source="policy.requires_countersign", read_only=True)
+    counter_signed_by_name = serializers.CharField(source="counter_signed_by.name", read_only=True)
+    awaiting_countersign = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PolicyAcknowledgement
+        fields = ["id", "policy", "policy_title", "requires_countersign", "user", "employee_name",
+                  "version", "signature", "signed_at", "counter_signed_by", "counter_signed_by_name",
+                  "counter_signature", "counter_signed_at", "archived", "awaiting_countersign"]
+        read_only_fields = fields
+
+    def get_awaiting_countersign(self, obj):
+        return bool(obj.policy.requires_countersign and not obj.counter_signed_at)
