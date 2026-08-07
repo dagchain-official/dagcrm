@@ -1084,7 +1084,7 @@ export const RESOURCES = {
     ],
   },
   "hr-tickets": {                   // HR Helpdesk (self-service)
-    title: "HR Helpdesk", endpoint: "hr-tickets", search: true,
+    title: "HR Helpdesk", endpoint: "hr-tickets", search: true, selfCreate: true, selfEdit: true,
     rowActions: [
       { label: "Resolve", icon: "check", variant: "success", when: { status: "open" }, post: (id) => `hr-tickets/${id}/resolve/` },
     ],
@@ -1111,8 +1111,8 @@ export const RESOURCES = {
       { key: "status", label: "Status", type: "select", options: sel("open", "in_progress", "resolved", "closed") },
     ],
   },
-  policies: {                       // Policy Centre (read + e-sign)
-    title: "Policy Centre", endpoint: "policies", search: true,
+  policies: {                       // Policy Centre (HR manages, everyone signs)
+    title: "Policy Centre", endpoint: "policies", search: true, permModule: "employees",
     rowActions: [
       { label: "I Acknowledge", icon: "check", variant: "success", when: { my_ack: false }, post: (id) => `policies/${id}/acknowledge/` },
     ],
@@ -1139,7 +1139,7 @@ export const RESOURCES = {
     ],
   },
   recognitions: {                   // Recognition wall (peer nomination)
-    title: "Recognition", endpoint: "recognitions", search: true,
+    title: "Recognition", endpoint: "recognitions", search: true, selfCreate: true,
     rowActions: [
       { label: "Approve", icon: "check", variant: "success", when: { status: "pending" }, post: (id) => `recognitions/${id}/approve/` },
       { label: "Reject", icon: "x", variant: "danger", when: { status: "pending" }, post: (id) => `recognitions/${id}/reject/` },

@@ -85,9 +85,12 @@ export default function ResourceTable({ resource: propResource }) {
   // some resources borrow another module's permissions (e.g. message templates
   // use "communications" — whoever can chat can make their own templates).
   const permMod = cfg.permModule || resource;
-  const canCreate = !cfg.noCreate && can(permMod, "create");
-  const canEdit = !cfg.readOnly && can(permMod, "edit");
-  const canDelete = can(permMod, "delete");
+  // `selfCreate`/`selfEdit`: self-service resources (raise a ticket, nominate…)
+  // that any signed-in user may create — the backend enforces the real rules,
+  // so they don't need a permission-matrix entry to show the button.
+  const canCreate = cfg.selfCreate ? true : (!cfg.noCreate && can(permMod, "create"));
+  const canEdit = cfg.selfEdit ? true : (!cfg.readOnly && can(permMod, "edit"));
+  const canDelete = cfg.selfEdit ? true : can(permMod, "delete");
   // `adminOnly` columns (e.g. Lead phone) are visible ONLY to the Super Admin
   const columns = cfg.columns.filter((c) => !c.adminOnly || user?.is_superuser);
 
