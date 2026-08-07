@@ -24,6 +24,7 @@ class IntegrationsConfig(AppConfig):
         threading.Thread(target=_autosync_loop, daemon=True).start()
         threading.Thread(target=_reassign_loop, daemon=True).start()
         threading.Thread(target=_payroll_loop, daemon=True).start()
+        threading.Thread(target=_hr_reminders_loop, daemon=True).start()
 
 
 def _autosync_loop():
@@ -83,6 +84,35 @@ def _payroll_loop():
                         with connection.cursor() as cur:
                             cur.execute("SELECT pg_advisory_unlock(%s)", [_PAYROLL_LOCK_KEY])
                         close_old_connections()
+        except Exception:  # noqa: BLE001 — never let the loop die
+            pass
+        time.sleep(interval)
+
+
+_HR_REMINDERS_LOCK_KEY = 918273648    # daily HR reminder pass lock
+
+
+def _hr_reminders_loop():
+    """Every few hours, run the HR reminder pass (doc/visa expiry, work
+    anniversaries, PIP reviews, helpdesk SLA breaches, training due). The pass
+    is idempotent (notify_once dedupes per day) so re-checks never double-send."""
+    interval = int(os.environ.get("HR_REMINDERS_INTERVAL", "21600"))  # 6h
+    time.sleep(90)  # after payroll's boot delay
+    while True:
+        try:
+            from django.db import close_old_connections, connection
+            close_old_connections()
+            with connection.cursor() as cur:
+                cur.execute("SELECT pg_try_advisory_lock(%s)", [_HR_REMINDERS_LOCK_KEY])
+                got = cur.fetchone()[0]
+            if got:
+                try:
+                    from apps.hr.reminders import run_hr_reminders
+                    run_hr_reminders()
+                finally:
+                    with connection.cursor() as cur:
+                        cur.execute("SELECT pg_advisory_unlock(%s)", [_HR_REMINDERS_LOCK_KEY])
+                    close_old_connections()
         except Exception:  # noqa: BLE001 — never let the loop die
             pass
         time.sleep(interval)
