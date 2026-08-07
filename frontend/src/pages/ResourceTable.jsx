@@ -526,11 +526,11 @@ export default function ResourceTable({ resource: propResource }) {
         )}
       </div>
 
-      <Modal open={!!modal} onClose={() => setModal(null)}
+      <Modal open={!!modal} onClose={() => setModal(null)} size={cfg.wide ? "3xl" : "lg"}
         title={`${modal?.mode === "edit" ? "Edit" : "New"} ${singular(cfg.title)}`}>
         {modal && (
           <DataForm fields={formFields} initial={modal.row} submitting={saving} autofill={cfg.autofill}
-            onSubmit={save} onCancel={() => setModal(null)} />
+            cols={cfg.wide ? 3 : 2} onSubmit={save} onCancel={() => setModal(null)} />
         )}
       </Modal>
 

@@ -6,7 +6,7 @@ import { COUNTRY_DIAL } from "../config/countries";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function DataForm({ fields, initial, onSubmit, onCancel, submitting, autofill }) {
+export default function DataForm({ fields, initial, onSubmit, onCancel, submitting, autofill, cols = 2 }) {
   const [form, setForm] = useState(() => ({ ...initial }));
   const [errors, setErrors] = useState({});
 
@@ -76,9 +76,9 @@ export default function DataForm({ fields, initial, onSubmit, onCancel, submitti
 
   return (
     <form id="data-form" onSubmit={submit} className="space-y-3" noValidate>
-      <div className="grid sm:grid-cols-2 gap-x-4 gap-y-3">
+      <div className={`grid gap-x-4 gap-y-3 ${cols === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
         {fields.map((f) => (
-          <div key={f.key} className={f.type === "textarea" ? "sm:col-span-2" : ""}>
+          <div key={f.key} className={f.type === "textarea" ? (cols === 3 ? "sm:col-span-2 lg:col-span-3" : "sm:col-span-2") : ""}>
             <label className="label">
               {f.label} {f.required && <span className="text-rose-500">*</span>}
             </label>
