@@ -257,6 +257,71 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response({"employee": emp.user.name if emp.user else "—",
                          "month": month, "year": year, "lines": lines, "total_ctc": total})
 
+    @action(detail=True, methods=["get"])
+    def journey(self, request, pk=None):
+        """Employee 360 relationship map — reporting line (up + down), the clients
+        they own, their documents, and a timeline of their key events."""
+        from django.db.models import Q, Sum
+        from apps.crm.models import Customer
+        from apps.sales.models import Revenue
+        from .models import HRRequest, Leave, TrainingAssignment
+        emp = self.get_object()
+        user = emp.user
+
+        # reporting line — up the manager chain, then direct reports
+        up, m, seen = [], emp.manager, set()
+        while m and m.id not in seen:
+            seen.add(m.id)
+            up.append({"id": m.id, "name": m.name, "role": getattr(getattr(m, "role", None), "name", "")})
+            me = Employee.objects.select_related("manager").filter(user=m).first()
+            m = me.manager if me else None
+        reports = [{"emp_id": e.id, "name": e.user.name if e.user else "—",
+                    "role": getattr(getattr(e.user, "role", None), "name", "")}
+                   for e in Employee.objects.select_related("user", "user__role").filter(manager=user).exclude(user__is_superuser=True)]
+
+        # clients / customers this person owns
+        clients = []
+        rev_by_cust = {}
+        if user:
+            for r in (Revenue.objects.filter(Q(customer__assigned_to=user) | Q(customer__lead__assigned_to=user))
+                      .values("customer_id").annotate(s=Sum("net_revenue"))):
+                rev_by_cust[r["customer_id"]] = float(r["s"] or 0)
+            custs = (Customer.objects.filter(Q(assigned_to=user) | Q(lead__assigned_to=user)).distinct())
+            for c in custs[:40]:
+                clients.append({"id": c.id, "name": c.name,
+                                "platform": ("DAGChain" if hasattr(c, "dagchain") else "FX Artha" if c.external_id else "CRM"),
+                                "revenue": round(rev_by_cust.get(c.id, 0.0), 2)})
+            clients.sort(key=lambda x: -x["revenue"])
+
+        # timeline of key events
+        events = []
+        if emp.joining_date:
+            events.append({"date": str(emp.joining_date), "kind": "join", "title": "Joined the company"})
+        for lv in Leave.objects.filter(employee=emp).select_related("leave_type")[:30]:
+            events.append({"date": str(lv.start_date or ""), "kind": "leave",
+                           "title": f"{(lv.leave_type.leave_name if lv.leave_type else 'Leave')} — {lv.status}"})
+        for rq in HRRequest.objects.filter(employee=emp)[:30]:
+            events.append({"date": str(rq.created_at.date()), "kind": "request",
+                           "title": f"{rq.get_request_type_display()} request '{rq.title}' — {rq.status}"})
+        for ta in TrainingAssignment.objects.filter(employee=emp).select_related("module")[:30]:
+            if ta.status == "completed":
+                events.append({"date": str(getattr(ta, "completed_date", "") or ta.due_date or ""), "kind": "training",
+                               "title": f"Completed training: {ta.module.title if ta.module_id else ''}"})
+        events = [e for e in events if e["date"]]
+        events.sort(key=lambda e: e["date"], reverse=True)
+
+        return Response({
+            "name": user.name if user else "—",
+            "reporting": {"managers": up, "reports": reports},
+            "clients": clients,
+            "documents": {
+                "photo": emp.photo.url if emp.photo else None,
+                "document": emp.document.url if emp.document else None,
+                "passport_expiry": emp.passport_expiry, "visa_expiry": emp.visa_expiry,
+            },
+            "timeline": events[:40],
+        })
+
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.select_related("employee", "employee__user").exclude(employee__user__is_superuser=True)

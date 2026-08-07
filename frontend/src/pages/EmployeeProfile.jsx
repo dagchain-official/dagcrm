@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, CreditCard, Briefcase, Building2, UserCog,
-  Calendar, DollarSign, Wallet, FileText, BarChart3,
+  Calendar, DollarSign, Wallet, FileText, BarChart3, Network, UserCheck, Activity,
 } from "lucide-react";
 import api from "../api/client";
 import { Spinner, EmptyState, Badge } from "../components/ui";
@@ -43,10 +43,12 @@ function Row({ icon: Icon, label, value, href }) {
 export default function EmployeeProfile() {
   const { id } = useParams();
   const [e, setE] = useState(null);
+  const [j, setJ] = useState(null);   // journey — reporting line, clients, timeline
   const [err, setErr] = useState(false);
 
   useEffect(() => {
     api.get(`/employees/${id}/`).then((r) => setE(r.data)).catch(() => setErr(true));
+    api.get(`/employees/${id}/journey/`).then((r) => setJ(r.data)).catch(() => setJ(null));
   }, [id]);
 
   if (err) return <EmptyState title="Employee not found" />;
@@ -124,6 +126,69 @@ export default function EmployeeProfile() {
             : <p className="text-sm text-ink-400 py-2.5">No document uploaded.</p>}
         </div>
       </div>
+
+      {/* ---- Journey / relationship 360 ---- */}
+      {j && (
+        <div className="grid lg:grid-cols-3 gap-5">
+          {/* reporting line */}
+          <div className="card p-5">
+            <h3 className="font-bold text-ink-900 mb-3 flex items-center gap-2"><Network size={17} className="text-brand-600" /> Reporting line</h3>
+            {(j.reporting?.managers || []).length > 0 && (
+              <div className="mb-3">
+                <p className="text-[11px] font-bold text-ink-400 uppercase mb-1.5">Reports up to</p>
+                {j.reporting.managers.map((m) => (
+                  <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-ink-500/5 mb-1">
+                    <UserCog size={14} className="text-ink-400" />
+                    <span className="text-sm text-ink-700"><b className="text-ink-900">{m.name}</b> · {m.role}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] font-bold text-ink-400 uppercase mb-1.5">Direct reports ({(j.reporting?.reports || []).length})</p>
+            {(j.reporting?.reports || []).length === 0 ? <p className="text-sm text-ink-400">None.</p> : (
+              j.reporting.reports.map((r) => (
+                <Link key={r.emp_id} to={`/hr/employee/${r.emp_id}`} className="flex items-center gap-2 p-2 rounded-lg bg-brand-500/10 mb-1 hover:bg-brand-500/20">
+                  <UserCheck size={14} className="text-brand-600" />
+                  <span className="text-sm text-ink-700"><b className="text-ink-900">{r.name}</b> · {r.role}</span>
+                </Link>
+              ))
+            )}
+          </div>
+
+          {/* clients */}
+          <div className="card p-5">
+            <h3 className="font-bold text-ink-900 mb-3 flex items-center gap-2"><Briefcase size={17} className="text-brand-600" /> Clients ({(j.clients || []).length})</h3>
+            {(j.clients || []).length === 0 ? <p className="text-sm text-ink-400">No clients assigned.</p> : (
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {j.clients.map((c) => (
+                  <Link key={c.id} to={`/customers/${c.id}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-ink-500/5 hover:bg-ink-500/10">
+                    <span className="text-sm text-ink-700 truncate"><b className="text-ink-900">{c.name}</b> <span className="text-xs text-ink-400">· {c.platform}</span></span>
+                    <span className="text-xs font-semibold text-emerald-600 shrink-0">{money(c.revenue)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* timeline */}
+          <div className="card p-5">
+            <h3 className="font-bold text-ink-900 mb-3 flex items-center gap-2"><Activity size={17} className="text-brand-600" /> Timeline</h3>
+            {(j.timeline || []).length === 0 ? <p className="text-sm text-ink-400">No events yet.</p> : (
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {j.timeline.map((ev, i) => (
+                  <div key={i} className="flex gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-brand-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-sm text-ink-700">{ev.title}</p>
+                      <p className="text-[11px] text-ink-400">{date(ev.date)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
