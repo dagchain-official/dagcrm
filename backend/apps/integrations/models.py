@@ -3,7 +3,7 @@ from django.db import models
 # Platform catalogue: slug -> (label, lead source name, config fields client must give)
 PLATFORMS = {
     "meta": {"label": "Meta Lead Ads", "source": "Meta Ads",
-             "fields": ["page_id", "access_token"]},
+             "fields": ["page_id", "access_token", "app_secret"]},
     "google": {"label": "Google Ads", "source": "Google Ads",
                "fields": []},
     "whatsapp": {"label": "WhatsApp Business", "source": "WhatsApp",

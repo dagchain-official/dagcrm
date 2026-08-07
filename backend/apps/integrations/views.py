@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import secrets
 
 from django.http import HttpResponse
@@ -41,9 +43,18 @@ def webhook(request, platform, conn_id=None):
     if not conn or conn.status != "connected":
         return Response({"detail": "Integration not connected"}, status=400)
 
-    key = request.GET.get("key") or request.headers.get("X-Webhook-Secret")
-    if conn.webhook_secret and key != conn.webhook_secret:
-        return Response({"detail": "Invalid webhook secret"}, status=403)
+    # Meta posts with an X-Hub-Signature-256 (HMAC-SHA256 of the raw body using
+    # the App Secret) and NEVER our ?key=, so it gets its own auth path.
+    app_secret = (conn.config or {}).get("app_secret")
+    if platform == "meta" and app_secret:
+        sig = request.headers.get("X-Hub-Signature-256", "")
+        mac = hmac.new(app_secret.encode(), request.body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(f"sha256={mac}", sig):
+            return Response({"detail": "Invalid signature"}, status=403)
+    else:
+        key = request.GET.get("key") or request.headers.get("X-Webhook-Secret")
+        if conn.webhook_secret and key != conn.webhook_secret:
+            return Response({"detail": "Invalid webhook secret"}, status=403)
 
     result = process_webhook(conn, request.data)
     return Response(result)

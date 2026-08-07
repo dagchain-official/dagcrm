@@ -49,6 +49,43 @@ def normalize(platform, payload):
     return out
 
 
+def fetch_meta_lead(conn, leadgen_id):
+    """Meta's leadgen webhook carries only a leadgen_id — pull the real answers
+    from the Graph API using the page access token stored on the connection."""
+    token = (conn.config or {}).get("access_token")
+    if not token:
+        return {}
+    try:
+        import requests
+        r = requests.get(
+            f"https://graph.facebook.com/v19.0/{leadgen_id}",
+            params={"access_token": token,
+                    "fields": "field_data,campaign_name,ad_name,created_time"},
+            timeout=15,
+        )
+        return r.json() if r.ok else {}
+    except Exception:  # noqa: BLE001 — never break ingestion on a fetch error
+        return {}
+
+
+def expand_meta(conn, payload):
+    """In-place: for any Meta change that has only a leadgen_id, fetch its
+    field_data so the shared normalize() can read name/email/phone as usual."""
+    if not isinstance(payload, dict):
+        return payload
+    for entry in payload.get("entry", []):
+        for ch in entry.get("changes", []):
+            val = ch.get("value", {})
+            if not val.get("field_data") and val.get("leadgen_id"):
+                data = fetch_meta_lead(conn, val["leadgen_id"])
+                if data.get("field_data"):
+                    val["field_data"] = data["field_data"]
+                    if data.get("campaign_name") or data.get("ad_name"):
+                        val["field_data"].append(
+                            {"name": "campaign", "values": [data.get("campaign_name") or data.get("ad_name")]})
+    return payload
+
+
 def _next_rm(business=None):
     """Least-busy CLOCKED-IN front-line agent — anything auto-assigned (CRM leads
     AND synced FX Artha traders) goes only to an active RM. None if nobody is
@@ -95,6 +132,8 @@ def ingest_lead(conn, fields):
 
 def process_webhook(conn, payload):
     """Normalize → ingest each → update stats + log. Returns summary dict."""
+    if conn.platform == "meta":
+        payload = expand_meta(conn, payload)   # leadgen_id → real field_data
     leads = normalize(conn.platform, payload)
     created = skipped = 0
     for f in leads:
