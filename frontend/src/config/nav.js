@@ -45,7 +45,8 @@ export const moduleOf = (to) => {
   if (to === "/m/message-templates") return "communications";   // same access as chats
   // HR suite — the HR-managed lists ride on the People/"employees" permission…
   if (["/m/employee-documents", "/m/employee-events", "/m/performance-journal",
-       "/m/appraisals", "/m/pips", "/m/employee-exits"].includes(to)) return "employees";
+       "/m/appraisals", "/m/pips", "/m/employee-exits",
+       "/m/profile-change-requests"].includes(to)) return "employees";
   // …the self-service ones (helpdesk, policies, recognition) are open to everyone.
   if (["/m/hr-tickets", "/m/policies", "/m/recognitions"].includes(to)) return null;
   if (to.startsWith("/m/")) return to.slice(3);
@@ -116,6 +117,7 @@ export const NAV = [
       { to: "/m/pips", label: "Improvement Plans", icon: AlertTriangle },
       { to: "/m/employee-events", label: "Employee Timeline", icon: History },
       { to: "/m/employee-exits", label: "Exit Management", icon: DoorOpen },
+      { to: "/m/profile-change-requests", label: "Profile Approvals", icon: UserCheck },
       { to: "/hr/attendance", label: "Attendance & Leave", icon: Clock },
       { to: "/hr/costs", label: "Cost & CTC", icon: Wallet },
       { to: "/hr/payroll", label: "Payroll & Incentives", icon: Award },

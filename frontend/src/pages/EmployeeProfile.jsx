@@ -99,8 +99,10 @@ export default function EmployeeProfile() {
       body = fd; cfg = { headers: { "Content-Type": "multipart/form-data" } };
     }
     try {
-      await api.patch(`/employees/${id}/`, body, cfg);
-      toast.success("Profile updated");
+      const { data } = await api.patch(`/employees/${id}/`, body, cfg);
+      // an employee editing their OWN profile gets queued for HR approval (202)
+      if (data && data.pending) toast.success("Changes sent to HR for approval");
+      else toast.success("Profile updated");
       setEditStep(null);
       loadEmp();
     } catch { toast.error("Could not save"); } finally { setSaving(false); }

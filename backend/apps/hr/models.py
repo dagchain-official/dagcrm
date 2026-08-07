@@ -761,3 +761,24 @@ class Recognition(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class ProfileChangeRequest(models.Model):
+    """When an employee edits their OWN profile, the change is NOT applied — it
+    lands here as a pending request for HR to approve. `payload` holds the
+    proposed scalar field changes; uploaded files wait in pending_*. On approve
+    the payload is applied to the Employee; on reject it is discarded."""
+    STATUS = [("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="change_requests")
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="profile_changes_made")
+    payload = models.JSONField(default=dict)          # {field: new_value} for scalar fields
+    pending_photo = models.FileField(upload_to="profile_pending/", null=True, blank=True)
+    pending_document = models.FileField(upload_to="profile_pending/", null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS, default="pending")
+    review_comment = models.CharField(max_length=255, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="profile_changes_reviewed")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

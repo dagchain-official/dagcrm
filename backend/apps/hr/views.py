@@ -241,6 +241,40 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             qs = qs.filter(user_id__in=subordinate_user_ids(self.request.user, include_self=True))
         return qs
 
+    def update(self, request, *args, **kwargs):
+        """When an employee edits their OWN profile, don't apply the change —
+        queue it for HR approval. HR / admin edits still save directly."""
+        emp = self.get_object()
+        u = request.user
+        from apps.accounts.access import is_admin_view
+        is_hr = is_admin_view(u) or getattr(getattr(u, "role", None), "name", "") == "HR"
+        if not is_hr and emp.user_id == u.id:
+            return self._queue_self_change(request, emp)
+        return super().update(request, *args, **kwargs)
+
+    def _queue_self_change(self, request, emp):
+        from .models import ProfileChangeRequest
+        SELF = {"dob", "nationality", "address", "emergency_contact", "emergency_phone",
+                "passport_no", "passport_expiry", "visa_expiry"}
+        payload = {f: request.data.get(f) for f in SELF if f in request.data}
+        photo = request.FILES.get("photo")
+        doc = request.FILES.get("document")
+        if not payload and not photo and not doc:
+            return Response({"detail": "No editable changes to submit."}, status=400)
+        pcr = ProfileChangeRequest.objects.create(
+            employee=emp, submitted_by=request.user, payload=payload)
+        if photo:
+            pcr.pending_photo = photo
+        if doc:
+            pcr.pending_document = doc
+        if photo or doc:
+            pcr.save()
+        for hr in User.objects.filter(role__name="HR", status="active"):
+            notify(hr, title="Profile change to review",
+                   body=f"{request.user.name} requested profile changes.",
+                   kind="info", link="/m/profile-change-requests")
+        return Response({"detail": "Changes sent to HR for approval.", "pending": True}, status=202)
+
     @action(detail=True, methods=["get"])
     def ctc(self, request, pk=None):
         """Cost-To-Company breakdown for a month: salary + each cost category."""
@@ -1050,3 +1084,79 @@ class RecognitionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
         return self._set_status(request, pk, "rejected")
+
+
+# --------------------------------------------- Profile change approvals (#1)
+from .models import ProfileChangeRequest
+from .serializers import ProfileChangeRequestSerializer
+
+# fields an employee may edit on their OWN profile — anything else in the
+# payload is ignored so salary/role/manager can never be self-set.
+SELF_EDITABLE = {"dob", "nationality", "address", "emergency_contact",
+                 "emergency_phone", "passport_no", "passport_expiry", "visa_expiry"}
+
+
+class ProfileChangeRequestViewSet(viewsets.ModelViewSet):
+    """HR review queue for employee self-edits. Rows are created by the
+    EmployeeViewSet intercept (not a form). HR/admin approve/reject; approving
+    applies the change to the Employee."""
+    queryset = ProfileChangeRequest.objects.select_related(
+        "employee__user", "submitted_by", "reviewed_by").all()
+    serializer_class = ProfileChangeRequestSerializer
+    filterset_fields = ["status", "employee"]
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if _is_hr(self.request.user):
+            return qs
+        # everyone else sees only their own requests
+        return qs.filter(employee__user_id=self.request.user.id)
+
+    def _apply(self, pcr):
+        """Apply an approved change to the Employee, reusing the serializer for
+        proper coercion (dates/files) of the scalar payload."""
+        emp = pcr.employee
+        if pcr.payload:
+            ser = EmployeeSerializer(emp, data=dict(pcr.payload), partial=True)
+            ser.is_valid(raise_exception=True)
+            ser.save()
+        updates = []
+        if pcr.pending_photo:
+            emp.photo = pcr.pending_photo.name
+            updates.append("photo")
+        if pcr.pending_document:
+            emp.document = pcr.pending_document.name
+            updates.append("document")
+        if updates:
+            emp.save(update_fields=updates)
+
+    def _decide(self, request, pk, approve):
+        if not _is_hr(request.user):
+            return Response({"detail": "Only HR can review profile changes."}, status=403)
+        pcr = self.get_object()
+        if pcr.status != "pending":
+            return Response({"detail": "Already reviewed."}, status=400)
+        if approve:
+            self._apply(pcr)
+            pcr.status = "approved"
+        else:
+            pcr.status = "rejected"
+        pcr.review_comment = request.data.get("comment", "")
+        pcr.reviewed_by = request.user
+        pcr.reviewed_at = timezone.now()
+        pcr.save(update_fields=["status", "review_comment", "reviewed_by", "reviewed_at"])
+        if pcr.employee.user_id:
+            notify(pcr.employee.user,
+                   title=f"Profile change {pcr.status}",
+                   body=f"Your profile update was {pcr.status} by {request.user.name}.",
+                   kind="success" if approve else "warning", link="/hr/employee/%s" % pcr.employee_id)
+        return Response(self.get_serializer(pcr).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, pk, True)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, pk, False)

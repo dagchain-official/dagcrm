@@ -701,3 +701,42 @@ class RecognitionSerializer(serializers.ModelSerializer):
         fields = ["id", "employee", "employee_name", "nominated_by", "nominated_by_name",
                   "award", "award_display", "reason", "points", "status", "created_at"]
         read_only_fields = ["nominated_by", "created_at"]
+
+
+from .models import ProfileChangeRequest
+
+_PCR_LABELS = {
+    "dob": "Date of birth", "nationality": "Nationality", "address": "Address",
+    "emergency_contact": "Emergency contact", "emergency_phone": "Emergency phone",
+    "passport_no": "Passport no", "passport_expiry": "Passport expiry", "visa_expiry": "Visa expiry",
+}
+
+
+class ProfileChangeRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    submitted_by_name = serializers.CharField(source="submitted_by.name", read_only=True)
+    reviewed_by_name = serializers.CharField(source="reviewed_by.name", read_only=True)
+    summary = serializers.SerializerMethodField()
+    can_approve = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProfileChangeRequest
+        fields = ["id", "employee", "employee_name", "submitted_by", "submitted_by_name",
+                  "payload", "summary", "status", "review_comment", "reviewed_by",
+                  "reviewed_by_name", "reviewed_at", "can_approve", "created_at"]
+        read_only_fields = fields
+
+    def get_summary(self, obj):
+        parts = [f"{_PCR_LABELS.get(k, k)}: {v}" for k, v in (obj.payload or {}).items()]
+        if obj.pending_photo:
+            parts.append("Photo (new)")
+        if obj.pending_document:
+            parts.append("Document (new)")
+        return "; ".join(parts) or "—"
+
+    def get_can_approve(self, obj):
+        req = self.context.get("request")
+        if not req or obj.status != "pending":
+            return False
+        from apps.accounts.access import is_admin_view
+        return is_admin_view(req.user) or getattr(getattr(req.user, "role", None), "name", "") == "HR"

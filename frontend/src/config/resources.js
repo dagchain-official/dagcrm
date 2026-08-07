@@ -1156,4 +1156,24 @@ export const RESOURCES = {
       { key: "points", label: "Points (optional)", type: "number" },
     ],
   },
+  "profile-change-requests": {      // HR review queue for employee self-edits (#1)
+    title: "Profile Change Approvals", endpoint: "profile-change-requests",
+    permModule: "employees", noCreate: true, readOnly: true,
+    rowActions: [
+      { label: "Approve", icon: "check", variant: "success", when: { status: "pending" }, post: (id) => `profile-change-requests/${id}/approve/` },
+      { label: "Reject", icon: "x", variant: "danger", when: { status: "pending" }, post: (id) => `profile-change-requests/${id}/reject/` },
+    ],
+    filters: [
+      { key: "status", label: "Status", options: sel("pending", "approved", "rejected") },
+    ],
+    columns: [
+      { key: "employee_name", label: "Employee" },
+      { key: "summary", label: "Requested changes" },
+      { key: "submitted_by_name", label: "Submitted by" },
+      { key: "status", label: "Status", badge: true },
+      { key: "reviewed_by_name", label: "Reviewed by" },
+      { key: "created_at", label: "Requested", datetime: true },
+    ],
+    fields: [],
+  },
 };
