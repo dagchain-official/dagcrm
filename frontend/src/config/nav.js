@@ -11,7 +11,7 @@ import {
 // Derive the permission module key from a nav `to` path.
 // null = always visible (dashboard, AI assistant).
 export const moduleOf = (to) => {
-  if (to === "/" || to === "/ai") return null;
+  if (to === "/" || to === "/ai" || to === "/hr-requests") return null;   // self-service, everyone
   if (to === "/kpi") return "kpi";   // its own module — RMs get their scoped KPI without the company reports/P&L
   if (["/reports", "/employee-report", "/product-report", "/pnl", "/target-board", "/kpi-board", "/performance", "/incentive-board"].includes(to)) return "reports";
   // FX Artha & DAGChain: each sub-page has its own permission module so access
@@ -54,6 +54,7 @@ export const NAV = [
       { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { to: "/attendance-clock", label: "My Attendance", icon: Clock, hideForSuper: true },
       { to: "/leaves-mine", label: "My Leaves", icon: CalendarOff, hideForSuper: true },
+      { to: "/hr-requests", label: "Requests", icon: FileText },
       { to: "/ai", label: "AI Assistant", icon: Sparkles },
     ],
   },

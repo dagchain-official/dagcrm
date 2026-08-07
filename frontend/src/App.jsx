@@ -14,6 +14,7 @@ import TargetsHub from "./pages/TargetsHub";
 import KpiHub from "./pages/KpiHub";
 import { PeopleHub, AttendanceHub, CostHub, PayrollHub, RulesHub } from "./pages/HrHubs";
 import EmployeeProfile from "./pages/EmployeeProfile";
+import HrRequests from "./pages/HrRequests";
 import HierarchyTree from "./pages/HierarchyTree";
 import { FinanceHub, AumHub, ContributionHub } from "./pages/FinanceHubs";
 import ConfigHub from "./pages/ConfigHub";
@@ -79,6 +80,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="attendance-clock" element={<MyAttendance />} />
         <Route path="leaves-mine" element={<MyLeaves />} />
+        <Route path="hr-requests" element={<HrRequests />} />
         <Route path="ai" element={<AIAssistant />} />
         <Route path="reports" element={<Reports />} />
         <Route path="employee-report" element={<EmployeeReport />} />
