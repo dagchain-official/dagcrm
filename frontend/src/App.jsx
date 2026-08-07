@@ -94,6 +94,7 @@ export default function App() {
         <Route path="kpi" element={<KpiHub />} />
         <Route path="hr/people" element={<PeopleHub />} />
         <Route path="hr/employee/:id" element={<EmployeeProfile />} />
+        <Route path="my-profile" element={<EmployeeProfile />} />
         <Route path="hr/training" element={<TrainingHub />} />
         <Route path="hr/training/module/:id" element={<TrainingModuleDetail />} />
         <Route path="hr/hierarchy" element={<HierarchyTree />} />

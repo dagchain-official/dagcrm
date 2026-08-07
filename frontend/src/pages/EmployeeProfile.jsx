@@ -9,6 +9,7 @@ import api from "../api/client";
 import { Spinner, EmptyState, Badge, Modal } from "../components/ui";
 import DataForm from "../components/DataForm";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 import { STATUS_COLORS } from "../config/resources";
 
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
@@ -70,7 +71,9 @@ function Row({ icon: Icon, label, value, href }) {
 }
 
 export default function EmployeeProfile() {
-  const { id } = useParams();
+  const { id: paramId } = useParams();
+  const { user } = useAuth();
+  const id = paramId || user?.employee_pk;   // /my-profile -> own record
   const toast = useToast();
   const [e, setE] = useState(null);
   const [j, setJ] = useState(null);   // journey — reporting line, clients, timeline
@@ -111,11 +114,15 @@ export default function EmployeeProfile() {
   if (err) return <EmptyState title="Employee not found" />;
   if (!e) return <Spinner label="Loading profile…" />;
 
+  const isSelfView = !paramId;   // reached via /my-profile
+
   return (
     <div className="space-y-5">
+      {!isSelfView && (
       <Link to="/hr/people" className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-ink-800">
         <ArrowLeft size={16} /> Back to People
       </Link>
+      )}
 
       {/* header */}
       <div className="card p-6">

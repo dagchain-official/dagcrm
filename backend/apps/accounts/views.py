@@ -52,6 +52,7 @@ def me_payload(user):
     data["onboarding_modules"] = user.onboarding_modules or []
     emp = user.employee.first()          # profile photo (Employee.photo), if uploaded
     data["photo"] = emp.photo.url if (emp and emp.photo) else None
+    data["employee_pk"] = emp.id if emp else None   # lets the user open their own profile
     return data
 
 

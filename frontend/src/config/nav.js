@@ -59,6 +59,7 @@ export const NAV = [
     group: "Overview",
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { to: "/my-profile", label: "My Profile", icon: UserCheck, hideForSuper: true },
       { to: "/attendance-clock", label: "My Attendance", icon: Clock, hideForSuper: true },
       { to: "/leaves-mine", label: "My Leaves", icon: CalendarOff, hideForSuper: true },
       { to: "/hr-requests", label: "Requests", icon: FileText },

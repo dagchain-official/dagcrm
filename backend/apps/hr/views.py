@@ -225,9 +225,29 @@ class EmployeeCostViewSet(viewsets.ModelViewSet):
     filterset_fields = ["employee", "category", "month", "year"]
 
 
+from apps.accounts.api_permissions import ModuleAccess
+
+
+class EmployeeSelfEditAccess(ModuleAccess):
+    """Normal module permissions, EXCEPT a user may always submit an edit to
+    their OWN employee record — the viewset intercepts it and queues it for HR
+    approval instead of applying, so no extra rights are needed to *request* a
+    change to one's own profile."""
+
+    def has_permission(self, request, view):
+        # view or edit one's OWN record is always allowed (edits get queued)
+        if request.method in ("GET", "HEAD", "OPTIONS", "PATCH", "PUT") and view.kwargs.get("pk"):
+            uid = (Employee.objects.filter(pk=view.kwargs["pk"])
+                   .values_list("user_id", flat=True).first())
+            if uid and uid == request.user.id:
+                return True
+        return super().has_permission(request, view)
+
+
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.select_related("user", "department", "manager", "hierarchy_level").exclude(user__is_superuser=True)
     serializer_class = EmployeeSerializer
+    permission_classes = [EmployeeSelfEditAccess]
     filterset_fields = ["department", "manager", "hierarchy_level"]
     search_fields = ["user__name", "designation"]
 
