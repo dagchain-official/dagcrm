@@ -8,7 +8,7 @@ from .views import (
     IncentiveRuleViewSet, ActivityIncentiveViewSet, FormulaRuleViewSet, IncentiveSlabViewSet,
     IncentiveViewSet, JobPostingViewSet, LeaveTypeViewSet, LeaveViewSet, MyLeavesView,
     PayrollViewSet, PerformanceWeightViewSet, PublicJobView, TargetMultiplierViewSet,
-    TrainingModuleViewSet, TrainingAssignmentViewSet, AssessmentViewSet,
+    TrainingModuleViewSet, TrainingAssignmentViewSet, AssessmentViewSet, HRRequestViewSet,
 )
 
 router = DefaultRouter()
@@ -21,6 +21,7 @@ router.register("attendance", AttendanceViewSet)
 router.register("employee-activities", EmployeeActivityViewSet)
 router.register("leave-types", LeaveTypeViewSet)
 router.register("leaves", LeaveViewSet)
+router.register("hr-requests", HRRequestViewSet)
 router.register("payrolls", PayrollViewSet)
 router.register("incentive-rules", IncentiveRuleViewSet)
 router.register("incentives", IncentiveViewSet)

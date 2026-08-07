@@ -498,3 +498,39 @@ class AssessmentSerializer(serializers.ModelSerializer):
                   "pass_mark", "result", "knowledge_gap", "retest_due", "assessor",
                   "assessor_name", "certificate_id"]
         read_only_fields = ["result"]
+
+
+class HRRequestApprovalSerializer(serializers.ModelSerializer):
+    approver_name = serializers.CharField(source="approver.name", read_only=True)
+
+    class Meta:
+        from apps.hr.models import HRRequestApproval
+        model = HRRequestApproval
+        fields = ["id", "stage", "approver", "approver_name", "decision", "comment", "created_at"]
+
+
+class HRRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    current_stage = serializers.CharField(read_only=True)
+    approvals = HRRequestApprovalSerializer(many=True, read_only=True)
+    can_approve = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        from apps.hr.models import HRRequest
+        model = HRRequest
+        fields = ["id", "employee", "employee_name", "request_type", "title", "details", "amount",
+                  "start_date", "end_date", "status", "chain", "stage_index", "current_stage",
+                  "can_approve", "is_mine", "approvals", "created_at"]
+        read_only_fields = ["employee", "status", "chain", "stage_index", "created_at"]
+
+    def get_can_approve(self, obj):
+        req = self.context.get("request")
+        if not req or obj.status != "pending":
+            return False
+        from .services import can_approve_stage
+        return can_approve_stage(req.user, obj, obj.current_stage)
+
+    def get_is_mine(self, obj):
+        req = self.context.get("request")
+        return bool(req and obj.employee and obj.employee.user_id == req.user.id)

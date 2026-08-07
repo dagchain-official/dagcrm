@@ -50,6 +50,26 @@ def bump_activity(user, field, n=1):
     act.save(update_fields=[field])
 
 
+def can_approve_stage(user, req, stage):
+    """Who may approve a given stage of an HR request:
+      manager -> the employee's direct manager (HR / admin can stand in)
+      hr      -> HR
+      head    -> Business Head / Sales Director
+    A Super Admin can approve any stage."""
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    role = getattr(getattr(user, "role", None), "name", "")
+    if user.is_superuser or role == "Super Admin":
+        return True
+    if stage == "manager":
+        return req.employee.manager_id == user.id or role == "HR"
+    if stage == "hr":
+        return role == "HR"
+    if stage == "head":
+        return role in ("Business Head", "Sales Director")
+    return False
+
+
 def generate_payroll(month, year):
     """Create a Payroll row for every active employee who doesn't already have one
     for that month — Basic = salary, Incentive = that month's incentives, Deduction

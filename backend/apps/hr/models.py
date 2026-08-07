@@ -139,6 +139,50 @@ class EmployeeActivity(models.Model):
         ordering = ["-date"]
 
 
+# ---------------------------------------------------- Self-service HR Requests
+class HRRequest(models.Model):
+    """A self-service employee request (visa / letter / reimbursement / …) that
+    flows through a MULTI-LEVEL approval chain (manager → HR → higher). `chain`
+    is the ordered list of stages; `stage_index` points at the one pending now."""
+    TYPES = [("leave", "Leave"), ("visa", "Visa / Immigration"), ("letter", "Letter / Certificate"),
+             ("reimbursement", "Reimbursement"), ("document", "Document"), ("other", "Other")]
+    STATUS = [("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected"),
+              ("cancelled", "Cancelled")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="hr_requests")
+    request_type = models.CharField(max_length=20, choices=TYPES, default="other")
+    title = models.CharField(max_length=150)
+    details = models.TextField(blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)   # reimbursement
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS, default="pending")
+    chain = models.JSONField(default=list)                 # ["manager","hr","head"]
+    stage_index = models.PositiveIntegerField(default=0)   # which stage is pending
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def current_stage(self):
+        if self.status == "pending" and self.stage_index < len(self.chain or []):
+            return self.chain[self.stage_index]
+        return ""
+
+
+class HRRequestApproval(models.Model):
+    """One decision in a request's chain — the audit trail of who approved/rejected."""
+    request = models.ForeignKey(HRRequest, on_delete=models.CASCADE, related_name="approvals")
+    stage = models.CharField(max_length=20)
+    approver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    decision = models.CharField(max_length=10)   # approve / reject
+    comment = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+
 # ------------------------------------------------------------------ Leaves
 class LeaveType(models.Model):
     leave_name = models.CharField(max_length=80, unique=True)

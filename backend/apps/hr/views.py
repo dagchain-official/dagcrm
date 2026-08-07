@@ -710,3 +710,68 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentSerializer
     filterset_fields = ["employee", "module", "result"]
     search_fields = ["employee__user__name", "module__title", "certificate_id"]
+
+
+class HRRequestViewSet(viewsets.ModelViewSet):
+    """Self-service HR requests (visa / letter / reimbursement / …) with a
+    multi-level approval chain. Scope: HR/admin see all; a manager sees their
+    subtree; everyone else sees only their own. Approve/reject advance the chain."""
+    from .models import HRRequest, HRRequestApproval
+    from .serializers import HRRequestSerializer
+    queryset = HRRequest.objects.select_related("employee__user").prefetch_related("approvals__approver").all()
+    serializer_class = HRRequestSerializer
+    filterset_fields = ["request_type", "status", "employee"]
+
+    def get_queryset(self):
+        from apps.accounts.access import is_admin_view, subordinate_user_ids
+        qs = super().get_queryset()
+        user = self.request.user
+        role = getattr(getattr(user, "role", None), "name", "")
+        if is_admin_view(user) or role == "HR":
+            return qs
+        return qs.filter(employee__user_id__in=subordinate_user_ids(user, include_self=True))
+
+    def perform_create(self, serializer):
+        from .services import ensure_employee
+        emp = ensure_employee(self.request.user)
+        rtype = serializer.validated_data.get("request_type", "other")
+        chain = []
+        if emp and emp.manager_id:
+            chain.append("manager")
+        chain.append("hr")
+        if rtype == "reimbursement":
+            chain.append("head")            # money needs a higher sign-off
+        serializer.save(employee=emp, chain=chain or ["hr"], stage_index=0, status="pending")
+
+    def _decide(self, request, pk, decision):
+        from .models import HRRequestApproval
+        from .services import can_approve_stage
+        req = self.get_object()
+        if req.status != "pending":
+            return Response({"detail": "This request is already closed."}, status=400)
+        stage = req.current_stage
+        if not can_approve_stage(request.user, req, stage):
+            return Response({"detail": "You aren't the approver for this stage."}, status=403)
+        HRRequestApproval.objects.create(request=req, stage=stage, approver=request.user,
+                                         decision=decision, comment=request.data.get("comment", ""))
+        if decision == "reject":
+            req.status = "rejected"
+            req.save(update_fields=["status"])
+        else:
+            req.stage_index += 1
+            if req.stage_index >= len(req.chain or []):
+                req.status = "approved"
+            req.save(update_fields=["stage_index", "status"])
+        if req.employee and req.employee.user_id:
+            notify(req.employee.user, title=f"Request {req.status}",
+                   body=f"Your {req.get_request_type_display()} request '{req.title}' is {req.status}.",
+                   kind="info", link="/hr-requests")
+        return Response(self.get_serializer(req).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, pk, "approve")
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, pk, "reject")
