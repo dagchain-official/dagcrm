@@ -96,6 +96,9 @@ export default function HrRequests() {
   useEffect(() => {
     load();
     api.get("/users/assignable/").then(({ data }) => setPeople(data.results || data || [])).catch(() => {});
+    // auto-refresh so a new request / approval reflects without a manual reload
+    const t = setInterval(() => { if (!document.hidden) load(); }, 15000);
+    return () => clearInterval(t);
   }, []);
 
   const assign = async (id, owner, due_date) => {

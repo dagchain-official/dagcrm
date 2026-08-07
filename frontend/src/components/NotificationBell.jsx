@@ -24,9 +24,18 @@ export default function NotificationBell() {
   const loadCount = () => api.get("/notifications/unread_count/").then(({ data }) => setCount(data.count)).catch(() => {});
   const loadItems = () => api.get("/notifications/").then(({ data }) => setItems(data.results || data)).catch(() => {});
 
+  const openRef = useRef(false);
+  useEffect(() => { openRef.current = open; }, [open]);
+
   useEffect(() => {
     loadCount();
-    const t = setInterval(() => { if (!document.hidden) loadCount(); }, 30000);
+    // near-real-time: refresh the unread badge every 10s, and if the panel is
+    // open also refresh the list so new items appear without any manual reload.
+    const t = setInterval(() => {
+      if (document.hidden) return;
+      loadCount();
+      if (openRef.current) loadItems();
+    }, 10000);
     const onClick = (e) => box.current && !box.current.contains(e.target) && setOpen(false);
     document.addEventListener("mousedown", onClick);
     return () => { clearInterval(t); document.removeEventListener("mousedown", onClick); };
