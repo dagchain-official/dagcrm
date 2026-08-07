@@ -50,6 +50,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source="user.role.name", read_only=True)
     hierarchy_level_name = serializers.CharField(source="hierarchy_level.level_name", read_only=True)
     monthly_ctc = serializers.SerializerMethodField()
+    profile_completion = serializers.SerializerMethodField()
+    profile_steps = serializers.SerializerMethodField()
     # type the person's name/email directly — the login account is auto-created/updated
     name = serializers.CharField(write_only=True, required=False)
     email = serializers.EmailField(write_only=True, required=False)
@@ -68,7 +70,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
                   "designation", "salary", "monthly_ctc", "joining_date", "manager", "manager_name",
                   "photo", "document", "dob", "nationality", "address",
                   "emergency_contact", "emergency_phone",
-                  "passport_no", "passport_expiry", "visa_expiry"]
+                  "passport_no", "passport_expiry", "visa_expiry",
+                  "profile_completion", "profile_steps"]
         # hierarchy_level is derived from the role, never posted from the form
         extra_kwargs = {"user": {"required": False}, "hierarchy_level": {"read_only": True}}
 
@@ -76,6 +79,37 @@ class EmployeeSerializer(serializers.ModelSerializer):
         from django.utils import timezone
         today = timezone.localdate()
         return obj.monthly_ctc(today.month, today.year)
+
+    # ---- profile completion (step-by-step onboarding) ----
+    _STEPS = [
+        ("basic", "Basic details", ["name", "email", "role", "department", "joining_date"]),
+        ("personal", "Personal details", ["dob", "nationality", "address", "emergency_contact"]),
+        ("documents", "Documents", ["photo", "document"]),
+        ("compliance", "Verification (passport / visa)", ["passport_no", "passport_expiry", "visa_expiry"]),
+    ]
+
+    def _filled(self, obj, f):
+        if f == "name":
+            return bool(obj.user and obj.user.name)
+        if f == "email":
+            return bool(obj.user and obj.user.email)
+        if f == "role":
+            return bool(obj.user and obj.user.role_id)
+        if f == "department":
+            return bool(obj.department_id)
+        return bool(getattr(obj, f, None))
+
+    def get_profile_steps(self, obj):
+        return [{"key": k, "label": lbl, "total": len(fs),
+                 "filled": sum(1 for f in fs if self._filled(obj, f)),
+                 "done": all(self._filled(obj, f) for f in fs)}
+                for k, lbl, fs in self._STEPS]
+
+    def get_profile_completion(self, obj):
+        steps = self.get_profile_steps(obj)
+        total = sum(s["total"] for s in steps)
+        filled = sum(s["filled"] for s in steps)
+        return round(filled / total * 100) if total else 100
 
     def _derived_level(self, attrs):
         """The level this employee will end up on, from the role being saved."""

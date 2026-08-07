@@ -3,13 +3,42 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, CreditCard, Briefcase, Building2, UserCog,
   Calendar, DollarSign, Wallet, FileText, BarChart3, Network, UserCheck, Activity,
+  CheckCircle2, Circle, ShieldCheck,
 } from "lucide-react";
 import api from "../api/client";
-import { Spinner, EmptyState, Badge } from "../components/ui";
+import { Spinner, EmptyState, Badge, Modal } from "../components/ui";
+import DataForm from "../components/DataForm";
+import { useToast } from "../context/ToastContext";
 import { STATUS_COLORS } from "../config/resources";
 
 const money = (v) => `$${Number(v || 0).toLocaleString()}`;
 const date = (v) => (v ? new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
+
+// the fields collected in each profile step (basic is done on the create form)
+const STEP_META = {
+  personal: {
+    label: "Personal details", fields: [
+      { key: "dob", label: "Date of birth", type: "date" },
+      { key: "nationality", label: "Nationality" },
+      { key: "address", label: "Address" },
+      { key: "emergency_contact", label: "Emergency contact (name)" },
+      { key: "emergency_phone", label: "Emergency phone" },
+    ],
+  },
+  documents: {
+    label: "Documents", fields: [
+      { key: "photo", label: "Photo", type: "file", accept: "image/*" },
+      { key: "document", label: "Document (PDF)", type: "file", accept: "application/pdf,.pdf" },
+    ],
+  },
+  compliance: {
+    label: "Verification (passport / visa)", fields: [
+      { key: "passport_no", label: "Passport no." },
+      { key: "passport_expiry", label: "Passport expiry", type: "date" },
+      { key: "visa_expiry", label: "Visa expiry", type: "date" },
+    ],
+  },
+};
 
 // an expiry row that warns when the date is near/past
 function Expiry({ label, d }) {
@@ -42,14 +71,40 @@ function Row({ icon: Icon, label, value, href }) {
 
 export default function EmployeeProfile() {
   const { id } = useParams();
+  const toast = useToast();
   const [e, setE] = useState(null);
   const [j, setJ] = useState(null);   // journey — reporting line, clients, timeline
   const [err, setErr] = useState(false);
+  const [editStep, setEditStep] = useState(null);   // which step's edit modal is open
+  const [saving, setSaving] = useState(false);
 
+  const loadEmp = () => api.get(`/employees/${id}/`).then((r) => setE(r.data)).catch(() => setErr(true));
   useEffect(() => {
-    api.get(`/employees/${id}/`).then((r) => setE(r.data)).catch(() => setErr(true));
+    loadEmp();
     api.get(`/employees/${id}/journey/`).then((r) => setJ(r.data)).catch(() => setJ(null));
   }, [id]);
+
+  const saveStep = async (form) => {
+    setSaving(true);
+    const payload = { ...form };
+    Object.keys(payload).forEach((k) => {
+      const v = payload[k];
+      if (v === "" || v == null || (typeof v === "string" && v.includes("/media/"))) delete payload[k];
+    });
+    const hasFile = Object.values(payload).some((v) => v instanceof File);
+    let body = payload, cfg;
+    if (hasFile) {
+      const fd = new FormData();
+      Object.entries(payload).forEach(([k, v]) => v != null && fd.append(k, v));
+      body = fd; cfg = { headers: { "Content-Type": "multipart/form-data" } };
+    }
+    try {
+      await api.patch(`/employees/${id}/`, body, cfg);
+      toast.success("Profile updated");
+      setEditStep(null);
+      loadEmp();
+    } catch { toast.error("Could not save"); } finally { setSaving(false); }
+  };
 
   if (err) return <EmptyState title="Employee not found" />;
   if (!e) return <Spinner label="Loading profile…" />;
@@ -82,6 +137,40 @@ export default function EmployeeProfile() {
           <Link to={`/employee-report`} className="chip !py-2 text-sm inline-flex items-center gap-1.5 shrink-0">
             <BarChart3 size={15} /> Full report
           </Link>
+        </div>
+      </div>
+
+      {/* profile completion — step by step */}
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h3 className="font-bold text-ink-900 flex items-center gap-2"><ShieldCheck size={18} className="text-brand-600" /> Profile completion</h3>
+          <span className="text-2xl font-extrabold text-brand-600 tabular-nums">{e.profile_completion}%</span>
+        </div>
+        <div className="h-3 rounded-full bg-ink-200 overflow-hidden mb-4">
+          <div className="h-full bg-gradient-to-r from-brand-400 to-brand-600 transition-all" style={{ width: `${e.profile_completion}%` }} />
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {(e.profile_steps || []).map((s, i) => {
+            const editable = STEP_META[s.key];
+            return (
+              <div key={s.key} className={`rounded-xl border p-3 ${s.done ? "border-emerald-200 bg-emerald-500/5" : "border-ink-200 bg-ink-500/5"}`}>
+                <div className="flex items-center gap-2">
+                  {s.done ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Circle size={18} className="text-ink-300" />}
+                  <span className="text-xs font-bold text-ink-400 uppercase">Step {i + 1}</span>
+                </div>
+                <p className="text-sm font-semibold text-ink-800 mt-1">{s.label}</p>
+                <p className="text-[11px] text-ink-400">{s.filled}/{s.total} done</p>
+                {editable ? (
+                  <button onClick={() => setEditStep(s.key)}
+                    className={`text-xs mt-2 w-full justify-center ${s.done ? "chip !py-1.5" : "btn-primary !py-1.5 !px-3"}`}>
+                    {s.done ? "Edit" : "Complete"}
+                  </button>
+                ) : (
+                  <p className="text-[11px] text-ink-400 mt-2">{s.done ? "✓ done at creation" : "Set on the People form"}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -189,6 +278,16 @@ export default function EmployeeProfile() {
           </div>
         </div>
       )}
+
+      {/* step editor */}
+      <Modal open={!!editStep} onClose={() => setEditStep(null)} title={editStep ? STEP_META[editStep]?.label : ""}>
+        {editStep && (
+          <DataForm
+            fields={STEP_META[editStep].fields}
+            initial={Object.fromEntries(STEP_META[editStep].fields.map((f) => [f.key, e[f.key] ?? ""]))}
+            submitting={saving} onSubmit={saveStep} onCancel={() => setEditStep(null)} />
+        )}
+      </Modal>
     </div>
   );
 }

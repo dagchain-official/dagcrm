@@ -100,16 +100,8 @@ const PERSON_FIELDS = [
   { key: "joining_date", label: "Joining date", type: "date" },
   { key: "status", label: "Status", type: "select", options: sel("active", "inactive", "suspended") },
   { key: "password", label: "Password (set/reset)", type: "text" },
-  { key: "photo", label: "Photo", type: "file", accept: "image/*" },
-  { key: "document", label: "Document (PDF)", type: "file", accept: "application/pdf,.pdf" },
-  { key: "dob", label: "Date of birth", type: "date" },
-  { key: "nationality", label: "Nationality" },
-  { key: "address", label: "Address" },
-  { key: "emergency_contact", label: "Emergency contact (name)" },
-  { key: "emergency_phone", label: "Emergency phone" },
-  { key: "passport_no", label: "Passport no." },
-  { key: "passport_expiry", label: "Passport expiry", type: "date" },
-  { key: "visa_expiry", label: "Visa expiry", type: "date" },
+  // personal / document / compliance fields are filled step-by-step on the profile
+  // page after creation (profile completion), not on this basic create form.
 ];
 
 export const RESOURCES = {
@@ -456,13 +448,13 @@ export const RESOURCES = {
     fields: [{ key: "department_name", label: "Department name", required: true }],
   },
   employees: {
-    title: "Employees", endpoint: "employees", search: true, detailPath: "/hr/employee", wide: true,
+    title: "Employees", endpoint: "employees", search: true, detailPath: "/hr/employee",
     columns: [
       { key: "employee_id", label: "Emp ID" },
       { key: "user_name", label: "Name" },
       { key: "email", label: "Email" },
       { key: "role_name", label: "Role" },
-      { key: "hierarchy_level_name", label: "Level" },
+      { key: "profile_completion", label: "Profile", progress: true },
       { key: "manager_name", label: "Reports to" },
       { key: "department_name", label: "Department" },
       { key: "salary", label: "Salary", money: true },
