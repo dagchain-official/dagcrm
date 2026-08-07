@@ -72,6 +72,29 @@ export default function UserDashboard({ userId }) {
           <p className="text-sm text-ink-400 mt-0.5">Employee dashboard — personal performance</p>
         </div>
       )}
+      {/* ramped sales target — 6x CTC month 1, 8x month 2, 10x month 3+ */}
+      {d.my_target > 0 && (
+        <div className="card p-5 bg-gradient-to-br from-brand-600 to-brand-500 text-white border-0">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-white/80">Your target this month ({d.my_target_multiplier}× CTC)</p>
+              <p className="text-3xl font-extrabold tabular-nums mt-0.5">{money(d.my_target)}</p>
+              <p className="text-xs text-white/70 mt-1">Revenue so far: {money(d.my_revenue)} · {d.my_target_pct}% of target</p>
+            </div>
+            <div className="w-full sm:w-56">
+              <div className="h-3 rounded-full bg-white/20 overflow-hidden">
+                <div className="h-full bg-white" style={{ width: `${Math.min(100, d.my_target_pct)}%` }} />
+              </div>
+              <p className="text-[11px] text-white/70 mt-1.5">
+                {d.my_target - Number(d.my_revenue || 0) > 0
+                  ? `${money(d.my_target - Number(d.my_revenue || 0))} more to hit target`
+                  : "🎉 Target achieved!"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <Kpi icon={UserPlus} label="My Leads" value={d.my_leads} trend={`${d.my_new_leads} new`} color="bg-orange-100 text-orange-600" to="/m/leads" />

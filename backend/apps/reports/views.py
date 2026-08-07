@@ -253,7 +253,18 @@ def my_dashboard(request):
         .values("id", "lead__name", "activity_type", "followup_date", "next_action")[:6]
     )
     my_revenue = Revenue.objects.filter(customer__lead__assigned_to=user)
+    # ramped sales target — 6x CTC month 1, 8x month 2, 10x month 3+
+    from apps.hr.models import Employee
+    _emp = Employee.objects.filter(user=user).first()
+    _mult = ramped_multiplier(_emp, today) if _emp else 10
+    _ctc = float(_emp.monthly_ctc(today.month, today.year)) if _emp else 0.0
+    _rev_val = float(_money(my_revenue, "net_revenue") or 0)
+    _target = round(_ctc * _mult, 2)
     return Response({
+        "my_target": _target,
+        "my_target_multiplier": _mult,
+        "my_ctc": round(_ctc, 2),
+        "my_target_pct": round(_rev_val / _target * 100, 1) if _target else 0.0,
         "my_leads": my_leads.active().count(),   # active only
         "my_new_leads": my_leads.filter(status="new").count(),
         "my_converted": my_leads.filter(status="converted").count(),
@@ -1733,3 +1744,66 @@ def customer_fx(request):
         "brokerage": round(float(c["b"] or 0), 2), "insurance": round(float(c["i"] or 0), 2),
         "staking": round(float(c["s"] or 0), 2), "trading_loss": round(float(c["t"] or 0), 2),
     })
+
+
+def ramped_multiplier(emp, today=None):
+    """A salesperson's revenue target ramps with tenure: 6x CTC in month 1,
+    8x in month 2, 10x from month 3 onwards."""
+    from django.utils import timezone
+    today = today or timezone.localdate()
+    jd = getattr(emp, "joining_date", None)
+    if not jd:
+        return 10
+    mn = (today.year - jd.year) * 12 + (today.month - jd.month) + 1   # 1-based tenure month
+    return 6 if mn <= 1 else 8 if mn == 2 else 10
+
+
+@api_view(["GET"])
+def team_pnl(request):
+    """Team-level P&L — Super Admin / Finance / Business Head only. Per team leader:
+    their salary, the team's members + CTC, the team's overall CTC, revenue
+    generated, profit, and the extra revenue still needed to break into profit."""
+    from apps.accounts.access import subordinate_user_ids
+    from apps.hr.models import Employee
+    from .pnl import _revenue_by_user
+    user = request.user
+    role = getattr(getattr(user, "role", None), "name", "")
+    if not (user.is_superuser or role in ("Super Admin", "Business Head", "Finance")):
+        return Response({"detail": "Only Super Admin, Finance or a Business Head can view Team P&L."}, status=403)
+
+    today = timezone.localdate()
+    month = int(request.query_params.get("month") or today.month)
+    year = int(request.query_params.get("year") or today.year)
+    by_user, _ = _revenue_by_user(month, year)
+    full = user.is_superuser or role in ("Super Admin", "Finance")
+    allowed = None if full else subordinate_user_ids(user, include_self=True)
+
+    tls = (Employee.objects.select_related("user", "user__role")
+           .filter(user__role__name="Team Leader").exclude(user__is_superuser=True))
+    rows = []
+    for tl in tls:
+        if not full and tl.user_id not in allowed:
+            continue
+        ids = list(subordinate_user_ids(tl.user, include_self=True))
+        members = list(Employee.objects.select_related("user").filter(user_id__in=ids).exclude(id=tl.id))
+        tl_ctc = float(tl.monthly_ctc(month, year))
+        members_ctc = sum(float(m.monthly_ctc(month, year)) for m in members)
+        team_ctc = round(tl_ctc + members_ctc, 2)
+        team_rev = round(sum(float(by_user.get(uid, 0)) for uid in ids), 2)
+        profit = round(team_rev - team_ctc, 2)
+        rows.append({
+            "team_leader": tl.user.name if tl.user else "—", "employee_id": tl.id,
+            "tl_salary": round(float(tl.salary or 0), 2), "tl_ctc": round(tl_ctc, 2),
+            "member_count": len(members), "members_ctc": round(members_ctc, 2),
+            "team_ctc": team_ctc, "revenue": team_rev, "profit": profit,
+            "gap_to_profit": round(max(0.0, team_ctc - team_rev), 2),
+            "margin": round(profit / team_rev * 100, 1) if team_rev else 0.0,
+            "members": [{"name": m.user.name if m.user else "—",
+                         "role": getattr(getattr(m.user, "role", None), "name", ""),
+                         "ctc": round(float(m.monthly_ctc(month, year)), 2),
+                         "revenue": round(float(by_user.get(m.user_id, 0)), 2)} for m in members],
+        })
+    rows.sort(key=lambda r: r["profit"], reverse=True)
+    totals = {k: round(sum(r[k] for r in rows), 2) for k in ("team_ctc", "revenue", "profit", "gap_to_profit")}
+    totals["teams"] = len(rows)
+    return Response({"month": month, "year": year, "rows": rows, "totals": totals})

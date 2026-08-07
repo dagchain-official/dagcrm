@@ -18,6 +18,7 @@ urlpatterns = [
     path("reports/revenue-by-business/", views.revenue_by_business),
     path("reports/revenue-trend/", views.revenue_trend),
     path("reports/pnl/", views.pnl),
+    path("reports/team-pnl/", views.team_pnl),
     path("reports/target-board/", views.target_board),
     path("reports/kpi-board/", views.kpi_board),
     path("reports/traders-lots/", views.traders_lots),

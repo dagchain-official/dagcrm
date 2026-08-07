@@ -7,6 +7,7 @@ import Reports from "./pages/Reports";
 import EmployeeReport from "./pages/EmployeeReport";
 import ProductReport from "./pages/ProductReport";
 import PnL from "./pages/PnL";
+import TeamPnl from "./pages/TeamPnl";
 import TargetBoard from "./pages/TargetBoard";
 import AssignTarget from "./pages/AssignTarget";
 import TeamRequests from "./pages/TeamRequests";
@@ -102,6 +103,7 @@ export default function App() {
         <Route path="hr/rules" element={<RulesHub />} />
         <Route path="recruitment" element={<Recruitment />} />
         <Route path="finance" element={<FinanceHub />} />
+        <Route path="team-pnl" element={<TeamPnl />} />
         <Route path="aum" element={<AumHub />} />
         <Route path="contribution" element={<ContributionHub />} />
         <Route path="config" element={<ConfigHub />} />
