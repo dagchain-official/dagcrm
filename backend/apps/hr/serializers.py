@@ -568,3 +568,136 @@ class HRRequestSerializer(serializers.ModelSerializer):
     def get_is_mine(self, obj):
         req = self.context.get("request")
         return bool(req and obj.employee and obj.employee.user_id == req.user.id)
+
+
+# ==================================================================== HR SUITE
+from .models import (
+    Appraisal, EmployeeDocument, EmployeeEvent, EmployeeExit, HRTicket,
+    PerformanceJournal, PIP, Policy, PolicyAcknowledgement, Recognition,
+)
+
+
+class EmployeeDocumentSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    doc_type_display = serializers.CharField(source="get_doc_type_display", read_only=True)
+    days_to_expiry = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EmployeeDocument
+        fields = ["id", "employee", "employee_name", "doc_type", "doc_type_display", "title",
+                  "number", "file", "issue_date", "expiry_date", "verified", "notes",
+                  "days_to_expiry", "created_at"]
+        read_only_fields = ["created_at"]
+
+    def get_days_to_expiry(self, obj):
+        if not obj.expiry_date:
+            return None
+        from django.utils import timezone
+        return (obj.expiry_date - timezone.localdate()).days
+
+
+class HRTicketSerializer(serializers.ModelSerializer):
+    raised_by_name = serializers.CharField(source="raised_by.name", read_only=True)
+    assigned_to_name = serializers.CharField(source="assigned_to.name", read_only=True)
+    can_resolve = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HRTicket
+        fields = ["id", "raised_by", "raised_by_name", "category", "subject", "description",
+                  "priority", "status", "assigned_to", "assigned_to_name", "resolution",
+                  "can_resolve", "created_at"]
+        read_only_fields = ["raised_by", "created_at"]
+
+    def get_can_resolve(self, obj):
+        req = self.context.get("request")
+        if not req:
+            return False
+        from apps.accounts.access import is_admin_view
+        return is_admin_view(req.user) or getattr(getattr(req.user, "role", None), "name", "") == "HR"
+
+
+class EmployeeExitSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+
+    class Meta:
+        model = EmployeeExit
+        fields = ["id", "employee", "employee_name", "resignation_date", "last_working_day",
+                  "reason", "status", "clearance_it", "clearance_finance", "clearance_hr",
+                  "exit_interview", "notes", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+class EmployeeEventSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    kind_display = serializers.CharField(source="get_kind_display", read_only=True)
+
+    class Meta:
+        model = EmployeeEvent
+        fields = ["id", "employee", "employee_name", "kind", "kind_display", "date",
+                  "title", "details", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+class PerformanceJournalSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    author_name = serializers.CharField(source="author.name", read_only=True)
+    kind_display = serializers.CharField(source="get_kind_display", read_only=True)
+
+    class Meta:
+        model = PerformanceJournal
+        fields = ["id", "employee", "employee_name", "author", "author_name", "date",
+                  "kind", "kind_display", "rating", "note", "created_at"]
+        read_only_fields = ["author", "created_at"]
+
+
+class AppraisalSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = Appraisal
+        fields = ["id", "employee", "employee_name", "period", "self_review", "self_rating",
+                  "manager_review", "manager_rating", "increment_pct", "promotion_to",
+                  "status", "status_display", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+class PIPSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    owner_name = serializers.CharField(source="owner.name", read_only=True)
+
+    class Meta:
+        model = PIP
+        fields = ["id", "employee", "employee_name", "reason", "goals", "start_date",
+                  "end_date", "review_notes", "status", "owner", "owner_name", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+class PolicySerializer(serializers.ModelSerializer):
+    category_display = serializers.CharField(source="get_category_display", read_only=True)
+    ack_count = serializers.IntegerField(source="acks.count", read_only=True)
+    my_ack = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Policy
+        fields = ["id", "title", "category", "category_display", "version", "body", "file",
+                  "requires_ack", "active", "ack_count", "my_ack", "created_at"]
+        read_only_fields = ["created_at"]
+
+    def get_my_ack(self, obj):
+        req = self.context.get("request")
+        if not req:
+            return False
+        return obj.acks.filter(user=req.user, version=obj.version).exists()
+
+
+class RecognitionSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.user.name", read_only=True)
+    nominated_by_name = serializers.CharField(source="nominated_by.name", read_only=True)
+    award_display = serializers.CharField(source="get_award_display", read_only=True)
+
+    class Meta:
+        model = Recognition
+        fields = ["id", "employee", "employee_name", "nominated_by", "nominated_by_name",
+                  "award", "award_display", "reason", "points", "status", "created_at"]
+        read_only_fields = ["nominated_by", "created_at"]

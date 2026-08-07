@@ -1,0 +1,167 @@
+from django.conf import settings
+import django.db.models.deletion
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("hr", "0026_hrrequest"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="EmployeeDocument",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("doc_type", models.CharField(choices=[("passport", "Passport"), ("visa", "Visa"), ("emirates_id", "Emirates / National ID"), ("contract", "Contract"), ("offer_letter", "Offer Letter"), ("certificate", "Certificate"), ("insurance", "Insurance"), ("other", "Other")], default="other", max_length=20)),
+                ("title", models.CharField(blank=True, max_length=150)),
+                ("number", models.CharField(blank=True, max_length=80)),
+                ("file", models.FileField(blank=True, null=True, upload_to="employee_vault/")),
+                ("issue_date", models.DateField(blank=True, null=True)),
+                ("expiry_date", models.DateField(blank=True, null=True)),
+                ("verified", models.BooleanField(default=False)),
+                ("notes", models.CharField(blank=True, max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="vault", to="hr.employee")),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+        migrations.CreateModel(
+            name="HRTicket",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("category", models.CharField(choices=[("leave", "Leave"), ("payroll", "Payroll"), ("visa", "Visa / Immigration"), ("it", "IT / Access"), ("grievance", "Grievance"), ("benefits", "Benefits"), ("other", "Other")], default="other", max_length=20)),
+                ("subject", models.CharField(max_length=200)),
+                ("description", models.TextField(blank=True)),
+                ("priority", models.CharField(choices=[("low", "Low"), ("medium", "Medium"), ("high", "High"), ("urgent", "Urgent")], default="medium", max_length=10)),
+                ("status", models.CharField(choices=[("open", "Open"), ("in_progress", "In Progress"), ("resolved", "Resolved"), ("closed", "Closed")], default="open", max_length=15)),
+                ("resolution", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("assigned_to", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="hr_tickets_assigned", to=settings.AUTH_USER_MODEL)),
+                ("raised_by", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="hr_tickets", to=settings.AUTH_USER_MODEL)),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+        migrations.CreateModel(
+            name="EmployeeExit",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("resignation_date", models.DateField(blank=True, null=True)),
+                ("last_working_day", models.DateField(blank=True, null=True)),
+                ("reason", models.CharField(blank=True, max_length=255)),
+                ("status", models.CharField(choices=[("initiated", "Initiated"), ("clearance", "In Clearance"), ("completed", "Completed"), ("cancelled", "Cancelled")], default="initiated", max_length=15)),
+                ("clearance_it", models.BooleanField(default=False)),
+                ("clearance_finance", models.BooleanField(default=False)),
+                ("clearance_hr", models.BooleanField(default=False)),
+                ("exit_interview", models.TextField(blank=True)),
+                ("notes", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="exits", to="hr.employee")),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+        migrations.CreateModel(
+            name="EmployeeEvent",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("kind", models.CharField(choices=[("join", "Joined"), ("promotion", "Promotion"), ("transfer", "Transfer"), ("appraisal", "Appraisal"), ("pip", "PIP"), ("warning", "Warning"), ("recognition", "Recognition"), ("training", "Training"), ("exit", "Exit"), ("note", "Note")], default="note", max_length=20)),
+                ("date", models.DateField()),
+                ("title", models.CharField(max_length=200)),
+                ("details", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("created_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="events", to="hr.employee")),
+            ],
+            options={"ordering": ["-date", "-id"]},
+        ),
+        migrations.CreateModel(
+            name="PerformanceJournal",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("date", models.DateField()),
+                ("kind", models.CharField(choices=[("win", "Win"), ("coaching", "Coaching"), ("concern", "Concern"), ("note", "Note")], default="note", max_length=20)),
+                ("rating", models.PositiveSmallIntegerField(default=0)),
+                ("note", models.TextField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("author", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="journal_written", to=settings.AUTH_USER_MODEL)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="journal", to="hr.employee")),
+            ],
+            options={"ordering": ["-date", "-id"]},
+        ),
+        migrations.CreateModel(
+            name="Appraisal",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("period", models.CharField(max_length=40)),
+                ("self_review", models.TextField(blank=True)),
+                ("self_rating", models.PositiveSmallIntegerField(default=0)),
+                ("manager_review", models.TextField(blank=True)),
+                ("manager_rating", models.PositiveSmallIntegerField(default=0)),
+                ("increment_pct", models.DecimalField(decimal_places=2, default=0, max_digits=5)),
+                ("promotion_to", models.CharField(blank=True, max_length=120)),
+                ("status", models.CharField(choices=[("self", "Self-review"), ("manager", "Manager review"), ("approved", "Approved"), ("closed", "Closed")], default="self", max_length=15)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="appraisals", to="hr.employee")),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+        migrations.CreateModel(
+            name="PIP",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("reason", models.TextField()),
+                ("goals", models.TextField(blank=True)),
+                ("start_date", models.DateField(blank=True, null=True)),
+                ("end_date", models.DateField(blank=True, null=True)),
+                ("review_notes", models.TextField(blank=True)),
+                ("status", models.CharField(choices=[("active", "Active"), ("passed", "Passed"), ("failed", "Failed"), ("cancelled", "Cancelled")], default="active", max_length=15)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="pips", to="hr.employee")),
+                ("owner", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="pips_owned", to=settings.AUTH_USER_MODEL)),
+            ],
+            options={"ordering": ["-created_at"], "verbose_name": "PIP"},
+        ),
+        migrations.CreateModel(
+            name="Policy",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("title", models.CharField(max_length=200)),
+                ("category", models.CharField(choices=[("hr", "HR"), ("it", "IT"), ("finance", "Finance"), ("compliance", "Compliance"), ("code_of_conduct", "Code of Conduct"), ("other", "Other")], default="hr", max_length=30)),
+                ("version", models.CharField(default="1.0", max_length=20)),
+                ("body", models.TextField(blank=True)),
+                ("file", models.FileField(blank=True, null=True, upload_to="policies/")),
+                ("requires_ack", models.BooleanField(default=True)),
+                ("active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"ordering": ["-created_at"], "verbose_name_plural": "Policies"},
+        ),
+        migrations.CreateModel(
+            name="PolicyAcknowledgement",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("version", models.CharField(blank=True, max_length=20)),
+                ("signature", models.CharField(max_length=120)),
+                ("signed_at", models.DateTimeField(auto_now_add=True)),
+                ("policy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="acks", to="hr.policy")),
+                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="policy_acks", to=settings.AUTH_USER_MODEL)),
+            ],
+            options={"ordering": ["-signed_at"], "unique_together": {("policy", "user", "version")}},
+        ),
+        migrations.CreateModel(
+            name="Recognition",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("award", models.CharField(choices=[("kudos", "Kudos"), ("star", "Star Performer"), ("team_player", "Team Player"), ("innovation", "Innovation"), ("milestone", "Milestone"), ("spot", "Spot Award")], default="kudos", max_length=20)),
+                ("reason", models.TextField()),
+                ("points", models.PositiveIntegerField(default=0)),
+                ("status", models.CharField(choices=[("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")], default="pending", max_length=15)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("employee", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="recognitions", to="hr.employee")),
+                ("nominated_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="nominations_made", to=settings.AUTH_USER_MODEL)),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+    ]

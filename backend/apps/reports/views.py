@@ -561,6 +561,14 @@ def hr_dashboard(request):
             if d and d <= soon:
                 expiring_docs.append({"employee": e.user.name if e.user else "—", "employee_id": e.id,
                                       "doc": label, "expires": d, "days": (d - today).days})
+    # Document Vault entries with an expiry date (passport/visa/insurance/…)
+    from apps.hr.models import EmployeeDocument
+    for vd in (EmployeeDocument.objects.select_related("employee__user")
+               .filter(expiry_date__lte=soon, expiry_date__isnull=False)):
+        expiring_docs.append({"employee": vd.employee.user.name if vd.employee.user else "—",
+                              "employee_id": vd.employee_id,
+                              "doc": vd.get_doc_type_display() + (f" · {vd.title}" if vd.title else ""),
+                              "expires": vd.expiry_date, "days": (vd.expiry_date - today).days})
     expiring_docs.sort(key=lambda x: x["days"])
 
     return Response({

@@ -5,7 +5,8 @@ import {
   Receipt, Handshake, BarChart3, Sparkles, Settings2, ShieldCheck, Plug, FileText,
   TrendingUp, Gauge, BarChart4, ListPlus, Trophy, Coins, Layers, Wand2, Calculator,
   Landmark, PiggyBank, Scale, CandlestickChart, LineChart, Boxes, Server, Network,
-  GraduationCap,
+  GraduationCap, FolderArchive, History, NotebookPen, ClipboardCheck, AlertTriangle,
+  DoorOpen, Headset, ScrollText,
 } from "lucide-react";
 
 // Derive the permission module key from a nav `to` path.
@@ -42,6 +43,11 @@ export const moduleOf = (to) => {
   if (to === "/contribution") return "contribution-entries";
   if (to === "/config") return "businesses";
   if (to === "/m/message-templates") return "communications";   // same access as chats
+  // HR suite — the HR-managed lists ride on the People/"employees" permission…
+  if (["/m/employee-documents", "/m/employee-events", "/m/performance-journal",
+       "/m/appraisals", "/m/pips", "/m/employee-exits"].includes(to)) return "employees";
+  // …the self-service ones (helpdesk, policies, recognition) are open to everyone.
+  if (["/m/hr-tickets", "/m/policies", "/m/recognitions"].includes(to)) return null;
   if (to.startsWith("/m/")) return to.slice(3);
   return null;
 };
@@ -55,6 +61,9 @@ export const NAV = [
       { to: "/attendance-clock", label: "My Attendance", icon: Clock, hideForSuper: true },
       { to: "/leaves-mine", label: "My Leaves", icon: CalendarOff, hideForSuper: true },
       { to: "/hr-requests", label: "Requests", icon: FileText },
+      { to: "/m/hr-tickets", label: "HR Helpdesk", icon: Headset },
+      { to: "/m/policies", label: "Policy Centre", icon: ScrollText },
+      { to: "/m/recognitions", label: "Recognition", icon: Trophy },
       { to: "/ai", label: "AI Assistant", icon: Sparkles },
     ],
   },
@@ -101,6 +110,12 @@ export const NAV = [
       { to: "/hr/hierarchy", label: "Org Hierarchy", icon: Network },
       { to: "/recruitment", label: "Recruitment", icon: UserPlus },
       { to: "/hr/training", label: "Training", icon: GraduationCap },
+      { to: "/m/employee-documents", label: "Document Vault", icon: FolderArchive },
+      { to: "/m/appraisals", label: "Appraisals", icon: ClipboardCheck },
+      { to: "/m/performance-journal", label: "Performance Journal", icon: NotebookPen },
+      { to: "/m/pips", label: "Improvement Plans", icon: AlertTriangle },
+      { to: "/m/employee-events", label: "Employee Timeline", icon: History },
+      { to: "/m/employee-exits", label: "Exit Management", icon: DoorOpen },
       { to: "/hr/attendance", label: "Attendance & Leave", icon: Clock },
       { to: "/hr/costs", label: "Cost & CTC", icon: Wallet },
       { to: "/hr/payroll", label: "Payroll & Incentives", icon: Award },

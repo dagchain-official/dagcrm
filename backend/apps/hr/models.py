@@ -577,3 +577,187 @@ class Assessment(models.Model):
 
     def __str__(self):
         return f"{self.employee_id} · {self.module_id} · {self.result}"
+
+
+# ==================================================================== HR SUITE
+class EmployeeDocument(models.Model):
+    """Document Vault — many documents per employee, each with a type, number,
+    expiry and a verify flag (feeds HR expiry alerts)."""
+    TYPES = [("passport", "Passport"), ("visa", "Visa"), ("emirates_id", "Emirates / National ID"),
+             ("contract", "Contract"), ("offer_letter", "Offer Letter"), ("certificate", "Certificate"),
+             ("insurance", "Insurance"), ("other", "Other")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="vault")
+    doc_type = models.CharField(max_length=20, choices=TYPES, default="other")
+    title = models.CharField(max_length=150, blank=True)
+    number = models.CharField(max_length=80, blank=True)
+    file = models.FileField(upload_to="employee_vault/", null=True, blank=True)
+    issue_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    verified = models.BooleanField(default=False)
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class HRTicket(models.Model):
+    """HR Helpdesk — an employee-raised internal ticket (leave / payroll / visa /
+    grievance …) that HR assigns and resolves."""
+    CATEGORY = [("leave", "Leave"), ("payroll", "Payroll"), ("visa", "Visa / Immigration"),
+                ("it", "IT / Access"), ("grievance", "Grievance"), ("benefits", "Benefits"), ("other", "Other")]
+    STATUS = [("open", "Open"), ("in_progress", "In Progress"), ("resolved", "Resolved"), ("closed", "Closed")]
+    PRIORITY = [("low", "Low"), ("medium", "Medium"), ("high", "High"), ("urgent", "Urgent")]
+    raised_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hr_tickets")
+    category = models.CharField(max_length=20, choices=CATEGORY, default="other")
+    subject = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY, default="medium")
+    status = models.CharField(max_length=15, choices=STATUS, default="open")
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="hr_tickets_assigned")
+    resolution = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class EmployeeExit(models.Model):
+    """Exit Management — offboarding: resignation, clearance checklist, EOS."""
+    STATUS = [("initiated", "Initiated"), ("clearance", "In Clearance"), ("completed", "Completed"), ("cancelled", "Cancelled")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="exits")
+    resignation_date = models.DateField(null=True, blank=True)
+    last_working_day = models.DateField(null=True, blank=True)
+    reason = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS, default="initiated")
+    clearance_it = models.BooleanField(default=False)
+    clearance_finance = models.BooleanField(default=False)
+    clearance_hr = models.BooleanField(default=False)
+    exit_interview = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class EmployeeEvent(models.Model):
+    """Employee Timeline — one durable record per milestone (join / promotion /
+    appraisal / PIP / warning / exit …). Other modules append here; HR can also
+    add manual notes. This is the single audited history of a person."""
+    KIND = [("join", "Joined"), ("promotion", "Promotion"), ("transfer", "Transfer"),
+            ("appraisal", "Appraisal"), ("pip", "PIP"), ("warning", "Warning"),
+            ("recognition", "Recognition"), ("training", "Training"), ("exit", "Exit"),
+            ("note", "Note")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="events")
+    kind = models.CharField(max_length=20, choices=KIND, default="note")
+    date = models.DateField()
+    title = models.CharField(max_length=200)
+    details = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+
+class PerformanceJournal(models.Model):
+    """Performance Journal — a leader's dated evidence note on a report (win,
+    coaching, concern). Feeds appraisals with real examples, not vibes."""
+    KIND = [("win", "Win"), ("coaching", "Coaching"), ("concern", "Concern"), ("note", "Note")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="journal")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="journal_written")
+    date = models.DateField()
+    kind = models.CharField(max_length=20, choices=KIND, default="note")
+    rating = models.PositiveSmallIntegerField(default=0)   # optional 1-5
+    note = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+
+class Appraisal(models.Model):
+    """Appraisal Engine — one cycle per employee: self-review, manager rating,
+    increment/promotion recommendation, and a workflow status."""
+    STATUS = [("self", "Self-review"), ("manager", "Manager review"),
+              ("approved", "Approved"), ("closed", "Closed")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="appraisals")
+    period = models.CharField(max_length=40)               # "H1 2026", "Annual 2025"…
+    self_review = models.TextField(blank=True)
+    self_rating = models.PositiveSmallIntegerField(default=0)   # 1-5
+    manager_review = models.TextField(blank=True)
+    manager_rating = models.PositiveSmallIntegerField(default=0)  # 1-5
+    increment_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    promotion_to = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS, default="self")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PIP(models.Model):
+    """Performance Improvement Plan — goals + review windows + outcome."""
+    STATUS = [("active", "Active"), ("passed", "Passed"), ("failed", "Failed"), ("cancelled", "Cancelled")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="pips")
+    reason = models.TextField()
+    goals = models.TextField(blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    review_notes = models.TextField(blank=True)
+    status = models.CharField(max_length=15, choices=STATUS, default="active")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="pips_owned")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "PIP"
+
+
+class Policy(models.Model):
+    """Policy Centre — a company policy / SOP that employees must read & e-sign."""
+    CATEGORY = [("hr", "HR"), ("it", "IT"), ("finance", "Finance"), ("compliance", "Compliance"),
+                ("code_of_conduct", "Code of Conduct"), ("other", "Other")]
+    title = models.CharField(max_length=200)
+    category = models.CharField(max_length=30, choices=CATEGORY, default="hr")
+    version = models.CharField(max_length=20, default="1.0")
+    body = models.TextField(blank=True)
+    file = models.FileField(upload_to="policies/", null=True, blank=True)
+    requires_ack = models.BooleanField(default=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name_plural = "Policies"
+
+
+class PolicyAcknowledgement(models.Model):
+    """E-signature: a user's typed-name acceptance of a policy version."""
+    policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name="acks")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="policy_acks")
+    version = models.CharField(max_length=20, blank=True)
+    signature = models.CharField(max_length=120)           # typed full name
+    signed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("policy", "user", "version")
+        ordering = ["-signed_at"]
+
+
+class Recognition(models.Model):
+    """Recognition / peer nomination — an award or kudos, optionally HR-approved."""
+    AWARD = [("kudos", "Kudos"), ("star", "Star Performer"), ("team_player", "Team Player"),
+             ("innovation", "Innovation"), ("milestone", "Milestone"), ("spot", "Spot Award")]
+    STATUS = [("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="recognitions")
+    nominated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="nominations_made")
+    award = models.CharField(max_length=20, choices=AWARD, default="kudos")
+    reason = models.TextField()
+    points = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=15, choices=STATUS, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

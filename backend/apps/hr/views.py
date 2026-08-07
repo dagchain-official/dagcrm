@@ -840,3 +840,213 @@ class HRRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
         return self._decide(request, pk, "reject")
+
+
+# ==================================================================== HR SUITE
+from .models import (
+    Appraisal, EmployeeDocument, EmployeeEvent, EmployeeExit, HRTicket,
+    PerformanceJournal, PIP, Policy, PolicyAcknowledgement, Recognition,
+)
+from .serializers import (
+    AppraisalSerializer, EmployeeDocumentSerializer, EmployeeEventSerializer,
+    EmployeeExitSerializer, HRTicketSerializer, PerformanceJournalSerializer,
+    PIPSerializer, PolicySerializer, RecognitionSerializer,
+)
+
+
+def _is_hr(user):
+    from apps.accounts.access import is_admin_view
+    return is_admin_view(user) or getattr(getattr(user, "role", None), "name", "") == "HR"
+
+
+def _scope_by_employee(qs, user, field="employee__user_id"):
+    """HR/admin see all; everyone else only their own subtree (self + reports)."""
+    if _is_hr(user):
+        return qs
+    from apps.accounts.access import subordinate_user_ids
+    return qs.filter(**{f"{field}__in": subordinate_user_ids(user, include_self=True)})
+
+
+class EmployeeDocumentViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeDocument.objects.select_related("employee__user").all()
+    serializer_class = EmployeeDocumentSerializer
+    filterset_fields = ["employee", "doc_type", "verified"]
+    search_fields = ["title", "number", "employee__user__name"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+
+class EmployeeEventViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeEvent.objects.select_related("employee__user").all()
+    serializer_class = EmployeeEventSerializer
+    filterset_fields = ["employee", "kind"]
+    search_fields = ["title", "employee__user__name"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class PerformanceJournalViewSet(viewsets.ModelViewSet):
+    queryset = PerformanceJournal.objects.select_related("employee__user", "author").all()
+    serializer_class = PerformanceJournalSerializer
+    filterset_fields = ["employee", "kind"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class AppraisalViewSet(viewsets.ModelViewSet):
+    queryset = Appraisal.objects.select_related("employee__user").all()
+    serializer_class = AppraisalSerializer
+    filterset_fields = ["employee", "status", "period"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+
+class PIPViewSet(viewsets.ModelViewSet):
+    queryset = PIP.objects.select_related("employee__user", "owner").all()
+    serializer_class = PIPSerializer
+    filterset_fields = ["employee", "status"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class EmployeeExitViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeExit.objects.select_related("employee__user").all()
+    serializer_class = EmployeeExitSerializer
+    filterset_fields = ["employee", "status"]
+
+    def get_queryset(self):
+        return _scope_by_employee(super().get_queryset(), self.request.user)
+
+
+class HRTicketViewSet(viewsets.ModelViewSet):
+    """HR Helpdesk. Employees raise and see their own tickets; HR/admin see all
+    and resolve. raised_by is always the caller."""
+    queryset = HRTicket.objects.select_related("raised_by", "assigned_to").all()
+    serializer_class = HRTicketSerializer
+    filterset_fields = ["category", "status", "priority"]
+    search_fields = ["subject", "raised_by__name"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if _is_hr(self.request.user):
+            return qs
+        return qs.filter(raised_by=self.request.user)
+
+    def perform_create(self, serializer):
+        ticket = serializer.save(raised_by=self.request.user)
+        for u in User.objects.filter(role__name="HR", status="active"):
+            notify(u, title="New HR ticket",
+                   body=f"{self.request.user.name}: {ticket.subject}", kind="info", link="/hr-helpdesk")
+
+    def update(self, request, *args, **kwargs):
+        if not _is_hr(request.user) and self.get_object().raised_by_id != request.user.id:
+            return Response({"detail": "Not allowed."}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"])
+    def resolve(self, request, pk=None):
+        if not _is_hr(request.user):
+            return Response({"detail": "Only HR can resolve."}, status=403)
+        t = self.get_object()
+        t.status = "resolved"
+        t.resolution = request.data.get("resolution", t.resolution)
+        t.assigned_to = request.user
+        t.save(update_fields=["status", "resolution", "assigned_to"])
+        notify(t.raised_by, title="Ticket resolved",
+               body=f"Your ticket '{t.subject}' was resolved.", kind="success", link="/hr-helpdesk")
+        return Response(self.get_serializer(t).data)
+
+
+class PolicyViewSet(viewsets.ModelViewSet):
+    """Policy Centre. Everyone reads active policies; HR/admin manage them.
+    acknowledge records a typed-name e-signature for the current version."""
+    queryset = Policy.objects.prefetch_related("acks").all()
+    serializer_class = PolicySerializer
+    filterset_fields = ["category", "active"]
+    search_fields = ["title"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs if _is_hr(self.request.user) else qs.filter(active=True)
+
+    def create(self, request, *args, **kwargs):
+        if not _is_hr(request.user):
+            return Response({"detail": "Only HR can add policies."}, status=403)
+        return super().create(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"])
+    def acknowledge(self, request, pk=None):
+        policy = self.get_object()
+        sig = (request.data.get("signature") or request.user.name or "").strip()
+        if not sig:
+            return Response({"detail": "Type your full name to sign."}, status=400)
+        PolicyAcknowledgement.objects.get_or_create(
+            policy=policy, user=request.user, version=policy.version,
+            defaults={"signature": sig})
+        return Response(self.get_serializer(policy).data)
+
+    @action(detail=True, methods=["get"])
+    def acks(self, request, pk=None):
+        """Who has / has not signed - HR acceptance tracking."""
+        policy = self.get_object()
+        signed_ids = set(policy.acks.filter(version=policy.version).values_list("user_id", flat=True))
+        rows = []
+        for u in User.objects.filter(status="active").exclude(is_superuser=True):
+            rows.append({"user": u.name, "signed": u.id in signed_ids})
+        rows.sort(key=lambda r: (r["signed"], r["user"]))
+        return Response({"version": policy.version,
+                         "signed": len(signed_ids), "total": len(rows), "rows": rows})
+
+
+class RecognitionViewSet(viewsets.ModelViewSet):
+    """Recognition wall. Anyone nominates a peer; HR/admin approve. Everyone sees
+    approved recognitions (the wall) plus their own pending nominations."""
+    queryset = Recognition.objects.select_related("employee__user", "nominated_by").all()
+    serializer_class = RecognitionSerializer
+    filterset_fields = ["employee", "award", "status"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if _is_hr(self.request.user):
+            return qs
+        from django.db.models import Q
+        return qs.filter(Q(status="approved") | Q(nominated_by=self.request.user))
+
+    def perform_create(self, serializer):
+        rec = serializer.save(nominated_by=self.request.user)
+        for u in User.objects.filter(role__name="HR", status="active"):
+            notify(u, title="New recognition nomination",
+                   body=f"{self.request.user.name} nominated {rec.employee.user.name}", kind="info", link="/recognition")
+
+    def _set_status(self, request, pk, new):
+        if not _is_hr(request.user):
+            return Response({"detail": "Only HR can moderate."}, status=403)
+        rec = self.get_object()
+        rec.status = new
+        rec.save(update_fields=["status"])
+        if new == "approved" and rec.employee and rec.employee.user_id:
+            notify(rec.employee.user, title="You were recognised!",
+                   body=f"{rec.get_award_display()}: {rec.reason[:120]}", kind="success", link="/recognition")
+        return Response(self.get_serializer(rec).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._set_status(request, pk, "approved")
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._set_status(request, pk, "rejected")
